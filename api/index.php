@@ -13,6 +13,16 @@ if (empty($path) || $path === '/' || $path === 'index.php') {
 }
 
 // 0. Specific Route Aliases to prevent 404s
+if ($path === 'my_matches' || $path === 'my_matches.php') {
+    require $root . '/my_tournaments.php';
+    exit;
+}
+
+if ($path === 'leaderboard' || $path === 'leaderboard.php') {
+    require $root . '/leaderboard.php';
+    exit;
+}
+
 if ($path === 'tournament.php' || $path === 'tournament' || $path === 'tournaments.php' || $path === 'tournaments') {
     if (file_exists($root . '/admin/tournament.php')) {
         require $root . '/admin/tournament.php';
@@ -54,7 +64,7 @@ if (is_file($file)) {
     exit;
 }
 
-// 2. If .php extension was omitted in URL (e.g. /login or /wallet)
+// 2. If .php extension was omitted in URL (e.g. /login or /wallet or /leaderboard)
 if (is_file($file . '.php')) {
     require $file . '.php';
     exit;
