@@ -260,7 +260,7 @@ $transactions = $tx_stmt->get_result();
         <h3 class="text-sm font-bold text-white mb-1">Instant Payment Gateway</h3>
         <p class="text-[11px] text-slate-400 mb-4">Enter amount to add (Min ₹10.00)</p>
 
-        <form method="POST" action="cashfree_create_order.php" class="space-y-3.5">
+        <form method="POST" action="cashfree_create_order.php" class="space-y-3.5" onsubmit="var b=this.querySelector('button[type=submit]'); if(b){ b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin mr-1.5\'></i> Connecting to Cashfree...'; }">
             <div>
                 <label class="block text-[11px] font-medium text-slate-300 mb-1">Amount (₹)</label>
                 <div class="relative">

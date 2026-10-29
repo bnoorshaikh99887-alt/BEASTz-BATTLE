@@ -15,6 +15,9 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     // Helper functions (defined early so they are always available)
     if (!function_exists('safe_redirect')) {
         function safe_redirect($url) {
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                @session_write_close();
+            }
             if (!headers_sent()) {
                 header("Location: " . $url);
                 exit;
@@ -65,7 +68,7 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
         function check_admin_auth() {
             $is_adm = (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'));
             if (!$is_adm) {
-                safe_redirect("/login.php");
+                safe_redirect("/admin/login.php");
                 exit;
             }
         }
@@ -90,7 +93,7 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     }
 
     // =========================================================================
-    // ✅ TiDB CLOUD LIVE DATABASE CONNECTION (SSL ENABLED)
+    // ✅ TiDB CLOUD LIVE DATABASE CONNECTION (LOW LATENCY + SSL)
     // =========================================================================
     $db_host = "gateway01.ap-southeast-1.prod.aws.tidbcloud.com";
     $db_user = "33NZV583e1gPsMh.root";
@@ -99,8 +102,11 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     $db_port = 4000;
 
     $conn = mysqli_init();
+    $conn->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
+    $conn->options(MYSQLI_OPT_READ_TIMEOUT, 5);
     $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
     $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+
     @$conn->real_connect($db_host, $db_user, $db_pass, $db_name, $db_port, NULL, MYSQLI_CLIENT_SSL);
 
     if ($conn->connect_error) {
@@ -125,7 +131,7 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
                 $stmt->execute();
                 $res = $stmt->get_result();
                 if ($u = $res->fetch_assoc()) {
-                    if (($u['status'] ?? 'active') !== 'blocked') {
+                    if (($u['role'] ?? '') === 'admin' || ($u['status'] ?? 'active') !== 'blocked') {
                         $_SESSION['user_id'] = (int)$u['id'];
                         $_SESSION['username'] = $u['username'];
                         $_SESSION['email'] = $u['email'];
@@ -138,6 +144,14 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
                 }
                 $stmt->close();
             }
+        }
+    }
+
+    // Auto-heal admin user status if logged in
+    if (!empty($_SESSION['admin_id']) || (!empty($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
+        $adm_uid = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
+        if ($adm_uid > 0 && $conn && !$conn->connect_error) {
+            @$conn->query("UPDATE users SET status = 'active' WHERE id = {$adm_uid} AND role = 'admin'");
         }
     }
 

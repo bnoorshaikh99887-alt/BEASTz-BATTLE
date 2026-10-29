@@ -8,13 +8,14 @@ if (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role
 }
 
 if (!$is_admin) {
-    safe_redirect("../login.php");
+    safe_redirect("../admin/login.php");
     exit;
 }
 
 $user_wallet = 0.00;
 $logged_username = $_SESSION['admin_user'] ?? $_SESSION['username'] ?? 'Admin';
 $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
+
 if ($uid > 0 && $conn && !$conn->connect_error) {
     $stmt = $conn->prepare("SELECT username, wallet_balance, status, role FROM users WHERE id = ?");
     if ($stmt) {
@@ -22,7 +23,13 @@ if ($uid > 0 && $conn && !$conn->connect_error) {
         $stmt->execute();
         $res = $stmt->get_result();
         if ($u = $res->fetch_assoc()) {
-            if (($u['status'] ?? 'active') === 'blocked') {
+            // Admins are NEVER blocked or suspended
+            if (($u['role'] ?? '') === 'admin') {
+                if (($u['status'] ?? 'active') !== 'active') {
+                    // Auto-heal admin status if ever altered
+                    @$conn->query("UPDATE users SET status = 'active' WHERE id = {$uid}");
+                }
+            } elseif (($u['status'] ?? 'active') === 'blocked') {
                 safe_redirect("/logout.php");
                 exit;
             }
@@ -63,12 +70,10 @@ if ($uid > 0 && $conn && !$conn->connect_error) {
                 <span class="text-slate-600">&bull;</span>
                 <a href="withdrawals.php" class="text-slate-300 hover:text-white">Payouts</a>
             </div>
-
             <!-- Prominent Red Logout Button -->
             <a href="/logout.php" title="Sign Out" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold shadow transition flex items-center gap-1">
                 <i class="fa-solid fa-power-off text-[9px]"></i>
                 <span>Logout</span>
             </a>
         </div>
-
         <main class="flex-1 p-4">

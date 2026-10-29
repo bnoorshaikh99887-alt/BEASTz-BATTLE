@@ -4,7 +4,7 @@ require_once __DIR__ . '/common/header.php';
 $msg = "";
 $msg_type = "";
 
-// 1. Handle UPI & Cashfree PG Settings Update
+// 1. Handle Platform, UPI & Cashfree PG Settings Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_settings') {
     $settings = [
         'upi_id' => sanitize($_POST['upi_id'] ?? ''),
@@ -13,7 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'min_withdrawal' => sanitize($_POST['min_withdrawal'] ?? '50.00'),
         'whatsapp_support' => sanitize($_POST['whatsapp_support'] ?? '9878385810'),
         'cashfree_app_id' => sanitize($_POST['cashfree_app_id'] ?? ''),
-        'cashfree_secret_key' => sanitize($_POST['cashfree_secret_key'] ?? '')
+        'cashfree_secret_key' => sanitize($_POST['cashfree_secret_key'] ?? ''),
+        'google_client_id' => sanitize($_POST['google_client_id'] ?? '')
     ];
 
     foreach ($settings as $key => $val) {
@@ -25,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
-    $msg = "Cashfree Gateway aur UPI settings successfully update ho gayi!";
+    $msg = "All Platform, Gateway & Google settings successfully saved!";
     $msg_type = "success";
 }
 
@@ -64,20 +65,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Fetch Latest Settings from DB
-$upi_id = get_setting('upi_id', '9878385810@ybl');
+$upi_id = get_setting('upi_id', '9878385810@upi');
 $upi_name = get_setting('upi_name', 'BEASTz BATTLE');
 $min_deposit = get_setting('min_deposit', '10.00');
 $min_withdrawal = get_setting('min_withdrawal', '50.00');
 $whatsapp_support = get_setting('whatsapp_support', '9878385810');
 $cashfree_app_id = get_setting('cashfree_app_id', CASHFREE_APP_ID);
 $cashfree_secret = get_setting('cashfree_secret_key', CASHFREE_SECRET_KEY);
+$google_client_id = get_setting('google_client_id', '');
 ?>
 
 <div class="mb-4">
     <h2 class="text-base font-bold text-white flex items-center gap-2">
         <i class="fa-solid fa-sliders text-pink-500"></i> Platform & Gateway Settings
     </h2>
-    <p class="text-[11px] text-slate-400">Manage UPI IDs, Cashfree credentials, and Admin security</p>
+    <p class="text-[11px] text-slate-400">Manage UPI IDs, Cashfree credentials, Google OAuth and Admin security</p>
 </div>
 
 <?php if (!empty($msg)): ?>
@@ -90,19 +92,32 @@ $cashfree_secret = get_setting('cashfree_secret_key', CASHFREE_SECRET_KEY);
 <!-- Form 1: Gateway & Platform Config -->
 <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-lg mb-4">
     <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-        <i class="fa-solid fa-credit-card text-emerald-400"></i> Cashfree & UPI Settings
+        <i class="fa-solid fa-credit-card text-emerald-400"></i> Cashfree PG & Payment Config
     </h3>
     <form method="POST" action="settings.php" class="space-y-3">
         <input type="hidden" name="action" value="update_settings">
 
         <div>
-            <label class="block text-[11px] font-medium text-slate-300 mb-1">Receiver UPI ID</label>
-            <input type="text" name="upi_id" value="<?= htmlspecialchars($upi_id); ?>" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
+            <label class="block text-[11px] font-medium text-slate-300 mb-1">Cashfree App ID (Client ID)</label>
+            <input type="text" name="cashfree_app_id" value="<?= htmlspecialchars($cashfree_app_id); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
         </div>
 
         <div>
-            <label class="block text-[11px] font-medium text-slate-300 mb-1">Payee Name</label>
-            <input type="text" name="upi_name" value="<?= htmlspecialchars($upi_name); ?>" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
+            <label class="block text-[11px] font-medium text-slate-300 mb-1">Cashfree Secret Key</label>
+            <input type="password" name="cashfree_secret_key" value="<?= htmlspecialchars($cashfree_secret); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+        </div>
+
+        <div class="border-t border-slate-700/60 pt-3">
+            <h4 class="text-[11px] font-bold text-violet-400 mb-2">Direct UPI Settings</h4>
+            <div>
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Receiver UPI ID</label>
+                <input type="text" name="upi_id" value="<?= htmlspecialchars($upi_id); ?>" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
+            </div>
+
+            <div class="mt-2">
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Payee Name</label>
+                <input type="text" name="upi_name" value="<?= htmlspecialchars($upi_name); ?>" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
+            </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2">
@@ -121,8 +136,16 @@ $cashfree_secret = get_setting('cashfree_secret_key', CASHFREE_SECRET_KEY);
             <input type="text" name="whatsapp_support" value="<?= htmlspecialchars($whatsapp_support); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
         </div>
 
+        <div class="border-t border-slate-700/60 pt-3">
+            <h4 class="text-[11px] font-bold text-blue-400 mb-1 flex items-center gap-1.5">
+                <i class="fa-brands fa-google"></i> Google OAuth Client ID (Optional)
+            </h4>
+            <p class="text-[10px] text-slate-400 mb-2">If you have a Google Cloud OAuth Client ID, paste it here to enable Google One-Tap. Otherwise, Instant Gmail Login works automatically!</p>
+            <input type="text" name="google_client_id" value="<?= htmlspecialchars($google_client_id); ?>" placeholder="e.g. 123456789-abc.apps.googleusercontent.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+        </div>
+
         <button type="submit" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs transition shadow-md shadow-violet-600/30">
-            Save Platform Settings
+            Save All Platform Settings
         </button>
     </form>
 </div>
@@ -134,17 +157,14 @@ $cashfree_secret = get_setting('cashfree_secret_key', CASHFREE_SECRET_KEY);
     </h3>
     <form method="POST" action="settings.php" class="space-y-3">
         <input type="hidden" name="action" value="update_admin_auth">
-
         <div>
             <label class="block text-[11px] font-medium text-slate-300 mb-1">Current Password</label>
             <input type="password" name="current_password" required placeholder="Enter current password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
         </div>
-
         <div>
             <label class="block text-[11px] font-medium text-slate-300 mb-1">New Password (Min 6 chars)</label>
             <input type="password" name="new_password" required minlength="6" placeholder="Enter new password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
         </div>
-
         <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition shadow-md shadow-rose-600/30">
             Update Admin Password
         </button>
