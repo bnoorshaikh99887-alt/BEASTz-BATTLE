@@ -34,34 +34,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } elseif (strlen($clean_phone) !== 10) {
         $error = "Please enter a valid 10-digit mobile / WhatsApp number.";
     } else {
-        // Check if username is already taken by another player
-        $chk = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1");
-        $chk->bind_param("si", $clean_username, $user_id);
-        $chk->execute();
-        $taken = $chk->get_result()->fetch_assoc();
-        $chk->close();
+        try {
+            // Check if username is already taken by another player
+            $chk = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1");
+            $chk->bind_param("si", $clean_username, $user_id);
+            $chk->execute();
+            $taken = $chk->get_result()->fetch_assoc();
+            $chk->close();
 
-        if ($taken) {
-            $error = "Username '@{$clean_username}' is already taken. Please pick another.";
-        } else {
-            // Update profile
-            $upd = $conn->prepare("UPDATE users SET username = ?, phone = ? WHERE id = ?");
-            $upd->bind_param("ssi", $clean_username, $clean_phone, $user_id);
-            if ($upd->execute()) {
-                $upd->close();
-                $_SESSION['username'] = $clean_username;
-                
-                // Refresh persistent remember token
-                set_user_remember_token($user_id);
-
-                safe_redirect("index.php?welcome=1");
-                exit;
+            if ($taken) {
+                $error = "Username '@{$clean_username}' is already taken. Please pick another.";
             } else {
-                $error = "Failed to update profile. Please try again.";
+                // Update profile
+                $upd = $conn->prepare("UPDATE users SET username = ?, phone = ? WHERE id = ?");
+                $upd->bind_param("ssi", $clean_username, $clean_phone, $user_id);
+                if ($upd->execute()) {
+                    $upd->close();
+                    $_SESSION['username'] = $clean_username;
+                    
+                    // Refresh persistent remember token
+                    set_user_remember_token($user_id);
+
+                    safe_redirect("index.php?welcome=1");
+                    exit;
+                } else {
+                    $error = "Failed to update profile. Please try again.";
+                }
             }
+        } catch (Exception $e) {
+            $error = "Update Error: " . $e->getMessage();
         }
     }
 }
+
+$curr_uname = (string)($user['username'] ?? '');
+$display_uname = str_starts_with($curr_uname, 'player_') ? '' : $curr_uname;
 ?>
 <!DOCTYPE html>
 <html lang="en" class="dark">
@@ -119,9 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </label>
                 <div class="relative">
                     <span class="absolute left-3.5 top-2.5 text-slate-500 text-xs font-bold">@</span>
-                    <input type="text" name="username" required
-                           value="<?= htmlspecialchars(str_starts_with($user['username'], 'player_') ? '' : $user['username']); ?>"
-                           placeholder="e.g. shadow_ninja99"
+                    <input type="text" name="username" required 
+                           value="<?= htmlspecialchars($display_uname); ?>" 
+                           placeholder="e.g. shadow_ninja99" 
                            minlength="3" maxlength="20"
                            class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-8 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none">
                 </div>
@@ -138,9 +145,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-700 bg-slate-800/80 text-slate-400 text-xs font-bold font-mono">
                         +91
                     </span>
-                    <input type="tel" name="phone" required
-                           value="<?= htmlspecialchars($user['phone'] ?? ''); ?>"
-                           placeholder="9876543210"
+                    <input type="tel" name="phone" required 
+                           value="<?= htmlspecialchars($user['phone'] ?? ''); ?>" 
+                           placeholder="9876543210" 
                            maxlength="10" pattern="[0-9]{10}"
                            class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-r-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none font-mono">
                 </div>
@@ -158,8 +165,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <i class="fa-solid fa-power-off mr-1"></i> Sign Out
             </a>
         </div>
-
     </div>
-
 </body>
 </html>

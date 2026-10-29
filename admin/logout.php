@@ -1,16 +1,11 @@
 <?php
 require_once __DIR__ . '/common/config.php';
 
-// 1. Clear database remember_token for this user
-$target_id = null;
-if (isset($_SESSION['user_id'])) {
-    $target_id = (int)$_SESSION['user_id'];
-} elseif (isset($_SESSION['admin_id'])) {
-    $target_id = (int)$_SESSION['admin_id'];
-}
-
-if ($target_id) {
-    @$conn->query("UPDATE users SET remember_token = NULL WHERE id = {$target_id}");
+// 1. Clear database remember_token for this admin/user
+$target_id = $_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? null;
+if ($target_id && $conn && !$conn->connect_error) {
+    $uid = (int)$target_id;
+    @$conn->query("UPDATE users SET remember_token = NULL WHERE id = {$uid}");
 }
 
 // 2. Clear remember token cookie
@@ -29,9 +24,8 @@ if (ini_get("session.use_cookies")) {
         $params["secure"], $params["httponly"]
     );
 }
-
 @session_destroy();
 
-// 4. Safe redirect back to login
-safe_redirect("login.php?logged_out=1");
+// 4. Safe redirect back to user login page
+safe_redirect("/login.php?logged_out=1");
 exit;

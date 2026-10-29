@@ -62,11 +62,13 @@ if (isset($order['order_status']) && $order['order_status'] === 'PAID') {
         $tx->execute();
         $tx->close();
 
-        // Deposits record entry
-        $dep = $conn->prepare("INSERT INTO deposits (user_id, amount, transaction_id, status) VALUES (?, ?, ?, 'Completed')");
-        $dep->bind_param("ids", $user_id, $paid_amount, $order_id);
-        $dep->execute();
-        $dep->close();
+        // Deposits record entry (populate order_id and transaction_id)
+        $dep = $conn->prepare("INSERT INTO deposits (user_id, order_id, transaction_id, amount, status) VALUES (?, ?, ?, ?, 'SUCCESS')");
+        if ($dep) {
+            $dep->bind_param("issd", $user_id, $order_id, $order_id, $paid_amount);
+            $dep->execute();
+            $dep->close();
+        }
 
         $conn->commit();
         safe_redirect("wallet.php?success=" . urlencode("🎉 " . format_inr($paid_amount) . " successfully added to your wallet!"));

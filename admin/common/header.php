@@ -1,13 +1,22 @@
 <?php
 require_once __DIR__ . '/config.php';
 
-$user_wallet = 0.00;
-$logged_username = "";
-$user_role = "";
+// Strictly Enforce Admin Authentication
 $is_admin = false;
+if (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
+    $is_admin = true;
+}
 
-if (isset($_SESSION['user_id'])) {
-    $uid = (int)$_SESSION['user_id'];
+if (!$is_admin) {
+    safe_redirect("../login.php");
+    exit;
+}
+
+$user_wallet = 0.00;
+$logged_username = $_SESSION['admin_user'] ?? $_SESSION['username'] ?? 'Admin';
+$uid = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
+
+if ($uid > 0 && $conn && !$conn->connect_error) {
     $stmt = $conn->prepare("SELECT username, wallet_balance, status, role FROM users WHERE id = ?");
     if ($stmt) {
         $stmt->bind_param("i", $uid);
@@ -19,15 +28,10 @@ if (isset($_SESSION['user_id'])) {
                 exit;
             }
             $user_wallet = (float)($u['wallet_balance'] ?? 0.00);
-            $logged_username = $u['username'] ?? '';
-            $user_role = $u['role'] ?? 'user';
+            $logged_username = $u['username'] ?? $logged_username;
         }
         $stmt->close();
     }
-}
-
-if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
-    $is_admin = true;
 }
 ?>
 <!DOCTYPE html>
@@ -52,7 +56,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-extrabold uppercase text-[9px] border border-rose-500/30">
                     Admin
                 </span>
-                <a href="index.php" class="text-slate-300 hover:text-white ml-1">Dashboard</a>
+                <a href="index.php" class="text-slate-300 hover:text-white ml-1 font-semibold">Dashboard</a>
                 <span class="text-slate-600">&bull;</span>
                 <a href="tournament.php" class="text-slate-300 hover:text-white">Tourneys</a>
                 <span class="text-slate-600">&bull;</span>
@@ -66,5 +70,4 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 <span>Logout</span>
             </a>
         </div>
-
         <main class="flex-1 p-4">

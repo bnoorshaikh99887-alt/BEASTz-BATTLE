@@ -12,6 +12,65 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
         ob_start();
     }
 
+    // Helper functions (defined early so they are always available)
+    if (!function_exists('safe_redirect')) {
+        function safe_redirect($url) {
+            if (!headers_sent()) {
+                header("Location: " . $url);
+                exit;
+            }
+            echo '<script>window.location.replace(' . json_encode($url) . ');</script>';
+            echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"></noscript>';
+            exit;
+        }
+    }
+
+    if (!function_exists('sanitize')) {
+        function sanitize($data) {
+            global $conn;
+            if ($data === null) return '';
+            if ($conn && is_object($conn) && method_exists($conn, 'real_escape_string')) {
+                return htmlspecialchars(trim($conn->real_escape_string((string)$data)));
+            }
+            return htmlspecialchars(trim((string)$data));
+        }
+    }
+    if (!function_exists('clean')) { function clean($data) { return sanitize($data); } }
+    if (!function_exists('clean_input')) { function clean_input($data) { return sanitize($data); } }
+
+    if (!function_exists('format_inr')) {
+        function format_inr($amount) {
+            return '₹' . number_format((float)$amount, 2);
+        }
+    }
+
+    if (!function_exists('is_logged_in')) {
+        function is_logged_in() {
+            return isset($_SESSION['user_id']);
+        }
+    }
+
+    if (!function_exists('check_user_auth')) {
+        function check_user_auth() {
+            if (!isset($_SESSION['user_id'])) {
+                safe_redirect("login.php");
+                exit;
+            }
+        }
+    }
+    if (!function_exists('check_user_login')) { function check_user_login() { check_user_auth(); } }
+    if (!function_exists('check_auth')) { function check_auth() { check_user_auth(); } }
+
+    if (!function_exists('check_admin_auth')) {
+        function check_admin_auth() {
+            $is_adm = (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'));
+            if (!$is_adm) {
+                safe_redirect("/login.php");
+                exit;
+            }
+        }
+    }
+
     // Set 1-Year Persistent Cookie Lifetime
     $one_year = 365 * 24 * 3600;
     ini_set('session.cookie_lifetime', $one_year);
@@ -45,7 +104,7 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     @$conn->real_connect($db_host, $db_user, $db_pass, $db_name, $db_port, NULL, MYSQLI_CLIENT_SSL);
 
     if ($conn->connect_error) {
-        $script_name = basename($_SERVER['PHP_SELF']);
+        $script_name = basename($_SERVER['PHP_SELF'] ?? '');
         if ($script_name !== 'install.php') {
             safe_redirect("install.php");
             exit;
@@ -57,7 +116,7 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     // =========================================================================
     // ✅ PERSISTENT LOGIN AUTO-RESTORE (UNTIL LOGOUT)
     // =========================================================================
-    if (!isset($_SESSION['user_id']) && !empty($_COOKIE['adept_remember'])) {
+    if (!isset($_SESSION['user_id']) && !empty($_COOKIE['adept_remember']) && $conn && !$conn->connect_error) {
         $rem_token = trim($_COOKIE['adept_remember']);
         if (preg_match('/^[a-f0-9]{32,128}$/i', $rem_token)) {
             $stmt = $conn->prepare("SELECT id, username, email, phone, role, status FROM users WHERE remember_token = ? LIMIT 1");
@@ -85,113 +144,72 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     // =========================================================================
     // ✅ CASHFREE LIVE PRODUCTION CREDENTIALS
     // =========================================================================
-    define('CASHFREE_APP_ID', '1494190b594e98ed762a2a943320914941');
-    define('CASHFREE_SECRET_KEY', 'cfsk_ma_prod_979295dd86c34ea7eef3d56c1e07d25e_27097462');
-    define('CASHFREE_ENVIRONMENT', 'PROD');
+    if (!defined('CASHFREE_APP_ID')) define('CASHFREE_APP_ID', '1494190b594e98ed762a2a943320914941');
+    if (!defined('CASHFREE_SECRET_KEY')) define('CASHFREE_SECRET_KEY', 'cfsk_ma_prod_979295dd86c34ea7eef3d56c1e07d25e_27097462');
+    if (!defined('CASHFREE_ENVIRONMENT')) define('CASHFREE_ENVIRONMENT', 'PROD');
 
-    function get_cashfree_app_id() { return CASHFREE_APP_ID; }
-    function get_cashfree_secret_key() { return CASHFREE_SECRET_KEY; }
-    function get_cashfree_env() { return 'PROD'; }
-
-    // Bulletproof Redirect (Works even if headers already sent)
-    function safe_redirect($url) {
-        if (!headers_sent()) {
-            header("Location: " . $url);
-            exit;
-        }
-        echo '<script>window.location.replace(' . json_encode($url) . ');</script>';
-        echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"></noscript>';
-        exit;
-    }
-
-    function sanitize($data) {
-        global $conn;
-        if ($data === null) return '';
-        return htmlspecialchars(trim($conn->real_escape_string((string)$data)));
-    }
-
-    function clean($data) { return sanitize($data); }
-    function clean_input($data) { return sanitize($data); }
-
-    function format_inr($amount) {
-        return '₹' . number_format((float)$amount, 2);
-    }
-
-    function is_logged_in() {
-        return isset($_SESSION['user_id']);
-    }
-
-    function check_user_auth() {
-        if (!isset($_SESSION['user_id'])) {
-            safe_redirect("login.php");
-            exit;
-        }
-    }
-
-    function check_user_login() {
-        check_user_auth();
-    }
-
-    function check_auth() {
-        check_user_auth();
-    }
-
-    function check_admin_auth() {
-        if (!isset($_SESSION['admin_id']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
-            safe_redirect("login.php");
-            exit;
-        }
-    }
+    if (!function_exists('get_cashfree_app_id')) { function get_cashfree_app_id() { return CASHFREE_APP_ID; } }
+    if (!function_exists('get_cashfree_secret_key')) { function get_cashfree_secret_key() { return CASHFREE_SECRET_KEY; } }
+    if (!function_exists('get_cashfree_env')) { function get_cashfree_env() { return 'PROD'; } }
 
     // Issue 1-Year Persistent Remember Token
-    function set_user_remember_token($user_id) {
-        global $conn;
-        $user_id = (int)$user_id;
-        $token = bin2hex(random_bytes(32));
-        $stmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
-        if ($stmt) {
-            $stmt->bind_param("si", $token, $user_id);
-            $stmt->execute();
-            $stmt->close();
+    if (!function_exists('set_user_remember_token')) {
+        function set_user_remember_token($user_id) {
+            global $conn;
+            $user_id = (int)$user_id;
+            $token = bin2hex(random_bytes(32));
+            if ($conn && !$conn->connect_error) {
+                $stmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
+                if ($stmt) {
+                    $stmt->bind_param("si", $token, $user_id);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+            }
+            $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+            $expire = time() + (365 * 24 * 3600);
+            setcookie('adept_remember', $token, [
+                'expires' => $expire,
+                'path' => '/',
+                'secure' => $is_https,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+            $_COOKIE['adept_remember'] = $token;
         }
-        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
-        $expire = time() + (365 * 24 * 3600);
-        setcookie('adept_remember', $token, [
-            'expires' => $expire,
-            'path' => '/',
-            'secure' => $is_https,
-            'httponly' => true,
-            'samesite' => 'Lax'
-        ]);
-        $_COOKIE['adept_remember'] = $token;
     }
 
     // Clear Persistent Remember Token (On explicit Logout)
-    function clear_user_remember_token($user_id = null) {
-        global $conn;
-        if ($user_id) {
-            $uid = (int)$user_id;
-            @$conn->query("UPDATE users SET remember_token = NULL WHERE id = {$uid}");
+    if (!function_exists('clear_user_remember_token')) {
+        function clear_user_remember_token($user_id = null) {
+            global $conn;
+            if ($user_id && $conn && !$conn->connect_error) {
+                $uid = (int)$user_id;
+                @$conn->query("UPDATE users SET remember_token = NULL WHERE id = {$uid}");
+            }
+            setcookie('adept_remember', '', time() - 86400, '/');
+            unset($_COOKIE['adept_remember']);
         }
-        setcookie('adept_remember', '', time() - 86400, '/');
-        unset($_COOKIE['adept_remember']);
     }
 
-    function get_setting($key, $default = '') {
-        global $conn;
-        $s = $conn->prepare("SELECT value, setting_value FROM settings WHERE `key` = ? OR `setting_key` = ? LIMIT 1");
-        if ($s) {
-            $s->bind_param("ss", $key, $key);
-            $s->execute();
-            $res = $s->get_result();
-            if ($row = $res->fetch_assoc()) {
-                $val = !empty($row['value']) ? $row['value'] : ($row['setting_value'] ?? '');
+    if (!function_exists('get_setting')) {
+        function get_setting($key, $default = '') {
+            global $conn;
+            if (!$conn || $conn->connect_error) return $default;
+            $s = $conn->prepare("SELECT value, setting_value FROM settings WHERE `key` = ? OR `setting_key` = ? LIMIT 1");
+            if ($s) {
+                $s->bind_param("ss", $key, $key);
+                $s->execute();
+                $res = $s->get_result();
+                if ($row = $res->fetch_assoc()) {
+                    $val = !empty($row['value']) ? $row['value'] : ($row['setting_value'] ?? '');
+                    $s->close();
+                    return $val ?: $default;
+                }
                 $s->close();
-                return $val ?: $default;
             }
-            $s->close();
+            return $default;
         }
-        return $default;
     }
 }
 ?>
