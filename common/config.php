@@ -18,14 +18,7 @@ $conn = mysqli_init();
 if ($conn) {
     $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
     $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
-    
-    // Connect to test database, fallback to sys if needed
-    if (!@$conn->real_connect($db_host, $db_user, $db_pass, $db_name, $db_port, NULL, MYSQLI_CLIENT_SSL)) {
-        if (@$conn->real_connect($db_host, $db_user, $db_pass, 'sys', $db_port, NULL, MYSQLI_CLIENT_SSL)) {
-            $conn->query("CREATE DATABASE IF NOT EXISTS `test`");
-            $conn->select_db('test');
-        }
-    }
+    @$conn->real_connect($db_host, $db_user, $db_pass, $db_name, $db_port, NULL, MYSQLI_CLIENT_SSL);
 }
 
 // Cashfree Live Production Keys
@@ -39,7 +32,16 @@ define('SUPPORT_PHONE_1', '+91 9878385810');
 define('SUPPORT_PHONE_2', '+91 988385810');
 define('APP_NAME', 'Adept Play');
 
-// Input Sanitization Function
+// Currency Formatter
+function format_inr($amount) {
+    return '₹' . number_format((float)$amount, 2);
+}
+
+function format_currency($amount) {
+    return format_inr($amount);
+}
+
+// Input Sanitization Functions
 function sanitize($data) {
     if (is_array($data)) {
         return array_map('sanitize', $data);
@@ -64,17 +66,11 @@ function check_user_auth() {
 }
 
 function check_user_login() {
-    if (!isset($_SESSION['user_id'])) {
-        header("Location: /login.php");
-        exit;
-    }
+    check_user_auth();
 }
 
 function check_auth() {
-    if (!isset($_SESSION['user_id'])) {
-        header("Location: /login.php");
-        exit;
-    }
+    check_user_auth();
 }
 
 function is_logged_in() {
@@ -84,26 +80,23 @@ function is_logged_in() {
 // Admin Authentication Checks
 function check_admin_auth() {
     if (!isset($_SESSION['admin_logged_in']) && !isset($_SESSION['admin_id'])) {
-        header("Location: /admin/login.php");
+        header("Location: /login.php");
         exit;
     }
 }
 
 function check_admin_login() {
-    if (!isset($_SESSION['admin_logged_in']) && !isset($_SESSION['admin_id'])) {
-        header("Location: /admin/login.php");
-        exit;
-    }
+    check_admin_auth();
 }
 
-// Helper to fetch settings from database
+// Settings Helper
 function get_setting($key, $default = '') {
     global $conn;
     if (!$conn) return $default;
     $k = $conn->real_escape_string($key);
-    $res = $conn->query("SELECT value FROM settings WHERE `key` = '$k' LIMIT 1");
+    $res = $conn->query("SELECT setting_value FROM settings WHERE setting_key = '$k' LIMIT 1");
     if ($res && $res->num_rows > 0) {
-        return $res->fetch_assoc()['value'];
+        return $res->fetch_assoc()['setting_value'];
     }
     return $default;
 }
