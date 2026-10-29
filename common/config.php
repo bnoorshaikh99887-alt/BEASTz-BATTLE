@@ -39,9 +39,28 @@ define('SUPPORT_PHONE_1', '+91 9878385810');
 define('SUPPORT_PHONE_2', '+91 988385810');
 define('APP_NAME', 'Adept Play');
 
+// Auth Check Functions
+function check_user_auth() {
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: /login.php");
+        exit;
+    }
+}
+
 function check_user_login() {
     if (!isset($_SESSION['user_id'])) {
         header("Location: /login.php");
         exit;
     }
+}
+
+function check_auth() {
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: /login.php");
+        exit;
+    }
+}
+
+function is_logged_in() {
+    return isset($_SESSION['user_id']);
 }
