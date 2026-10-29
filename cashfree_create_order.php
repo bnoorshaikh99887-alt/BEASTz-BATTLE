@@ -1,5 +1,5 @@
 <?php
-// cashfree_create_order.php - Live Production Order Creation
+ob_start();
 require_once __DIR__ . '/common/config.php';
 check_user_auth();
 
@@ -7,12 +7,12 @@ $user_id = (int)$_SESSION['user_id'];
 $amount_inr = isset($_POST['amount']) ? (float)$_POST['amount'] : 0.00;
 
 if ($amount_inr < 10) {
-    header("Location: wallet.php?error=" . urlencode("Minimum deposit amount ₹10.00 hai."));
+    safe_redirect("wallet.php?error=" . urlencode("Minimum deposit amount ₹10.00 hai."));
     exit;
 }
 
-$app_id = CASHFREE_APP_ID;
-$secret_key = CASHFREE_SECRET_KEY;
+$app_id = get_cashfree_app_id();
+$secret_key = get_cashfree_secret_key();
 
 // Fetch user data
 $u_stmt = $conn->prepare("SELECT username, email, phone FROM users WHERE id = ?");
@@ -22,8 +22,13 @@ $u = $u_stmt->get_result()->fetch_assoc();
 $u_stmt->close();
 
 $order_id = 'order_' . time() . '_' . $user_id;
-$cust_phone = (!empty($u['phone']) && strlen($u['phone']) >= 10) ? preg_replace('/[^0-9]/', '', $u['phone']) : "9878385810";
-if (strlen($cust_phone) > 10) $cust_phone = substr($cust_phone, -10);
+
+// Check if running on HTTPS
+$is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+
+$cust_phone = (!empty($u['phone']) && strlen($u['phone']) == 10) ? $u['phone'] : "9876543210";
+$cust_email = !empty($u['email']) ? $u['email'] : "player{$user_id}@adeptplay.com";
+$cust_name = !empty($u['username']) ? $u['username'] : "AdeptPlayer";
 
 $post_fields = [
     "order_id" => $order_id,
@@ -31,16 +36,22 @@ $post_fields = [
     "order_currency" => "INR",
     "customer_details" => [
         "customer_id" => "cust_" . $user_id,
-        "customer_name" => !empty($u['username']) ? $u['username'] : "AdeptPlayer",
-        "customer_email" => !empty($u['email']) ? $u['email'] : "player{$user_id}@adeptplay.com",
+        "customer_name" => $cust_name,
+        "customer_email" => $cust_email,
         "customer_phone" => $cust_phone
-    ],
-    "order_meta" => [
-        "return_url" => "https://beastz-battle.vercel.app/cashfree_return.php?order_id={order_id}"
     ]
 ];
 
+if ($is_https) {
+    $host = $_SERVER['HTTP_HOST'];
+    $base_dir = rtrim(dirname($_SERVER['REQUEST_URI']), '/\\');
+    $post_fields["order_meta"] = [
+        "return_url" => "https://" . $host . $base_dir . "/cashfree_return.php?order_id={order_id}"
+    ];
+}
+
 $endpoint = "https://api.cashfree.com/pg/orders";
+
 $ch = curl_init($endpoint);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
@@ -52,53 +63,45 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "x-client-secret: " . $secret_key
 ]);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
 $response = curl_exec($ch);
 $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curl_err = curl_error($ch);
-curl_close($ch);
+// Omit curl_close() for PHP 8.5 compatibility
 
 if ($curl_err) {
-    header("Location: wallet.php?error=" . urlencode("Cashfree Server Connection Error: " . $curl_err));
+    safe_redirect("wallet.php?error=" . urlencode("Cashfree Server Connection Error: " . $curl_err));
     exit;
 }
 
 $res_data = json_decode($response, true);
+
 if ($http_status !== 200 || !isset($res_data['payment_session_id'])) {
     $err_message = $res_data['message'] ?? 'Unable to create Cashfree order.';
-    header("Location: wallet.php?error=" . urlencode("Cashfree Error ($http_status): " . $err_message));
+    safe_redirect("wallet.php?error=" . urlencode("Cashfree Error ($http_status): " . $err_message));
     exit;
 }
 
 $payment_session_id = $res_data['payment_session_id'];
-
-// Save initial pending deposit in database
-$dep_stmt = $conn->prepare("INSERT INTO deposits (user_id, order_id, amount, method, status) VALUES (?, ?, ?, 'Cashfree', 'PENDING') ON DUPLICATE KEY UPDATE amount = ?");
-if ($dep_stmt) {
-    $dep_stmt->bind_param("isdd", $user_id, $order_id, $amount_inr, $amount_inr);
-    $dep_stmt->execute();
-    $dep_stmt->close();
-}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Connecting to Cashfree - <?= APP_NAME ?></title>
+    <title>Connecting to Cashfree - Adept Play</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 </head>
-<body class="bg-[#0b0f19] text-white min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-[#131b2e] border border-gray-800 rounded-2xl p-6 text-center shadow-2xl">
-        <div class="w-12 h-12 mx-auto rounded-full border-4 border-amber-500 border-t-transparent animate-spin mb-4"></div>
-        <h3 class="text-base font-bold mb-1">Redirecting to Cashfree Payment...</h3>
-        <p class="text-xs text-gray-400 mb-4">Amount: <span class="text-amber-400 font-mono font-bold"><?= format_inr($amount_inr); ?></span></p>
-        
-        <button onclick="launchCashfree()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl text-xs font-extrabold uppercase tracking-wider shadow-lg transition active:scale-95">
-            Proceed to Pay
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center shadow-2xl">
+        <div class="w-12 h-12 mx-auto rounded-full border-4 border-violet-500 border-t-transparent animate-spin mb-4"></div>
+        <h3 class="text-base font-bold mb-1">Opening Cashfree Gateway...</h3>
+        <p class="text-xs text-slate-400 mb-4">Amount: <span class="text-emerald-400 font-mono font-bold"><?= format_inr($amount_inr); ?></span></p>
+
+        <button onclick="launchCashfree()" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold transition">
+            Continue to Payment
         </button>
-        <a href="/wallet.php" class="block text-xs text-gray-500 hover:text-gray-300 mt-4">Cancel Transaction</a>
+        <a href="wallet.php" class="block text-xs text-slate-500 hover:text-slate-300 mt-4">Cancel</a>
     </div>
 
     <script>
@@ -109,12 +112,19 @@ if ($dep_stmt) {
         function launchCashfree() {
             cashfree.checkout({
                 paymentSessionId: "<?= $payment_session_id; ?>",
-                redirectTarget: "_self" // Mobile browser full-screen redirect (UPI apps support)
+                redirectTarget: "_self"
+            }).then(function(result) {
+                if (result.error) {
+                    alert(result.error.message || "Payment cancelled");
+                    window.location.href = "wallet.php?error=" + encodeURIComponent(result.error.message || "Payment cancelled");
+                    return;
+                }
+                window.location.href = "cashfree_return.php?order_id=<?= urlencode($order_id); ?>";
             });
         }
 
         window.onload = function() {
-            setTimeout(launchCashfree, 500);
+            launchCashfree();
         };
     </script>
 </body>

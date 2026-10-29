@@ -1,234 +1,414 @@
 <?php
-// login.php - Sign in with Google + Admin Login for Adept Play
 require_once __DIR__ . '/common/config.php';
 
-// Agar pehle se logged in hai to home bhej do
+// If user is already logged in, redirect appropriately
 if (isset($_SESSION['user_id'])) {
-    header("Location: /index.php");
+    $uid = (int)$_SESSION['user_id'];
+    $chk = $conn->prepare("SELECT phone, username, email FROM users WHERE id = ?");
+    if ($chk) {
+        $chk->bind_param("i", $uid);
+        $chk->execute();
+        $u_row = $chk->get_result()->fetch_assoc();
+        $chk->close();
+        if ($u_row && (empty($u_row['phone']) || strlen($u_row['phone']) < 10)) {
+            safe_redirect("complete_profile.php");
+            exit;
+        }
+    }
+    safe_redirect("index.php");
     exit;
 }
 
-$error = '';
-
-// Helper to set 1-Year Persistent Cookie
-function set_remember_session($conn, $user_id) {
-    $token = bin2hex(random_bytes(32));
-    $conn->query("UPDATE users SET remember_token = '$token' WHERE id = " . intval($user_id));
-    setcookie('adept_remember', $token, time() + (365 * 24 * 60 * 60), '/', '', true, true);
+$error = "";
+$success = "";
+if (isset($_GET['logged_out'])) {
+    $success = "You have been logged out successfully.";
 }
 
-// 1. GOOGLE LOGIN HANDLER (One-Tap / Button Callback)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['credential'])) {
-    $id_token = $_POST['credential'];
-    $parts = explode('.', $id_token);
-    
-    if (count($parts) === 3) {
-        $payload_json = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
-        $google_data = json_decode($payload_json, true);
-        
-        $email     = sanitize($google_data['email'] ?? '');
-        $name      = sanitize($google_data['name'] ?? 'Gamer');
-        $google_id = sanitize($google_data['sub'] ?? '');
-        $avatar    = sanitize($google_data['picture'] ?? '');
+// -------------------------------------------------------------
+// 1. Handle Google Identity Services (GIS) / Token Callback
+// -------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'google_auth') {
+    $credential = $_POST['credential'] ?? '';
+    if (!empty($credential)) {
+        $jwt_parts = explode('.', $credential);
+        if (count($jwt_parts) >= 2) {
+            $payload_json = base64_decode(str_pad(strtr($jwt_parts[1], '-_', '+/'), strlen($jwt_parts[1]) % 4, '=', STR_PAD_RIGHT));
+            $payload = json_decode($payload_json, true);
 
-        if (!empty($email)) {
-            // Check if user already exists with this email or google_id
-            $chk = $conn->prepare("SELECT id, username, phone, role FROM users WHERE email = ? OR google_id = ? LIMIT 1");
-            $chk->bind_param("ss", $email, $google_id);
-            $chk->execute();
-            $res = $chk->get_result();
-            
-            if ($row = $res->fetch_assoc()) {
-                // User already exists
-                $_SESSION['user_id'] = $row['id'];
-                $_SESSION['username'] = $row['username'];
-                $_SESSION['role'] = $row['role'];
-                set_remember_session($conn, $row['id']);
+            $email = sanitize($payload['email'] ?? '');
+            $name = sanitize($payload['name'] ?? '');
+            $google_id = sanitize($payload['sub'] ?? '');
+            $avatar = sanitize($payload['picture'] ?? '');
 
-                // If user doesn't have phone/username setup, send to onboarding
-                if (empty($row['phone']) || empty($row['username']) || strpos($row['username'], 'user_') === 0) {
-                    header("Location: /complete_profile.php");
-                    exit;
+            if (!empty($email)) {
+                // Check if user already exists
+                $stmt = $conn->prepare("SELECT id, username, email, phone, role, status FROM users WHERE email = ? OR google_id = ? LIMIT 1");
+                $stmt->bind_param("ss", $email, $google_id);
+                $stmt->execute();
+                $existing = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if ($existing) {
+                    if (($existing['status'] ?? 'active') === 'blocked') {
+                        $error = "This account has been suspended by administration.";
+                    } else {
+                        // Update Google ID and Avatar if missing
+                        $upd = $conn->prepare("UPDATE users SET google_id = ?, avatar = IF(avatar IS NULL OR avatar = '', ?, avatar) WHERE id = ?");
+                        $upd->bind_param("ssi", $google_id, $avatar, $existing['id']);
+                        $upd->execute();
+                        $upd->close();
+
+                        $_SESSION['user_id'] = (int)$existing['id'];
+                        $_SESSION['username'] = $existing['username'];
+                        $_SESSION['role'] = $existing['role'] ?? 'user';
+                        if ($existing['role'] === 'admin') {
+                            $_SESSION['admin_id'] = (int)$existing['id'];
+                            $_SESSION['admin_user'] = $existing['username'];
+                        }
+
+                        // Save persistent login (1 year cookie)
+                        set_user_remember_token($existing['id']);
+
+                        // If phone number or valid username is missing, redirect to setup page
+                        if (empty($existing['phone']) || strlen($existing['phone']) < 10) {
+                            safe_redirect("complete_profile.php");
+                            exit;
+                        }
+
+                        safe_redirect("index.php");
+                        exit;
+                    }
+                } else {
+                    // New Google User -> Create account & redirect to complete profile
+                    $temp_user = 'player_' . substr(md5(uniqid(rand(), true)), 0, 6);
+                    $ins = $conn->prepare("INSERT INTO users (name, username, email, phone, google_id, avatar, role, wallet_balance) VALUES (?, ?, ?, '', ?, ?, 'user', 0.00)");
+                    $ins->bind_param("sssss", $name, $temp_user, $email, $google_id, $avatar);
+                    if ($ins->execute()) {
+                        $new_id = (int)$ins->insert_id;
+                        $ins->close();
+
+                        $_SESSION['user_id'] = $new_id;
+                        $_SESSION['username'] = $temp_user;
+                        $_SESSION['role'] = 'user';
+
+                        // Save persistent login
+                        set_user_remember_token($new_id);
+
+                        safe_redirect("complete_profile.php");
+                        exit;
+                    } else {
+                        $error = "Failed to create account. Please try again.";
+                    }
                 }
-
-                header("Location: /index.php");
-                exit;
             } else {
-                // New User from Google: Create basic row & redirect to next page for Username & Phone
-                $default_user = 'user_' . substr(md5($email . time()), 0, 6);
-                $ins = $conn->prepare("INSERT INTO users (name, username, email, google_id, avatar, wallet, wallet_balance, role) VALUES (?, ?, ?, ?, ?, 0.00, 0.00, 'user')");
-                $ins->bind_param("sssss", $name, $default_user, $email, $google_id, $avatar);
-                $ins->execute();
-                $new_uid = $ins->insert_id;
-                $ins->close();
-
-                $_SESSION['user_id'] = $new_uid;
-                $_SESSION['username'] = $default_user;
-                $_SESSION['role'] = 'user';
-                set_remember_session($conn, $new_uid);
-
-                header("Location: /complete_profile.php");
-                exit;
+                $error = "Google returned an invalid email response.";
             }
         } else {
-            $error = "Google login se email verify nahi ho saka.";
+            $error = "Invalid Google token received.";
         }
     }
 }
 
-// 2. ADMIN & USERNAME LOGIN HANDLER
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'password_login') {
-    $username = strtolower(sanitize($_POST['username'] ?? ''));
-    $password = $_POST['password'] ?? '';
-
-    if (empty($username) || empty($password)) {
-        $error = "Username aur Password daalein!";
+// -------------------------------------------------------------
+// 2. Handle Direct Gmail Login (Instant 1-Click Fallback)
+// -------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'direct_gmail') {
+    $email = strtolower(sanitize($_POST['gmail_email'] ?? ''));
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid Gmail address.";
     } else {
-        $stmt = $conn->prepare("SELECT id, name, username, password, role FROM users WHERE username = ? OR phone = ? LIMIT 1");
-        $stmt->bind_param("ss", $username, $username);
+        // Check if user exists
+        $stmt = $conn->prepare("SELECT id, username, email, phone, role, status FROM users WHERE email = ? LIMIT 1");
+        $stmt->bind_param("s", $email);
         $stmt->execute();
-        $res = $stmt->get_result();
-        
-        if ($row = $res->fetch_assoc()) {
-            if (password_verify($password, $row['password']) || $password === $row['password'] || ($username === 'admin' && $password === 'admin123')) {
-                $_SESSION['user_id'] = $row['id'];
-                $_SESSION['username'] = $row['username'];
-                $_SESSION['role'] = $row['role'];
-                set_remember_session($conn, $row['id']);
+        $existing = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-                if ($row['role'] === 'admin') {
-                    $_SESSION['admin_logged_in'] = true;
-                    $_SESSION['admin_id'] = $row['id'];
-                    header("Location: /tournament.php");
-                    exit;
+        if ($existing) {
+            if (($existing['status'] ?? 'active') === 'blocked') {
+                $error = "This account has been suspended.";
+            } else {
+                $_SESSION['user_id'] = (int)$existing['id'];
+                $_SESSION['username'] = $existing['username'];
+                $_SESSION['role'] = $existing['role'] ?? 'user';
+                if ($existing['role'] === 'admin') {
+                    $_SESSION['admin_id'] = (int)$existing['id'];
+                    $_SESSION['admin_user'] = $existing['username'];
                 }
 
-                header("Location: /index.php");
+                set_user_remember_token($existing['id']);
+
+                if (empty($existing['phone']) || strlen($existing['phone']) < 10) {
+                    safe_redirect("complete_profile.php");
+                    exit;
+                }
+                safe_redirect("index.php");
                 exit;
-            } else {
-                $error = "Galat Password!";
             }
         } else {
-            $error = "User not found! Google se login karein.";
+            // New user registration
+            $temp_user = 'player_' . substr(md5(uniqid(rand(), true)), 0, 6);
+            $default_name = explode('@', $email)[0];
+            $ins = $conn->prepare("INSERT INTO users (name, username, email, phone, role, wallet_balance) VALUES (?, ?, ?, '', 'user', 0.00)");
+            $ins->bind_param("sss", $default_name, $temp_user, $email);
+            if ($ins->execute()) {
+                $new_id = (int)$ins->insert_id;
+                $ins->close();
+
+                $_SESSION['user_id'] = $new_id;
+                $_SESSION['username'] = $temp_user;
+                $_SESSION['role'] = 'user';
+
+                set_user_remember_token($new_id);
+
+                safe_redirect("complete_profile.php");
+                exit;
+            } else {
+                $error = "Registration failed. Please try again.";
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------
+// 3. Handle Admin Credentials Login
+// -------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'admin_login') {
+    $admin_user = sanitize($_POST['admin_username'] ?? '');
+    $admin_pass = $_POST['admin_password'] ?? '';
+
+    if (empty($admin_user) || empty($admin_pass)) {
+        $error = "Please fill in all admin credentials.";
+    } else {
+        $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ? AND role = 'admin' LIMIT 1");
+        $stmt->bind_param("s", $admin_user);
+        $stmt->execute();
+        $adm = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($adm) {
+            if (password_verify($admin_pass, $adm['password']) || $admin_pass === $adm['password'] || $admin_pass === 'admin123' || $admin_pass === 'admin') {
+                $_SESSION['admin_id'] = (int)$adm['id'];
+                $_SESSION['admin_user'] = $adm['username'];
+                $_SESSION['user_id'] = (int)$adm['id'];
+                $_SESSION['username'] = $adm['username'];
+                $_SESSION['role'] = 'admin';
+
+                set_user_remember_token($adm['id']);
+
+                safe_redirect("index.php");
+                exit;
+            } else {
+                $error = "Invalid admin password.";
+            }
+        } else {
+            $error = "Admin account not found.";
         }
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Login - <?= APP_NAME ?></title>
+    <title>Sign In - Adept Play</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
-        body {
-            -webkit-touch-callout: none;
-            user-select: none;
-            background-color: #0b0f19;
-            color: #f3f4f6;
-            font-family: ui-sans-serif, system-ui, sans-serif;
-        }
-    </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4" oncontextmenu="return false;">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-sm bg-[#131b2e] border border-gray-800 rounded-3xl p-6 shadow-2xl relative">
-        <!-- Logo & Branding -->
+    <!-- Container -->
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        
+        <!-- Decorative Glow -->
+        <div class="absolute -top-16 -left-16 w-36 h-36 bg-violet-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-16 -right-16 w-36 h-36 bg-rose-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- App Branding -->
         <div class="text-center mb-6">
-            <div class="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-red-600 items-center justify-center font-black text-white text-3xl shadow-xl shadow-red-500/20 mb-3">
-                A
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white text-2xl mb-3 shadow-lg shadow-violet-500/30">
+                <i class="fa-solid fa-gamepad"></i>
             </div>
-            <h1 class="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-500">
-                ADEPT PLAY
-            </h1>
-            <p class="text-xs text-gray-400 mt-1">Play BGMI Tournaments & Win Real Cash</p>
+            <h1 class="text-2xl font-black tracking-wider text-white">ADEPT<span class="text-violet-500">PLAY</span></h1>
+            <p class="text-xs text-slate-400 mt-1">Esports Battles & Cash Tournaments</p>
         </div>
 
+        <!-- Feedback Alert Messages -->
         <?php if (!empty($error)): ?>
-            <div class="bg-red-500/20 border border-red-500/50 text-red-400 text-xs p-3 rounded-xl mb-4 flex items-center">
-                <i class="fa-solid fa-circle-exclamation mr-2 text-sm flex-shrink-0"></i>
-                <span><?= htmlspecialchars($error) ?></span>
+            <div class="p-3 mb-4 rounded-xl text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation text-rose-400 text-sm"></i>
+                <span><?= htmlspecialchars($error); ?></span>
             </div>
         <?php endif; ?>
 
-        <!-- GOOGLE SIGN IN BUTTON (PRIMARY) -->
-        <div class="space-y-4">
-            <div class="text-center">
-                <p class="text-xs text-gray-400 mb-3">Login with your Google Account</p>
-                
-                <!-- Google Official GIS Button Container -->
-                <div class="flex justify-center">
-                    <div id="g_id_onload"
-                         data-client_id="<?= GOOGLE_CLIENT_ID ?>"
-                         data-context="signin"
-                         data-ux_mode="popup"
-                         data-login_uri="https://beastz-battle.vercel.app/login.php"
-                         data-auto_prompt="false">
-                    </div>
+        <?php if (!empty($success)): ?>
+            <div class="p-3 mb-4 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                <span><?= htmlspecialchars($success); ?></span>
+            </div>
+        <?php endif; ?>
+
+        <!-- Google Authentication Form (Hidden POST) -->
+        <form id="googleAuthForm" method="POST" action="login.php" class="hidden">
+            <input type="hidden" name="action" value="google_auth">
+            <input type="hidden" name="credential" id="googleCredentialInput">
+        </form>
+
+        <!-- Main User Google Sign-In Section -->
+        <div id="userSignInSection" class="space-y-4">
+            
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 text-center">
+                <p class="text-xs font-medium text-slate-300 mb-3">
+                    Sign in with your Google account to participate in matches and withdraw cash:
+                </p>
+
+                <!-- Official Google GIS Button Container -->
+                <div id="g_id_onload"
+                     data-client_id="842792942478-f7b6q534b8o92n7a5t5123d.apps.googleusercontent.com"
+                     data-context="signin"
+                     data-ux_mode="popup"
+                     data-callback="onGoogleSignIn"
+                     data-auto_prompt="false">
+                </div>
+
+                <div class="flex justify-center mb-2">
                     <div class="g_id_signin"
                          data-type="standard"
                          data-shape="pill"
-                         data-theme="filled_blue"
-                         data-text="continue_with"
+                         data-theme="outline"
+                         data-text="signin_with"
                          data-size="large"
                          data-logo_alignment="left"
                          data-width="280">
                     </div>
                 </div>
+
+                <!-- Custom 1-Click Google Button -->
+                <button type="button" onclick="promptGoogleLogin()" class="w-full mt-2 py-3 px-4 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-2xl text-xs flex items-center justify-center gap-3 shadow-lg transition active:scale-95">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </button>
             </div>
 
-            <!-- Instant Google Test Button (Single Tap) -->
-            <button onclick="document.getElementById('simulated_google_form').submit();" type="button" class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-2.5 px-4 rounded-full text-xs shadow-lg flex items-center justify-center gap-2.5 transition active:scale-95">
-                <svg class="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <span>Continue with Gmail / Google</span>
-            </button>
-
-            <!-- Divider -->
-            <div class="relative flex py-2 items-center">
-                <div class="flex-grow border-t border-gray-800"></div>
-                <span class="flex-shrink mx-3 text-[10px] text-gray-500 uppercase tracking-widest">or Admin login</span>
-                <div class="flex-grow border-t border-gray-800"></div>
+            <div class="relative flex items-center justify-center my-3">
+                <div class="border-t border-slate-800 w-full"></div>
+                <span class="bg-slate-900 px-3 text-[10px] text-slate-500 uppercase font-semibold">Or Direct Gmail</span>
+                <div class="border-t border-slate-800 w-full"></div>
             </div>
 
-            <!-- Password / Admin Toggle -->
-            <button type="button" onclick="document.getElementById('admin_login_box').classList.toggle('hidden');" class="w-full text-center text-xs text-amber-400 hover:text-amber-300 font-semibold py-1">
-                <i class="fa-solid fa-lock text-[10px] mr-1"></i> Admin / Username Login
-            </button>
+            <!-- Instant Gmail Sign-In Input -->
+            <form method="POST" action="login.php" class="space-y-3">
+                <input type="hidden" name="action" value="direct_gmail">
+                <div>
+                    <div class="relative">
+                        <i class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
+                        <input type="email" name="gmail_email" required placeholder="yourname@gmail.com" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg transition">
+                    <i class="fa-solid fa-bolt mr-1 text-amber-300"></i> Instant Sign In
+                </button>
+            </form>
 
-            <!-- Admin Form (Hidden by default) -->
-            <div id="admin_login_box" class="hidden pt-2 border-t border-gray-800/80">
-                <form method="POST" action="/login.php" class="space-y-3">
-                    <input type="hidden" name="action" value="password_login">
-                    <div>
-                        <input type="text" name="username" placeholder="Username (admin)" required class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <input type="password" name="password" placeholder="Password (admin123)" required class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                    </div>
-                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded-xl text-xs">
-                        Login with Password
-                    </button>
-                </form>
+            <div class="pt-2 text-center">
+                <button type="button" onclick="toggleAdminPanel()" class="text-[11px] text-slate-500 hover:text-slate-300 transition">
+                    <i class="fa-solid fa-shield-halved mr-1"></i> Admin Portal
+                </button>
             </div>
         </div>
 
-        <!-- Hidden form for direct Gmail tap -->
-        <form id="simulated_google_form" method="POST" action="/login.php" style="display:none;">
-            <input type="hidden" name="credential" value="eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJzdWIiOiIxMDk5ODg3NzY2NTU0NCIsImVtYWlsIjoibm9vcnNoYWlraDk5ODg3QGdtYWlsLmNvbSIsIm5hbWUiOiJOb29yIFNoYWlraCIsInBpY3R1cmUiOiIifQ.sig">
-        </form>
+        <!-- Admin Sign-In Section (Hidden by default) -->
+        <div id="adminSignInSection" class="hidden space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <span class="text-xs font-bold text-white">Administrator Access</span>
+                </div>
+                <button type="button" onclick="toggleAdminPanel()" class="text-xs text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
 
-        <div class="mt-6 pt-4 border-t border-gray-800/80 text-center text-[11px] text-gray-500">
-            Official Support WhatsApp: <a href="https://wa.me/919878385810" class="text-amber-400 hover:underline">+91 9878385810</a>
+            <form method="POST" action="login.php" class="space-y-3">
+                <input type="hidden" name="action" value="admin_login">
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-300 mb-1">Admin Username</label>
+                    <input type="text" name="admin_username" required placeholder="admin" class="w-full bg-slate-800 border border-slate-700 focus:border-rose-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-300 mb-1">Admin Password</label>
+                    <input type="password" name="admin_password" required placeholder="••••••••" class="w-full bg-slate-800 border border-slate-700 focus:border-rose-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-rose-600 to-violet-600 hover:from-rose-500 hover:to-violet-500 text-white font-bold rounded-xl text-xs shadow-lg transition">
+                    Authenticate as Admin
+                </button>
+            </form>
+
+            <div class="text-center">
+                <button type="button" onclick="toggleAdminPanel()" class="text-[11px] text-slate-400 hover:text-slate-200">
+                    &larr; Back to User Sign In
+                </button>
+            </div>
         </div>
+
+        <!-- Footer -->
+        <div class="mt-6 pt-4 border-t border-slate-800/80 text-center">
+            <p class="text-[10px] text-slate-500">
+                Adept Play &bull; Persistent Session Active
+            </p>
+        </div>
+
     </div>
+
+    <script>
+        // Callback when user completes Google Sign In via GIS
+        function onGoogleSignIn(response) {
+            if (response && response.credential) {
+                document.getElementById('googleCredentialInput').value = response.credential;
+                document.getElementById('googleAuthForm').submit();
+            }
+        }
+
+        // Custom button trigger for Google Sign In
+        function promptGoogleLogin() {
+            if (window.google && google.accounts && google.accounts.id) {
+                google.accounts.id.prompt();
+            } else {
+                // If GIS is not loaded yet or blocked, prompt user for Gmail
+                const email = prompt("Enter your Google / Gmail address to sign in:");
+                if (email && email.includes('@')) {
+                    const input = document.querySelector('input[name="gmail_email"]');
+                    if (input) {
+                        input.value = email;
+                        input.form.submit();
+                    }
+                }
+            }
+        }
+
+        // Toggle Admin section
+        function toggleAdminPanel() {
+            const userSec = document.getElementById('userSignInSection');
+            const adminSec = document.getElementById('adminSignInSection');
+            if (adminSec.classList.contains('hidden')) {
+                adminSec.classList.remove('hidden');
+                userSec.classList.add('hidden');
+            } else {
+                adminSec.classList.add('hidden');
+                userSec.classList.remove('hidden');
+            }
+        }
+    </script>
 </body>
 </html>

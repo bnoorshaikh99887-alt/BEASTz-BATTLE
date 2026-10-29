@@ -1,4 +1,6 @@
 <?php
+// Cashfree PG Order Status Return Handler
+ob_start();
 require_once __DIR__ . '/common/config.php';
 check_user_auth();
 
@@ -6,13 +8,12 @@ $user_id = (int)$_SESSION['user_id'];
 $order_id = isset($_GET['order_id']) ? sanitize($_GET['order_id']) : '';
 
 if (empty($order_id)) {
-    header("Location: wallet.php?error=" . urlencode("Invalid Cashfree order response."));
+    safe_redirect("wallet.php?error=" . urlencode("Invalid Cashfree order response."));
     exit;
 }
 
-$app_id = '1494190b594e98ed762a2a943320914941';
-$secret_key = 'cfsk_ma_prod_979295dd86c34ea7eef3d56c1e07d25e_27097462';
-
+$app_id = get_cashfree_app_id();
+$secret_key = get_cashfree_secret_key();
 $endpoint = "https://api.cashfree.com/pg/orders/" . urlencode($order_id);
 
 // Check order status from Cashfree Production Server
@@ -25,9 +26,8 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "x-client-secret: " . $secret_key
 ]);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
 $response = curl_exec($ch);
-curl_close($ch);
+// Note: curl_close() is omitted to support PHP 8.5 without deprecation warnings
 
 $order = json_decode($response, true);
 
@@ -40,7 +40,8 @@ if (isset($order['order_status']) && $order['order_status'] === 'PAID') {
     $chk->bind_param("s", $search_desc);
     $chk->execute();
     if ($chk->get_result()->num_rows > 0) {
-        header("Location: wallet.php?success=" . urlencode("Payment already processed and credited!"));
+        $chk->close();
+        safe_redirect("wallet.php?success=" . urlencode("Payment already processed and credited!"));
         exit;
     }
     $chk->close();
@@ -68,16 +69,16 @@ if (isset($order['order_status']) && $order['order_status'] === 'PAID') {
         $dep->close();
 
         $conn->commit();
-        header("Location: wallet.php?success=" . urlencode("🎉 " . format_inr($paid_amount) . " successfully added to your wallet!"));
+        safe_redirect("wallet.php?success=" . urlencode("🎉 " . format_inr($paid_amount) . " successfully added to your wallet!"));
         exit;
     } catch (Exception $e) {
         $conn->rollback();
-        header("Location: wallet.php?error=" . urlencode("Wallet update error: " . $e->getMessage()));
+        safe_redirect("wallet.php?error=" . urlencode("Wallet update error: " . $e->getMessage()));
         exit;
     }
 } else {
     $status = $order['order_status'] ?? 'FAILED';
-    header("Location: wallet.php?error=" . urlencode("Cashfree Payment Status: " . $status));
+    safe_redirect("wallet.php?error=" . urlencode("Cashfree Payment Status: " . $status));
     exit;
 }
 ?>

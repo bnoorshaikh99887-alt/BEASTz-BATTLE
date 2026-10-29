@@ -1,105 +1,197 @@
 <?php
-// common/config.php - Permanent Session, Google Auth & TiDB Configuration
+// Prevent multiple inclusions
+if (!defined('ADEPT_PLAY_CONFIG')) {
+    define('ADEPT_PLAY_CONFIG', true);
 
-// 1. Permanent Session Setup (1 Year Lifetime - Kabhi auto-logout nahi hoga)
-$one_year = 365 * 24 * 60 * 60;
-ini_set('session.cookie_lifetime', $one_year);
-ini_set('session.gc_maxlifetime', $one_year);
-session_set_cookie_params([
-    'lifetime' => $one_year,
-    'path' => '/',
-    'secure' => true,
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
+    // Suppress deprecated warnings (PHP 8.5 compatibility)
+    error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+    ini_set('display_errors', '0');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+    // Start Output Buffering for safe header redirects
+    if (ob_get_level() === 0) {
+        ob_start();
+    }
 
-mysqli_report(MYSQLI_REPORT_OFF);
+    // Set 1-Year Persistent Cookie Lifetime
+    $one_year = 365 * 24 * 3600;
+    ini_set('session.cookie_lifetime', $one_year);
+    ini_set('session.gc_maxlifetime', $one_year);
 
-// TiDB Cloud Serverless MySQL Connection
-$db_host = 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com';
-$db_port = 4000;
-$db_user = '33NZV583e1gPsMh.root';
-$db_pass = 'mcj5pocb1FlVZD68';
-$db_name = 'test';
+    if (session_status() === PHP_SESSION_NONE) {
+        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+        session_set_cookie_params([
+            'lifetime' => $one_year,
+            'path' => '/',
+            'domain' => $_SERVER['HTTP_HOST'] ?? '',
+            'secure' => $is_https,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        session_start();
+    }
 
-$conn = mysqli_init();
-if ($conn) {
+    // =========================================================================
+    // ✅ TiDB CLOUD LIVE DATABASE CONNECTION (SSL ENABLED)
+    // =========================================================================
+    $db_host = "gateway01.ap-southeast-1.prod.aws.tidbcloud.com";
+    $db_user = "33NZV583e1gPsMh.root";
+    $db_pass = "mcj5pocb1FlVZD68";
+    $db_name = "test";
+    $db_port = 4000;
+
+    $conn = mysqli_init();
     $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
     $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
     @$conn->real_connect($db_host, $db_user, $db_pass, $db_name, $db_port, NULL, MYSQLI_CLIENT_SSL);
-}
 
-// 2. Auto-login via Persistent Cookie (Agar session expire bhi ho to wapas login karega)
-if (!isset($_SESSION['user_id']) && isset($_COOKIE['adept_remember']) && $conn) {
-    $token = $conn->real_escape_string($_COOKIE['adept_remember']);
-    $r_res = $conn->query("SELECT * FROM users WHERE remember_token = '$token' LIMIT 1");
-    if ($r_res && $r_res->num_rows > 0) {
-        $u_row = $r_res->fetch_assoc();
-        $_SESSION['user_id'] = $u_row['id'];
-        $_SESSION['username'] = $u_row['username'];
-        $_SESSION['role'] = $u_row['role'];
+    if ($conn->connect_error) {
+        $script_name = basename($_SERVER['PHP_SELF']);
+        if ($script_name !== 'install.php') {
+            safe_redirect("install.php");
+            exit;
+        }
+    } else {
+        $conn->set_charset("utf8mb4");
     }
-}
 
-// Cashfree Live Production Keys
-define('CASHFREE_APP_ID', '1494190b594e98ed762a2a943320914941');
-define('CASHFREE_SECRET_KEY', 'cfsk_ma_prod_979295dd86c34ea7eef3d56c1e07d25e_27097462');
-define('CASHFREE_ENV', 'production');
-define('CASHFREE_API_URL', 'https://api.cashfree.com/pg');
+    // =========================================================================
+    // ✅ PERSISTENT LOGIN AUTO-RESTORE (UNTIL LOGOUT)
+    // =========================================================================
+    if (!isset($_SESSION['user_id']) && !empty($_COOKIE['adept_remember'])) {
+        $rem_token = trim($_COOKIE['adept_remember']);
+        if (preg_match('/^[a-f0-9]{32,128}$/i', $rem_token)) {
+            $stmt = $conn->prepare("SELECT id, username, email, phone, role, status FROM users WHERE remember_token = ? LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param("s", $rem_token);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                if ($u = $res->fetch_assoc()) {
+                    if (($u['status'] ?? 'active') !== 'blocked') {
+                        $_SESSION['user_id'] = (int)$u['id'];
+                        $_SESSION['username'] = $u['username'];
+                        $_SESSION['email'] = $u['email'];
+                        $_SESSION['role'] = $u['role'] ?? 'user';
+                        if ($u['role'] === 'admin') {
+                            $_SESSION['admin_id'] = (int)$u['id'];
+                            $_SESSION['admin_user'] = $u['username'];
+                        }
+                    }
+                }
+                $stmt->close();
+            }
+        }
+    }
 
-// Official Adept Support
-define('SUPPORT_PHONE_1', '+91 9878385810');
-define('SUPPORT_PHONE_2', '+91 988385810');
-define('APP_NAME', 'Adept Play');
+    // =========================================================================
+    // ✅ CASHFREE LIVE PRODUCTION CREDENTIALS
+    // =========================================================================
+    define('CASHFREE_APP_ID', '1494190b594e98ed762a2a943320914941');
+    define('CASHFREE_SECRET_KEY', 'cfsk_ma_prod_979295dd86c34ea7eef3d56c1e07d25e_27097462');
+    define('CASHFREE_ENVIRONMENT', 'PROD');
 
-// Google OAuth Client ID (Apna Google Client ID yahan daal sakte hain)
-define('GOOGLE_CLIENT_ID', '679468087962-gsi.apps.googleusercontent.com');
+    function get_cashfree_app_id() { return CASHFREE_APP_ID; }
+    function get_cashfree_secret_key() { return CASHFREE_SECRET_KEY; }
+    function get_cashfree_env() { return 'PROD'; }
 
-// Helpers
-function format_inr($amount) {
-    return '₹' . number_format((float)$amount, 2);
-}
-
-function format_currency($amount) {
-    return format_inr($amount);
-}
-
-function sanitize($data) {
-    if (is_array($data)) return array_map('sanitize', $data);
-    return htmlspecialchars(trim((string)$data), ENT_QUOTES, 'UTF-8');
-}
-
-function clean_input($data) { return sanitize($data); }
-function clean($data) { return sanitize($data); }
-
-function check_user_auth() {
-    if (!isset($_SESSION['user_id'])) {
-        header("Location: /login.php");
+    // Bulletproof Redirect (Works even if headers already sent)
+    function safe_redirect($url) {
+        if (!headers_sent()) {
+            header("Location: " . $url);
+            exit;
+        }
+        echo '<script>window.location.replace(' . json_encode($url) . ');</script>';
+        echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"></noscript>';
         exit;
     }
-}
 
-function check_user_login() { check_user_auth(); }
-function check_auth() { check_user_auth(); }
-function is_logged_in() { return isset($_SESSION['user_id']); }
+    function sanitize($data) {
+        global $conn;
+        if ($data === null) return '';
+        return htmlspecialchars(trim($conn->real_escape_string((string)$data)));
+    }
 
-function check_admin_auth() {
-    if (!isset($_SESSION['admin_logged_in']) && !isset($_SESSION['admin_id'])) {
-        header("Location: /login.php");
-        exit;
+    function clean($data) { return sanitize($data); }
+    function clean_input($data) { return sanitize($data); }
+
+    function format_inr($amount) {
+        return '₹' . number_format((float)$amount, 2);
+    }
+
+    function is_logged_in() {
+        return isset($_SESSION['user_id']);
+    }
+
+    function check_user_auth() {
+        if (!isset($_SESSION['user_id'])) {
+            safe_redirect("login.php");
+            exit;
+        }
+    }
+
+    function check_user_login() {
+        check_user_auth();
+    }
+
+    function check_auth() {
+        check_user_auth();
+    }
+
+    function check_admin_auth() {
+        if (!isset($_SESSION['admin_id']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
+            safe_redirect("login.php");
+            exit;
+        }
+    }
+
+    // Issue 1-Year Persistent Remember Token
+    function set_user_remember_token($user_id) {
+        global $conn;
+        $user_id = (int)$user_id;
+        $token = bin2hex(random_bytes(32));
+        $stmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param("si", $token, $user_id);
+            $stmt->execute();
+            $stmt->close();
+        }
+        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+        $expire = time() + (365 * 24 * 3600);
+        setcookie('adept_remember', $token, [
+            'expires' => $expire,
+            'path' => '/',
+            'secure' => $is_https,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        $_COOKIE['adept_remember'] = $token;
+    }
+
+    // Clear Persistent Remember Token (On explicit Logout)
+    function clear_user_remember_token($user_id = null) {
+        global $conn;
+        if ($user_id) {
+            $uid = (int)$user_id;
+            @$conn->query("UPDATE users SET remember_token = NULL WHERE id = {$uid}");
+        }
+        setcookie('adept_remember', '', time() - 86400, '/');
+        unset($_COOKIE['adept_remember']);
+    }
+
+    function get_setting($key, $default = '') {
+        global $conn;
+        $s = $conn->prepare("SELECT value, setting_value FROM settings WHERE `key` = ? OR `setting_key` = ? LIMIT 1");
+        if ($s) {
+            $s->bind_param("ss", $key, $key);
+            $s->execute();
+            $res = $s->get_result();
+            if ($row = $res->fetch_assoc()) {
+                $val = !empty($row['value']) ? $row['value'] : ($row['setting_value'] ?? '');
+                $s->close();
+                return $val ?: $default;
+            }
+            $s->close();
+        }
+        return $default;
     }
 }
-
-function check_admin_login() { check_admin_auth(); }
-
-function get_setting($key, $default = '') {
-    global $conn;
-    if (!$conn) return $default;
-    $k = $conn->real_escape_string($key);
-    $res = $conn->query("SELECT setting_value FROM settings WHERE setting_key = '$k' LIMIT 1");
-    return ($res && $res->num_rows > 0) ? $res->fetch_assoc()['setting_value'] : $default;
-}
+?>
