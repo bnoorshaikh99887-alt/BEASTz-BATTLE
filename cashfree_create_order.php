@@ -27,8 +27,8 @@ $order_id = 'order_' . time() . '_' . $user_id;
 $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
 
 $cust_phone = (!empty($u['phone']) && strlen($u['phone']) == 10) ? $u['phone'] : "9876543210";
-$cust_email = !empty($u['email']) ? $u['email'] : "player{$user_id}@adeptplay.com";
-$cust_name = !empty($u['username']) ? $u['username'] : "AdeptPlayer";
+$cust_email = !empty($u['email']) ? $u['email'] : "player{$user_id}@beastzbattle.com";
+$cust_name = !empty($u['username']) ? $u['username'] : "BeastzPlayer";
 
 $post_fields = [
     "order_id" => $order_id,
@@ -63,21 +63,21 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "x-client-secret: " . $secret_key
 ]);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
 $response = curl_exec($ch);
 $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curl_err = curl_error($ch);
-// Omit curl_close() for PHP 8.5 compatibility
 
 if ($curl_err) {
-    safe_redirect("wallet.php?error=" . urlencode("Cashfree Server Connection Error: " . $curl_err));
+    safe_redirect("wallet.php?error=" . urlencode("Payment Gateway Server Connection Error: " . $curl_err));
     exit;
 }
 
 $res_data = json_decode($response, true);
 
 if ($http_status !== 200 || !isset($res_data['payment_session_id'])) {
-    $err_message = $res_data['message'] ?? 'Unable to create Cashfree order.';
-    safe_redirect("wallet.php?error=" . urlencode("Cashfree Error ($http_status): " . $err_message));
+    $err_message = $res_data['message'] ?? 'Unable to initialize Cashfree payment session.';
+    safe_redirect("wallet.php?error=" . urlencode("Gateway Notice ($http_status): " . $err_message));
     exit;
 }
 
@@ -88,14 +88,14 @@ $payment_session_id = $res_data['payment_session_id'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Connecting to Cashfree - Adept Play</title>
+    <title>Connecting to Gateway - BEASTzBATTLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 </head>
 <body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center shadow-2xl">
         <div class="w-12 h-12 mx-auto rounded-full border-4 border-violet-500 border-t-transparent animate-spin mb-4"></div>
-        <h3 class="text-base font-bold mb-1">Opening Cashfree Gateway...</h3>
+        <h3 class="text-base font-bold mb-1">Opening Secure Gateway...</h3>
         <p class="text-xs text-slate-400 mb-4">Amount: <span class="text-emerald-400 font-mono font-bold"><?= format_inr($amount_inr); ?></span></p>
 
         <button onclick="launchCashfree()" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold transition">
@@ -115,8 +115,7 @@ $payment_session_id = $res_data['payment_session_id'];
                 redirectTarget: "_self"
             }).then(function(result) {
                 if (result.error) {
-                    alert(result.error.message || "Payment cancelled");
-                    window.location.href = "wallet.php?error=" + encodeURIComponent(result.error.message || "Payment cancelled");
+                    window.location.href = "wallet.php?info=" + encodeURIComponent(result.error.message || "Payment window closed");
                     return;
                 }
                 window.location.href = "cashfree_return.php?order_id=<?= urlencode($order_id); ?>";

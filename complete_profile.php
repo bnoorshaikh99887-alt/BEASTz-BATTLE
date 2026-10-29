@@ -75,7 +75,7 @@ $display_uname = str_starts_with($curr_uname, 'player_') ? '' : $curr_uname;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Complete Your Profile - Adept Play</title>
+    <title>Complete Your Profile - BEASTzBATTLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>

@@ -242,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sign In - Adept Play</title>
+    <title>Sign In - BEASTzBATTLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
@@ -262,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white text-2xl mb-3 shadow-lg shadow-violet-500/30">
                 <i class="fa-solid fa-gamepad"></i>
             </div>
-            <h1 class="text-2xl font-black tracking-wider text-white">ADEPT<span class="text-violet-500">PLAY</span></h1>
+            <h1 class="text-2xl font-black tracking-wider text-white">BEASTz<span class="text-violet-500">BATTLE</span></h1>
             <p class="text-xs text-slate-400 mt-1">Tournaments &bull; Real Cash Prizes &bull; Instant UPI</p>
         </div>
 
@@ -375,7 +375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <!-- Footer -->
         <div class="mt-6 pt-4 border-t border-slate-800/80 text-center">
             <p class="text-[10px] text-slate-500">
-                Adept Play &bull; Persistent Session Active
+                BEASTzBATTLE &bull; Persistent Session Active
             </p>
         </div>
     </div>

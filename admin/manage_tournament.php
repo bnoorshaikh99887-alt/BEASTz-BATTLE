@@ -7,22 +7,27 @@ $msg_type = "";
 
 // 1. Handle Room Credentials Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_room') {
-    $room_id = sanitize($_POST['room_id']);
-    $room_password = sanitize($_POST['room_password']);
-    $status = sanitize($_POST['status']);
+    $room_id = sanitize($_POST['room_id'] ?? '');
+    $room_password = sanitize($_POST['room_password'] ?? '');
+    $status = sanitize($_POST['status'] ?? 'upcoming');
 
     $u_stmt = $conn->prepare("UPDATE tournaments SET room_id = ?, room_password = ?, status = ? WHERE id = ?");
-    $u_stmt->bind_param("sssi", $room_id, $room_password, $status, $tournament_id);
-    if ($u_stmt->execute()) {
-        $msg = "Room ID and Password updated successfully!";
-        $msg_type = "success";
+    if ($u_stmt) {
+        $u_stmt->bind_param("sssi", $room_id, $room_password, $status, $tournament_id);
+        if ($u_stmt->execute()) {
+            $msg = "Room ID and Password updated successfully! Status set to " . htmlspecialchars($status);
+            $msg_type = "success";
+        } else {
+            $msg = "Update failed: " . $u_stmt->error;
+            $msg_type = "error";
+        }
+        $u_stmt->close();
     }
-    $u_stmt->close();
 }
 
 // 2. Handle Declare Winner & Distribute Prize
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'declare_winner') {
-    $winner_id = (int)$_POST['winner_user_id'];
+    $winner_id = (int)($_POST['winner_user_id'] ?? 0);
 
     // Fetch prize pool
     $tp_stmt = $conn->prepare("SELECT prize_pool, title, status FROM tournaments WHERE id = ?");
@@ -31,7 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $tourney_row = $tp_stmt->get_result()->fetch_assoc();
     $tp_stmt->close();
 
-    if ($tourney_row['status'] === 'Completed') {
+    if (!$tourney_row) {
+        $msg = "Tournament not found.";
+        $msg_type = "error";
+    } elseif (strtolower($tourney_row['status']) === 'completed') {
         $msg = "Winner has already been declared for this match.";
         $msg_type = "error";
     } elseif ($winner_id <= 0) {
@@ -47,20 +55,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $add_w = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
             $add_w->bind_param("di", $prize_amount, $winner_id);
             $add_w->execute();
+            $add_w->close();
 
             // 2. Add credit transaction
             $t_desc = "Prize Winner for tournament: " . $title;
             $t_tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'credit', ?)");
             $t_tx->bind_param("ids", $winner_id, $prize_amount, $t_desc);
             $t_tx->execute();
+            $t_tx->close();
 
             // 3. Mark tournament as Completed
-            $mark = $conn->prepare("UPDATE tournaments SET status = 'Completed', winner_user_id = ? WHERE id = ?");
+            $mark = $conn->prepare("UPDATE tournaments SET status = 'completed', winner_user_id = ? WHERE id = ?");
             $mark->bind_param("ii", $winner_id, $tournament_id);
             $mark->execute();
+            $mark->close();
 
             $conn->commit();
-            $msg = "Prize of " . format_inr($prize_amount) . " successfully credited to winner's wallet!";
+            $msg = "🎉 Prize of " . format_inr($prize_amount) . " successfully credited to winner's wallet!";
             $msg_type = "success";
         } catch (Exception $e) {
             $conn->rollback();
@@ -71,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Fetch Tournament Details
-$stmt = $conn->prepare("SELECT * FROM tournaments WHERE id = ?");
+$stmt = $conn->prepare("SELECT t.*, COALESCE(t.game_name, t.game, 'BGMI') as display_game FROM tournaments t WHERE t.id = ?");
 $stmt->bind_param("i", $tournament_id);
 $stmt->execute();
 $tourney = $stmt->get_result()->fetch_assoc();
@@ -85,11 +96,12 @@ if (!$tourney) {
 
 // Fetch Participants
 $part_stmt = $conn->prepare("
-    SELECT u.id, u.username, u.email, p.joined_at 
+    SELECT u.id, u.username, u.email, COALESCE(p.in_game_name, p.game_name, u.username) as game_ign, p.created_at as joined_at 
     FROM participants p
     INNER JOIN users u ON p.user_id = u.id
     WHERE p.tournament_id = ?
-    ORDER BY p.joined_at ASC");
+    ORDER BY p.id ASC
+");
 $part_stmt->bind_param("i", $tournament_id);
 $part_stmt->execute();
 $participants = $part_stmt->get_result();
@@ -97,6 +109,9 @@ $part_array = [];
 while ($p = $participants->fetch_assoc()) {
     $part_array[] = $p;
 }
+$part_stmt->close();
+
+$cur_status = strtolower($tourney['status'] ?? 'upcoming');
 ?>
 
 <!-- Back Link -->
@@ -110,14 +125,18 @@ while ($p = $participants->fetch_assoc()) {
 <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg mb-4">
     <div class="flex items-center justify-between mb-1">
         <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-600/30 text-violet-300">
-            <?= htmlspecialchars($tourney['game_name']); ?>
+            <?= htmlspecialchars($tourney['display_game']); ?> &bull; <?= htmlspecialchars($tourney['match_type'] ?? 'Squad'); ?>
         </span>
         <span class="text-[11px] font-bold text-amber-400 font-mono">
             Pool: <?= format_inr($tourney['prize_pool']); ?>
         </span>
     </div>
     <h2 class="text-sm font-bold text-white"><?= htmlspecialchars($tourney['title']); ?></h2>
-    <p class="text-[10px] text-slate-400 mt-1">Status: <span class="font-bold text-emerald-400"><?= $tourney['status']; ?></span></p>
+    <div class="flex items-center justify-between text-[10px] text-slate-400 mt-2">
+        <span>Map: <b class="text-slate-200"><?= htmlspecialchars($tourney['map'] ?? 'Erangel'); ?></b></span>
+        <span>Schedule: <b class="text-slate-200"><?= date("d M, h:i A", strtotime($tourney['match_time'])); ?></b></span>
+        <span>Status: <b class="capitalize text-emerald-400"><?= htmlspecialchars($tourney['status']); ?></b></span>
+    </div>
 </div>
 
 <!-- Alerts -->
@@ -151,40 +170,38 @@ while ($p = $participants->fetch_assoc()) {
         <div>
             <label class="block text-[11px] font-medium text-slate-300 mb-1">Tournament Status</label>
             <select name="status" class="w-full bg-slate-900 border border-slate-700 focus:border-violet-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                <option value="Upcoming" <?= ($tourney['status'] === 'Upcoming') ? 'selected' : '' ?>>Upcoming</option>
-                <option value="Live" <?= ($tourney['status'] === 'Live') ? 'selected' : '' ?>>Live (Room credentials visible)</option>
-                <option value="Completed" <?= ($tourney['status'] === 'Completed') ? 'selected' : '' ?>>Completed</option>
+                <option value="upcoming" <?= ($cur_status === 'upcoming') ? 'selected' : '' ?>>Upcoming (Registration open)</option>
+                <option value="live" <?= ($cur_status === 'live' || $cur_status === 'ongoing') ? 'selected' : '' ?>>Live / Ongoing (Room credentials visible to enrolled players)</option>
+                <option value="completed" <?= ($cur_status === 'completed') ? 'selected' : '' ?>>Completed</option>
             </select>
         </div>
 
-        <button type="submit" class="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs transition">
+        <button type="submit" class="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs transition shadow-md shadow-violet-600/30">
             Save Room Information
         </button>
     </form>
 </div>
 
 <!-- Form 2: Declare Winner & Distribute Prize -->
-<?php if ($tourney['status'] !== 'Completed'): ?>
+<?php if ($cur_status !== 'completed'): ?>
     <div class="bg-gradient-to-r from-amber-950/40 via-slate-800 to-slate-800 border border-amber-500/30 rounded-2xl p-4 shadow-lg mb-4">
         <h3 class="text-xs font-bold text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <i class="fa-solid fa-crown text-amber-400"></i> Declare Winner & Distribute Prize
         </h3>
-        <p class="text-[10px] text-slate-400 mb-3">Selecting a winner will automatically disburse <?= format_inr($tourney['prize_pool']); ?> to their wallet and close the tournament.</p>
+        <p class="text-[10px] text-slate-400 mb-3">Selecting a winner will automatically disburse <?= format_inr($tourney['prize_pool']); ?> to their wallet and mark the match completed.</p>
 
         <?php if (!empty($part_array)): ?>
             <form method="POST" action="manage_tournament.php?id=<?= $tournament_id; ?>" onsubmit="return confirm('Distribute prize and declare winner? This action cannot be reversed.');" class="space-y-3">
                 <input type="hidden" name="action" value="declare_winner">
-
                 <div>
                     <label class="block text-[11px] font-medium text-slate-300 mb-1">Select Winning Participant</label>
                     <select name="winner_user_id" required class="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
                         <option value="">-- Choose Winner --</option>
                         <?php foreach ($part_array as $p): ?>
-                            <option value="<?= $p['id']; ?>"><?= htmlspecialchars($p['username']); ?> (<?= htmlspecialchars($p['email']); ?>)</option>
+                            <option value="<?= $p['id']; ?>"><?= htmlspecialchars($p['username']); ?> [IGN: <?= htmlspecialchars($p['game_ign']); ?>] (<?= htmlspecialchars($p['email']); ?>)</option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-
                 <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs shadow-lg transition">
                     Declare Winner & Distribute Prize
                 </button>
@@ -204,8 +221,8 @@ while ($p = $participants->fetch_assoc()) {
 <!-- Participants List -->
 <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 shadow-lg">
     <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span><i class="fa-solid fa-users text-violet-400 mr-1"></i> Joined Players</span>
-        <span class="text-violet-400 font-mono"><?= count($part_array); ?></span>
+        <span><i class="fa-solid fa-users text-violet-400 mr-1"></i> Enrolled Players</span>
+        <span class="text-violet-400 font-mono"><?= count($part_array); ?> / <?= $tourney['total_slots'] ?? 100; ?></span>
     </h3>
 
     <?php if (!empty($part_array)): ?>
@@ -215,11 +232,11 @@ while ($p = $participants->fetch_assoc()) {
                     <div class="flex items-center gap-2.5">
                         <span class="text-[10px] text-slate-500 font-mono w-4">#<?= $index + 1; ?></span>
                         <div>
-                            <span class="font-bold text-white block"><?= htmlspecialchars($player['username']); ?></span>
+                            <span class="font-bold text-white block"><?= htmlspecialchars($player['username']); ?> <span class="text-violet-400 font-normal">[IGN: <?= htmlspecialchars($player['game_ign']); ?>]</span></span>
                             <span class="text-[10px] text-slate-400"><?= htmlspecialchars($player['email']); ?></span>
                         </div>
                     </div>
-                    <span class="text-[10px] text-slate-500"><?= date("d M, h:i A", strtotime($player['joined_at'])); ?></span>
+                    <span class="text-[10px] text-slate-500"><?= date("d M, h:i A", strtotime($player['joined_at'] ?? 'now')); ?></span>
                 </div>
             <?php endforeach; ?>
         </div>

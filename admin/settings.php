@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Fetch Latest Settings from DB
 $upi_id = get_setting('upi_id', '9878385810@ybl');
-$upi_name = get_setting('upi_name', 'Adept Esports');
+$upi_name = get_setting('upi_name', 'BEASTz BATTLE');
 $min_deposit = get_setting('min_deposit', '10.00');
 $min_withdrawal = get_setting('min_withdrawal', '50.00');
 $whatsapp_support = get_setting('whatsapp_support', '9878385810');

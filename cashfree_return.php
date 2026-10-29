@@ -8,7 +8,7 @@ $user_id = (int)$_SESSION['user_id'];
 $order_id = isset($_GET['order_id']) ? sanitize($_GET['order_id']) : '';
 
 if (empty($order_id)) {
-    safe_redirect("wallet.php?error=" . urlencode("Invalid Cashfree order response."));
+    safe_redirect("wallet.php?info=" . urlencode("Returned from payment gateway."));
     exit;
 }
 
@@ -27,11 +27,11 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 ]);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 $response = curl_exec($ch);
-// Note: curl_close() is omitted to support PHP 8.5 without deprecation warnings
 
 $order = json_decode($response, true);
+$order_status = $order['order_status'] ?? 'UNKNOWN';
 
-if (isset($order['order_status']) && $order['order_status'] === 'PAID') {
+if ($order_status === 'PAID') {
     $paid_amount = (float)$order['order_amount'];
 
     // 1. Double Credit Prevention
@@ -62,7 +62,7 @@ if (isset($order['order_status']) && $order['order_status'] === 'PAID') {
         $tx->execute();
         $tx->close();
 
-        // Deposits record entry (populate order_id and transaction_id)
+        // Deposits record entry
         $dep = $conn->prepare("INSERT INTO deposits (user_id, order_id, transaction_id, amount, status) VALUES (?, ?, ?, ?, 'SUCCESS')");
         if ($dep) {
             $dep->bind_param("issd", $user_id, $order_id, $order_id, $paid_amount);
@@ -71,16 +71,19 @@ if (isset($order['order_status']) && $order['order_status'] === 'PAID') {
         }
 
         $conn->commit();
-        safe_redirect("wallet.php?success=" . urlencode("🎉 " . format_inr($paid_amount) . " successfully added to your wallet!"));
+        safe_redirect("wallet.php?success=" . urlencode("🎉 " . format_inr($paid_amount) . " successfully added to your BEASTzBATTLE wallet!"));
         exit;
     } catch (Exception $e) {
         $conn->rollback();
         safe_redirect("wallet.php?error=" . urlencode("Wallet update error: " . $e->getMessage()));
         exit;
     }
+} elseif ($order_status === 'ACTIVE') {
+    // Order was created but payment was cancelled, abandoned, or pending in UPI app
+    safe_redirect("wallet.php?info=" . urlencode("Payment session closed or pending. If money was debited from your bank, it will auto-reflect in your wallet shortly."));
+    exit;
 } else {
-    $status = $order['order_status'] ?? 'FAILED';
-    safe_redirect("wallet.php?error=" . urlencode("Cashfree Payment Status: " . $status));
+    safe_redirect("wallet.php?error=" . urlencode("Payment status: " . $order_status . ". You can retry or use Direct UPI QR."));
     exit;
 }
 ?>

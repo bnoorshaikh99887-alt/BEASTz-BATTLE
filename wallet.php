@@ -3,12 +3,18 @@ require_once __DIR__ . '/common/config.php';
 check_user_auth();
 
 $user_id = (int)$_SESSION['user_id'];
-$alert_msg = isset($_GET['error']) ? sanitize($_GET['error']) : "";
-$alert_type = isset($_GET['error']) ? "error" : "";
+$alert_msg = "";
+$alert_type = "";
 
-if (isset($_GET['success'])) {
+if (isset($_GET['error'])) {
+    $alert_msg = sanitize($_GET['error']);
+    $alert_type = "error";
+} elseif (isset($_GET['success'])) {
     $alert_msg = sanitize($_GET['success']);
     $alert_type = "success";
+} elseif (isset($_GET['info'])) {
+    $alert_msg = sanitize($_GET['info']);
+    $alert_type = "info";
 }
 
 // Fetch Current User Details
@@ -16,25 +22,27 @@ $u_stmt = $conn->prepare("SELECT username, email, wallet_balance, upi_id FROM us
 $u_stmt->bind_param("i", $user_id);
 $u_stmt->execute();
 $user_info = $u_stmt->get_result()->fetch_assoc();
-$current_balance = (float)$user_info['wallet_balance'];
+$current_balance = (float)($user_info['wallet_balance'] ?? 0.00);
 $saved_upi_id = $user_info['upi_id'] ?? '';
 $u_stmt->close();
 
 // Fetch Admin Settings
-$admin_upi = "adeptplay@upi";
+$admin_upi = "9878385810@upi";
 $admin_qr = "";
-$set_res = $conn->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('admin_upi_id', 'admin_qr_image')");
+$set_res = $conn->query("SELECT setting_key, setting_value, `key`, `value` FROM settings WHERE setting_key IN ('admin_upi_id', 'admin_qr_image') OR `key` IN ('admin_upi_id', 'admin_qr_image')");
 if ($set_res) {
     while ($s = $set_res->fetch_assoc()) {
-        if ($s['setting_key'] === 'admin_upi_id' && !empty($s['setting_value'])) $admin_upi = $s['setting_value'];
-        if ($s['setting_key'] === 'admin_qr_image' && !empty($s['setting_value'])) $admin_qr = $s['setting_value'];
+        $k = $s['setting_key'] ?? $s['key'];
+        $v = !empty($s['setting_value']) ? $s['setting_value'] : ($s['value'] ?? '');
+        if ($k === 'admin_upi_id' && !empty($v)) $admin_upi = $v;
+        if ($k === 'admin_qr_image' && !empty($v)) $admin_qr = $v;
     }
 }
 
-// 1. Manual Deposit Request
+// 1. Manual UPI Deposit Request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'request_deposit') {
-    $amount = (float)$_POST['amount'];
-    $txn_id = sanitize($_POST['transaction_id']);
+    $amount = (float)($_POST['amount'] ?? 0);
+    $txn_id = sanitize($_POST['transaction_id'] ?? '');
 
     if ($amount < 10) {
         $alert_msg = "Minimum deposit amount ₹10.00 hai.";
@@ -55,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if ($dep->execute()) {
                 $alert_msg = "Deposit request for " . format_inr($amount) . " submit ho gayi! Admin verify karega.";
                 $alert_type = "success";
+            } else {
+                $alert_msg = "Deposit submission failed: " . $conn->error;
+                $alert_type = "error";
             }
             $dep->close();
         }
@@ -64,7 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // 2. Withdrawal Request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'request_withdrawal') {
-    $amount = (float)$_POST['amount'];
+    $amount = (float)($_POST['amount'] ?? 0);
+
     if (empty($saved_upi_id)) {
         $alert_msg = "Withdrawal se pehle Profile mein apna UPI ID link karein.";
         $alert_type = "error";
@@ -75,20 +87,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $alert_msg = "Wallet balance kam hai.";
         $alert_type = "error";
     } else {
-        $pend = $conn->prepare("SELECT id FROM withdrawals WHERE user_id = ? AND status = 'Pending'");
+        $pend = $conn->prepare("SELECT id FROM withdrawals WHERE user_id = ? AND LOWER(status) = 'pending'");
         $pend->bind_param("i", $user_id);
         $pend->execute();
         if ($pend->get_result()->num_rows > 0) {
             $alert_msg = "Aapki ek withdrawal request pehle se pending hai.";
             $alert_type = "error";
         } else {
-            $w_ins = $conn->prepare("INSERT INTO withdrawals (user_id, amount, upi_id, status) VALUES (?, ?, ?, 'Pending')");
-            $w_ins->bind_param("ids", $user_id, $amount, $saved_upi_id);
-            if ($w_ins->execute()) {
-                $alert_msg = "Withdrawal request for " . format_inr($amount) . " sent! Payout will reach " . htmlspecialchars($saved_upi_id);
+            $conn->begin_transaction();
+            try {
+                // Deduct balance upfront
+                $ded = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?");
+                $ded->bind_param("di", $amount, $user_id);
+                $ded->execute();
+                $ded->close();
+
+                // Add withdrawal record
+                $w_ins = $conn->prepare("INSERT INTO withdrawals (user_id, amount, upi_id, status) VALUES (?, ?, ?, 'Pending')");
+                $w_ins->bind_param("ids", $user_id, $amount, $saved_upi_id);
+                $w_ins->execute();
+                $w_ins->close();
+
+                // Passbook entry
+                $t_desc = "Withdrawal Requested (Payout to " . $saved_upi_id . ")";
+                $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'debit', ?)");
+                $tx->bind_param("ids", $user_id, $amount, $t_desc);
+                $tx->execute();
+                $tx->close();
+
+                $conn->commit();
+                $current_balance -= $amount;
+                $alert_msg = "🎉 Withdrawal request for " . format_inr($amount) . " submitted! Payout will be sent to " . htmlspecialchars($saved_upi_id);
                 $alert_type = "success";
+            } catch (Exception $e) {
+                $conn->rollback();
+                $alert_msg = "Withdrawal submission error: " . $e->getMessage();
+                $alert_type = "error";
             }
-            $w_ins->close();
         }
         $pend->close();
     }
@@ -97,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 require_once __DIR__ . '/common/header.php';
 
 // Fetch Transactions
-$tx_stmt = $conn->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 20");
+$tx_stmt = $conn->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY id DESC LIMIT 20");
 $tx_stmt->bind_param("i", $user_id);
 $tx_stmt->execute();
 $transactions = $tx_stmt->get_result();
@@ -105,9 +140,9 @@ $transactions = $tx_stmt->get_result();
 
 <!-- Alerts -->
 <?php if (!empty($alert_msg)): ?>
-    <div class="mb-4 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 <?= ($alert_type === 'success') ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30' ?>">
-        <i class="fa-solid <?= ($alert_type === 'success') ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-rose-400' ?>"></i>
-        <span><?= $alert_msg; ?></span>
+    <div class="mb-4 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 <?= ($alert_type === 'success') ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : (($alert_type === 'info') ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30') ?>">
+        <i class="fa-solid <?= ($alert_type === 'success') ? 'fa-circle-check text-emerald-400' : (($alert_type === 'info') ? 'fa-circle-info text-sky-400' : 'fa-circle-exclamation text-rose-400') ?>"></i>
+        <span><?= htmlspecialchars($alert_msg); ?></span>
     </div>
 <?php endif; ?>
 
@@ -163,148 +198,126 @@ $transactions = $tx_stmt->get_result();
             <?php endwhile; ?>
         <?php else: ?>
             <div class="bg-slate-800/40 border border-slate-800 rounded-xl p-6 text-center text-xs text-slate-400">
-                <i class="fa-solid fa-clock-rotate-left text-2xl text-slate-600 mb-2"></i>
-                <p>No transaction records found yet.</p>
+                <i class="fa-solid fa-rotate-left text-2xl text-slate-500 mb-2 block"></i>
+                No transaction records found yet.
             </div>
         <?php endif; ?>
     </div>
 </div>
 
-<!-- POPUP 1: Deposit Method Selection -->
-<div id="depositChoiceModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative">
+<!-- Modal 1: Choose Deposit Option -->
+<div id="depositChoiceModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative">
         <button type="button" onclick="closeDepositChoiceModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
-
-        <div class="text-center mb-4">
-            <div class="w-10 h-10 mx-auto rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center text-base mb-2">
-                <i class="fa-solid fa-wallet"></i>
-            </div>
-            <h3 class="text-base font-bold text-white">Deposit Options</h3>
-            <p class="text-[11px] text-slate-400">Select payment method to add money</p>
-        </div>
+        <h3 class="text-sm font-bold text-white mb-1">Add Money to Wallet</h3>
+        <p class="text-[11px] text-slate-400 mb-4">Choose your preferred deposit method</p>
 
         <div class="space-y-3">
-            <!-- Cashfree Instant Gateway -->
-            <button type="button" onclick="openCashfreeModal()" class="w-full p-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-left border border-violet-400/30 shadow-lg flex items-center justify-between group transition">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-lg text-emerald-400">
-                        <i class="fa-solid fa-bolt"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs font-bold flex items-center gap-1.5">
-                            Cashfree Gateway
-                            <span class="text-[9px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded">AUTO</span>
-                        </div>
-                        <p class="text-[10px] text-violet-200">Instant UPI, GPay, PhonePe & Cards</p>
-                    </div>
+            <!-- Option 1: Instant Cashfree Gateway -->
+            <button type="button" onclick="openCashfreeModal()" class="w-full bg-slate-800 hover:bg-slate-750 border border-violet-500/40 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
+                <div class="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-bolt"></i>
                 </div>
-                <i class="fa-solid fa-chevron-right text-xs text-violet-300"></i>
+                <div>
+                    <span class="text-xs font-bold text-white group-hover:text-violet-300 block">Instant Gateway</span>
+                    <span class="text-[10px] text-slate-400">Google Pay, PhonePe, Cards, NetBanking</span>
+                </div>
             </button>
 
-            <!-- Direct UPI App (PhonePe / GPay Intent) -->
-            <button type="button" onclick="openDirectUPIModal()" class="w-full p-3.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-white rounded-xl text-left border border-emerald-500/30 shadow-md flex items-center justify-between group transition">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-lg text-emerald-400">
-                        <i class="fa-brands fa-google-pay"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs font-bold text-emerald-300">Direct UPI App (PhonePe / GPay)</div>
-                        <p class="text-[10px] text-slate-300">Opens app directly on your phone</p>
-                    </div>
+            <!-- Option 2: Direct UPI App -->
+            <button type="button" onclick="openDirectUPIModal()" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
+                <div class="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-mobile-screen"></i>
                 </div>
-                <i class="fa-solid fa-chevron-right text-xs text-emerald-400"></i>
+                <div>
+                    <span class="text-xs font-bold text-white group-hover:text-emerald-300 block">Instant UPI App (Paytm/GPay)</span>
+                    <span class="text-[10px] text-slate-400">Pay directly to Admin UPI ID</span>
+                </div>
             </button>
 
-            <!-- Manual UPI QR -->
-            <button type="button" onclick="openManualQRModal()" class="w-full p-3.5 bg-slate-800 hover:bg-slate-700/80 text-white rounded-xl text-left border border-slate-700 shadow-md flex items-center justify-between group transition">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center text-lg text-amber-400">
-                        <i class="fa-solid fa-qrcode"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs font-bold">Scan Admin QR & Submit UTR</div>
-                        <p class="text-[10px] text-slate-400">Manual review by admin</p>
-                    </div>
+            <!-- Option 3: Scan QR Code -->
+            <button type="button" onclick="openManualQRModal()" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
+                <div class="w-10 h-10 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-qrcode"></i>
                 </div>
-                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+                <div>
+                    <span class="text-xs font-bold text-white group-hover:text-amber-300 block">Scan QR Code & UTR</span>
+                    <span class="text-[10px] text-slate-400">Manual verification via 12-digit UTR</span>
+                </div>
             </button>
         </div>
     </div>
 </div>
 
-<!-- POPUP 2: Cashfree Deposit Form -->
-<div id="cashfreeModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative">
+<!-- Modal 2: Instant Cashfree Gateway -->
+<div id="cashfreeModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative">
         <button type="button" onclick="closeCashfreeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
+        <h3 class="text-sm font-bold text-white mb-1">Instant Payment Gateway</h3>
+        <p class="text-[11px] text-slate-400 mb-4">Enter amount to add (Min ₹10.00)</p>
 
-        <div class="text-center mb-4">
-            <div class="w-10 h-10 mx-auto rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center text-base mb-2">
-                <i class="fa-solid fa-bolt"></i>
-            </div>
-            <h3 class="text-base font-bold text-white">Cashfree Deposit</h3>
-            <p class="text-[11px] text-slate-400">Auto-credited upon payment completion</p>
-        </div>
-
-        <form method="POST" action="cashfree_create_order.php" class="space-y-4">
+        <form method="POST" action="cashfree_create_order.php" class="space-y-3.5">
             <div>
-                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Enter Deposit Amount (₹)</label>
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Amount (₹)</label>
                 <div class="relative">
-                    <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">₹</span>
-                    <input type="number" name="amount" id="cfAmt" min="10" step="1" value="100" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-8 pr-3 py-2.5 text-sm font-bold text-white focus:outline-none">
+                    <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">₹</span>
+                    <input type="number" name="amount" min="10" step="1" value="50" required class="w-full bg-slate-950 border border-slate-700 focus:border-violet-500 rounded-xl pl-7 pr-3 py-2 text-xs text-white focus:outline-none font-bold">
                 </div>
             </div>
 
-            <div class="grid grid-cols-4 gap-2">
-                <button type="button" onclick="document.getElementById('cfAmt').value = 50" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg text-slate-200">₹50</button>
-                <button type="button" onclick="document.getElementById('cfAmt').value = 100" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg text-slate-200">₹100</button>
-                <button type="button" onclick="document.getElementById('cfAmt').value = 250" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg text-slate-200">₹250</button>
-                <button type="button" onclick="document.getElementById('cfAmt').value = 500" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg text-slate-200">₹500</button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="this.form.amount.value = 20" class="flex-1 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg">+₹20</button>
+                <button type="button" onclick="this.form.amount.value = 50" class="flex-1 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg">+₹50</button>
+                <button type="button" onclick="this.form.amount.value = 100" class="flex-1 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg">+₹100</button>
+                <button type="button" onclick="this.form.amount.value = 200" class="flex-1 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg">+₹200</button>
             </div>
 
-            <button type="submit" class="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2">
-                <i class="fa-solid fa-lock"></i> Pay via Cashfree
+            <button type="submit" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-extrabold rounded-xl text-xs transition shadow-md shadow-violet-600/30">
+                Proceed to Payment
             </button>
         </form>
     </div>
 </div>
 
-<!-- POPUP 3: Direct PhonePe/GPay Mobile Intent -->
-<div id="directUPIModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative">
+<!-- Modal 3: Direct UPI App -->
+<div id="directUPIModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative">
         <button type="button" onclick="closeDirectUPIModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
+        <h3 class="text-sm font-bold text-white mb-1">Direct UPI App Transfer</h3>
+        <p class="text-[11px] text-slate-400 mb-3">Pay via any installed UPI app (Paytm, GPay, PhonePe)</p>
 
-        <div class="text-center mb-3">
-            <div class="w-10 h-10 mx-auto rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-base mb-2">
-                <i class="fa-solid fa-mobile-screen-button"></i>
+        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 mb-3 space-y-1.5 text-xs">
+            <div class="flex items-center justify-between text-slate-400">
+                <span>Admin UPI ID:</span>
+                <span class="font-mono font-bold text-white select-all"><?= htmlspecialchars($admin_upi); ?></span>
             </div>
-            <h3 class="text-base font-bold text-white">Direct UPI App Transfer</h3>
-            <p class="text-[11px] text-slate-400">One-tap to open GPay, PhonePe, or Paytm</p>
         </div>
 
         <div class="space-y-3">
             <div>
-                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Enter Amount to Pay (₹)</label>
-                <input type="number" id="directAmtInput" min="10" value="100" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Deposit Amount (₹)</label>
+                <input type="number" id="directAmtInput" min="10" step="1" value="50" class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-bold">
             </div>
 
-            <button type="button" onclick="payViaUPIIntent()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open PhonePe / GPay / Paytm
+            <button type="button" onclick="payViaUPIIntent()" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition">
+                <i class="fa-solid fa-bolt mr-1"></i> Open in UPI App & Pay
             </button>
 
+            <!-- After paying, enter UTR form -->
             <form method="POST" action="wallet.php" class="pt-2 border-t border-slate-800 space-y-2">
                 <input type="hidden" name="action" value="request_deposit">
-                <input type="hidden" name="amount" id="formDirectAmt" value="100">
-
-                <label class="block text-[10px] text-slate-400">After payment in app, enter 12-digit UTR:</label>
-                <input type="text" name="transaction_id" required placeholder="Enter 12-digit UTR number" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-
-                <button type="submit" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition">
+                <input type="hidden" name="amount" id="formDirectAmt" value="50">
+                <div>
+                    <label class="block text-[10px] font-medium text-slate-400 mb-1">Enter 12-digit UTR after payment:</label>
+                    <input type="text" name="transaction_id" required placeholder="e.g. 429381748291" class="w-full bg-slate-950 border border-slate-700 focus:border-violet-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono">
+                </div>
+                <button type="submit" class="w-full py-2 bg-slate-800 hover:bg-slate-750 text-white font-bold rounded-xl text-xs transition">
                     Submit UTR for Verification
                 </button>
             </form>
@@ -312,84 +325,76 @@ $transactions = $tx_stmt->get_result();
     </div>
 </div>
 
-<!-- POPUP 4: Manual QR -->
-<div id="manualQRModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative">
+<!-- Modal 4: Manual QR Code & UTR -->
+<div id="manualQRModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button type="button" onclick="closeManualQRModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
+        <h3 class="text-sm font-bold text-white mb-1">Scan UPI QR Code</h3>
+        <p class="text-[11px] text-slate-400 mb-3">Scan with any UPI app and submit your 12-digit UTR ID</p>
 
-        <div class="text-center mb-3">
-            <h3 class="text-base font-bold text-white">Scan Admin QR</h3>
-            <p class="text-[11px] text-slate-400">Scan QR, pay, then submit transaction ID</p>
-        </div>
-
-        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center mb-3">
-            <?php if (!empty($admin_qr) && file_exists(__DIR__ . '/uploads/qr/' . $admin_qr)): ?>
-                <img src="uploads/qr/<?= htmlspecialchars($admin_qr); ?>" alt="Admin QR" class="w-32 h-32 mx-auto object-contain rounded-lg border border-slate-700 p-1 bg-white mb-2">
+        <div class="bg-white p-3 rounded-2xl max-w-[200px] mx-auto mb-3 shadow-inner text-center">
+            <?php if (!empty($admin_qr)): ?>
+                <img src="<?= htmlspecialchars($admin_qr); ?>" alt="Admin QR Code" class="w-full h-auto rounded-lg">
             <?php else: ?>
-                <div class="w-32 h-32 mx-auto bg-slate-800 border border-slate-700 rounded-lg flex flex-col items-center justify-center text-slate-500 mb-2">
-                    <i class="fa-solid fa-qrcode text-3xl mb-1 text-slate-400"></i>
-                    <span class="text-[9px]">GPay / PhonePe / Paytm</span>
-                </div>
+                <!-- Dynamic QR via UPI URI -->
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?= urlencode('upi://pay?pa=' . $admin_upi . '&pn=BEASTzBATTLE&cu=INR'); ?>" alt="UPI QR Code" class="w-full h-auto rounded-lg">
             <?php endif; ?>
-
-            <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center justify-between">
-                <span class="text-[11px] font-mono text-violet-400 select-all font-bold"><?= htmlspecialchars($admin_upi); ?></span>
-                <span class="text-[10px] text-slate-400 uppercase font-bold">Admin UPI</span>
-            </div>
+            <span class="text-[9px] text-slate-700 font-bold block mt-1">Scan & Pay Any Amount</span>
         </div>
 
         <form method="POST" action="wallet.php" class="space-y-3">
             <input type="hidden" name="action" value="request_deposit">
             <div>
-                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Amount Paid (₹)</label>
-                <input type="number" step="1" min="10" name="amount" required placeholder="e.g. 100" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Amount Paid (₹) *</label>
+                <input type="number" name="amount" min="10" step="1" required placeholder="Amount you paid" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-bold">
             </div>
+
             <div>
-                <label class="block text-[11px] font-semibold text-slate-300 mb-1">12-Digit UPI Transaction / UTR ID</label>
-                <input type="text" name="transaction_id" required placeholder="Found in your payment app" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">12-Digit UPI Ref / UTR ID *</label>
+                <input type="text" name="transaction_id" required placeholder="From receipt: 12 digit number" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono">
             </div>
-            <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition">
-                Submit for Verification
+
+            <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition shadow-md">
+                Submit Deposit Request
             </button>
         </form>
     </div>
 </div>
 
-<!-- POPUP 5: Withdraw Modal -->
-<div id="withdrawModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative">
+<!-- Modal 5: Withdraw Modal -->
+<div id="withdrawModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative">
         <button type="button" onclick="closeWithdrawModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
-
-        <div class="text-center mb-4">
-            <h3 class="text-base font-bold text-white">Withdraw Winning Cash</h3>
-            <p class="text-[11px] text-slate-400">Direct transfer to your saved UPI ID</p>
-        </div>
+        <h3 class="text-sm font-bold text-white mb-1">Withdraw to Bank / UPI</h3>
+        <p class="text-[11px] text-slate-400 mb-3">Available: <span class="font-bold text-emerald-400 font-mono"><?= format_inr($current_balance); ?></span></p>
 
         <?php if (empty($saved_upi_id)): ?>
-            <div class="bg-rose-500/20 border border-rose-500/30 rounded-xl p-3 text-xs text-rose-300 text-center mb-4">
-                You haven't linked a UPI ID yet!
-                <a href="profile.php" class="block mt-2 py-1.5 bg-violet-600 text-white font-bold rounded-lg text-xs">
-                    Link UPI in Profile
-                </a>
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center mb-3">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-xl mb-1"></i>
+                <p class="text-xs text-amber-300 font-bold">UPI ID Required</p>
+                <p class="text-[10px] text-slate-400 mt-1 mb-3">Please save your receiving UPI ID in Profile before requesting payout.</p>
+                <a href="profile.php" class="inline-block px-3 py-1.5 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold">Go to Profile</a>
             </div>
         <?php else: ?>
-            <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs mb-3">
-                <span class="text-slate-400 text-[10px] block">Receiving UPI ID:</span>
-                <span class="font-mono font-bold text-emerald-400"><?= htmlspecialchars($saved_upi_id); ?></span>
-            </div>
-
             <form method="POST" action="wallet.php" class="space-y-3">
                 <input type="hidden" name="action" value="request_withdrawal">
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">Amount to Withdraw (₹)</label>
-                    <input type="number" step="1" min="50" max="<?= $current_balance; ?>" name="amount" required placeholder="Min ₹50" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-[11px]">
+                    <span class="text-slate-400 block text-[10px]">Payout UPI ID:</span>
+                    <span class="text-white font-mono font-bold"><?= htmlspecialchars($saved_upi_id); ?></span>
                 </div>
+
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-300 mb-1">Amount to Withdraw (₹) *</label>
+                    <input type="number" name="amount" min="50" max="<?= $current_balance; ?>" step="1" value="50" required class="w-full bg-slate-950 border border-slate-700 focus:border-violet-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-bold">
+                    <span class="text-[10px] text-slate-500 mt-1 block">Minimum withdrawal: ₹50.00</span>
+                </div>
+
                 <button type="submit" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs transition">
-                    Confirm & Request Payout
+                    Request Payout
                 </button>
             </form>
         <?php endif; ?>
@@ -416,7 +421,7 @@ $transactions = $tx_stmt->get_result();
         const amt = document.getElementById('directAmtInput').value;
         document.getElementById('formDirectAmt').value = amt;
         const upiId = "<?= htmlspecialchars($admin_upi); ?>";
-        const upiUrl = "upi://pay?pa=" + encodeURIComponent(upiId) + "&pn=AdeptPlay&am=" + encodeURIComponent(amt) + "&cu=INR&tn=AdeptPlayDeposit";
+        const upiUrl = "upi://pay?pa=" + encodeURIComponent(upiId) + "&pn=BEASTzBATTLE&am=" + encodeURIComponent(amt) + "&cu=INR&tn=BEASTzBATTLE_Deposit";
         window.location.href = upiUrl;
     }
 </script>

@@ -160,14 +160,14 @@ require_once __DIR__ . '/common/header.php';
     </form>
 </div>
 
-<!-- Adept Code Official Support Community Card -->
+<!-- BEASTzBATTLE Official Support Community Card -->
 <div class="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-4 shadow-lg mb-4 text-xs">
     <div class="flex items-center gap-2 mb-1.5">
         <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
             <i class="fa-brands fa-whatsapp text-sm"></i>
         </div>
         <div>
-            <h5 class="font-bold text-white text-xs">Connect with Adept Code</h5>
+            <h5 class="font-bold text-white text-xs">BEASTzBATTLE Official Support</h5>
             <p class="text-[10px] text-slate-400">Join our official channels for support & updates.</p>
         </div>
     </div>
@@ -180,14 +180,14 @@ require_once __DIR__ . '/common/header.php';
             <span class="text-slate-400">Helpdesk Support:</span>
             <span class="font-mono text-slate-300">988385810</span>
         </div>
-        <p class="text-[9px] text-slate-500 italic pt-1">Beware of fake accounts. Only join verified links. Adept Code: Learn, Build, Conquer.</p>
+        <p class="text-[9px] text-slate-500 italic pt-1">Official verified community channels. BEASTzBATTLE: Play, Compete, Win.</p>
     </div>
 </div>
 
 <!-- Logout Button -->
 <a href="logout.php" class="w-full py-3 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-400 hover:text-rose-300 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2">
     <i class="fa-solid fa-power-off"></i>
-    <span>Sign Out of Adept Play</span>
+    <span>Sign Out of BEASTzBATTLE</span>
 </a>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>

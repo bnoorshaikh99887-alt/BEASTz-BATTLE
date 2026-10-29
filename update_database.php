@@ -40,7 +40,7 @@ try {
 
     // Default settings seed
     $conn->query("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES 
-        ('admin_upi_id', 'adeptplay@upi'),
+        ('admin_upi_id', '9878385810@upi'),
         ('admin_qr_image', ''),
         ('support_whatsapp', '+919878385810')");
 
@@ -55,7 +55,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Migration - Adept Play</title>
+    <title>Database Migration - BEASTzBATTLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>

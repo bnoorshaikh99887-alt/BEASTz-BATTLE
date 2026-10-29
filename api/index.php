@@ -12,6 +12,21 @@ if (empty($path) || $path === '/' || $path === 'index.php') {
     exit;
 }
 
+// 0. Specific Route Aliases to prevent 404s
+if ($path === 'tournament.php' || $path === 'tournament' || $path === 'tournaments.php' || $path === 'tournaments') {
+    if (file_exists($root . '/admin/tournament.php')) {
+        require $root . '/admin/tournament.php';
+        exit;
+    }
+}
+
+if ($path === 'manage_tournament.php' || $path === 'manage_tournament') {
+    if (file_exists($root . '/admin/manage_tournament.php')) {
+        require $root . '/admin/manage_tournament.php';
+        exit;
+    }
+}
+
 $file = $root . '/' . $path;
 
 // 1. Direct file match (.php or static files like images/css)
@@ -51,7 +66,17 @@ if (is_dir($file) && is_file($file . '/index.php')) {
     exit;
 }
 
-// 4. 404 Fallback
+// 4. Admin folder fallback (e.g. /admin/tournament or /deposits -> /admin/deposits.php)
+if (is_file($root . '/admin/' . $path)) {
+    require $root . '/admin/' . $path;
+    exit;
+}
+if (is_file($root . '/admin/' . $path . '.php')) {
+    require $root . '/admin/' . $path . '.php';
+    exit;
+}
+
+// 404 Fallback
 http_response_code(404);
 echo "404 Not Found: " . htmlspecialchars($request_uri);
 exit;

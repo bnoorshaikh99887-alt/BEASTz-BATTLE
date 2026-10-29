@@ -23,7 +23,7 @@ if (isset($_SESSION['user_id'])) {
             $user_role = $u['role'] ?? 'user';
             
             // Check if profile setup is pending (except on complete_profile.php itself)
-            $curr_script = basename($_SERVER['PHP_SELF']);
+            $curr_script = basename($_SERVER['PHP_SELF'] ?? '');
             if ($curr_script !== 'complete_profile.php' && $curr_script !== 'logout.php') {
                 if (empty($u['phone']) || strlen($u['phone']) < 10) {
                     safe_redirect("complete_profile.php");
@@ -44,7 +44,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Adept Play - Mobile Esports Tournaments</title>
+    <title>BEASTzBATTLE - Mobile Esports Tournaments</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -89,24 +89,22 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-start overflow-x-hidden select-none">
-
     <!-- Mobile App Container (Max Width 480px) -->
     <div class="w-full max-w-md min-h-screen bg-slate-900 border-x border-slate-800 flex flex-col relative pb-20 shadow-2xl">
-
         <?php if ($is_admin): ?>
             <!-- Admin Top Navigation Banner -->
             <div class="bg-gradient-to-r from-rose-950 via-slate-900 to-indigo-950 border-b border-rose-500/30 px-3 py-1.5 flex items-center justify-between text-[11px] sticky top-0 z-50">
                 <div class="flex items-center gap-1.5">
                     <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-extrabold uppercase text-[9px] border border-rose-500/30 tracking-wider">
-                        Admin Mode
+                        BEASTz Admin
                     </span>
-                    <a href="settings.php" class="text-slate-300 hover:text-white ml-1">Settings</a>
+                    <a href="admin/index.php" class="text-slate-300 hover:text-white ml-1 font-semibold">Panel</a>
                     <span class="text-slate-600">&bull;</span>
-                    <a href="user.php" class="text-slate-300 hover:text-white">Users</a>
+                    <a href="admin/tournament.php" class="text-slate-300 hover:text-white">Tourneys</a>
                     <span class="text-slate-600">&bull;</span>
-                    <a href="deposits.php" class="text-slate-300 hover:text-white">Deposits</a>
+                    <a href="admin/deposits.php" class="text-slate-300 hover:text-white">Deposits</a>
                     <span class="text-slate-600">&bull;</span>
-                    <a href="withdrawals.php" class="text-slate-300 hover:text-white">Payouts</a>
+                    <a href="admin/withdrawals.php" class="text-slate-300 hover:text-white">Payouts</a>
                 </div>
                 <!-- Admin Explicit Logout Button -->
                 <a href="logout.php" title="Admin Logout" class="bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white px-2.5 py-1 rounded-lg text-[10px] font-bold border border-rose-500/40 transition flex items-center gap-1">
@@ -123,7 +121,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                     <i class="fa-solid fa-gamepad text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-black tracking-wider text-white leading-tight">ADEPT<span class="text-violet-500">PLAY</span></h1>
+                    <h1 class="text-lg font-black tracking-wider text-white leading-tight">BEASTz<span class="text-violet-500">BATTLE</span></h1>
                     <p class="text-[10px] text-slate-400 font-medium tracking-widest uppercase">Esports Arena</p>
                 </div>
             </a>

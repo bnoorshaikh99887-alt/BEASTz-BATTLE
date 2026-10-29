@@ -1,10 +1,10 @@
 <?php
-// install.php - Database Table Installer for Adept Play
+// install.php - Database Table Installer for BEASTzBATTLE
 require_once __DIR__ . '/common/config.php';
 
 echo "<!DOCTYPE html><html><head><title>Install Database</title><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-gray-900 text-white p-6 font-sans'>";
 echo "<div class='max-w-md mx-auto bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-2xl'>";
-echo "<h1 class='text-xl font-bold text-amber-400 mb-4 flex items-center'><span class='w-3 h-3 bg-amber-400 rounded-full mr-2 animate-ping'></span> Installing Adept Play Database...</h1>";
+echo "<h1 class='text-xl font-bold text-amber-400 mb-4 flex items-center'><span class='w-3 h-3 bg-amber-400 rounded-full mr-2 animate-ping'></span> Installing BEASTzBATTLE Database...</h1>";
 
 if (!$conn || $conn->connect_error) {
     die("<div class='bg-red-500/20 text-red-400 p-4 rounded-lg border border-red-500/50 mb-4 font-mono text-sm'>Database Connection Failed: " . ($conn ? $conn->connect_error : 'Init error') . "</div></div></body></html>");
@@ -93,7 +93,7 @@ foreach ($queries as $sql) {
 // Create default admin user if not exists (username: admin, pass: admin123)
 $admin_pass = password_hash('admin123', PASSWORD_BCRYPT);
 $conn->query("INSERT IGNORE INTO `users` (`name`, `username`, `email`, `phone`, `password`, `wallet`, `role`) 
-              VALUES ('Admin', 'admin', 'admin@adeptplay.com', '9878385810', '$admin_pass', 1000.00, 'admin')");
+              VALUES ('Admin', 'admin', 'admin@beastzbattle.com', '9878385810', '$admin_pass', 1000.00, 'admin')");
 
 // Seed default settings
 $conn->query("INSERT IGNORE INTO `settings` (`key`, `value`) VALUES 
