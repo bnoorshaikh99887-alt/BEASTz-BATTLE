@@ -1,5 +1,5 @@
 <?php
-// common/config.php - TiDB Cloud & Cashfree Configuration
+// common/config.php - TiDB Cloud, Cashfree & Complete Helper Functions
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -39,7 +39,23 @@ define('SUPPORT_PHONE_1', '+91 9878385810');
 define('SUPPORT_PHONE_2', '+91 988385810');
 define('APP_NAME', 'Adept Play');
 
-// Auth Check Functions
+// Input Sanitization Function
+function sanitize($data) {
+    if (is_array($data)) {
+        return array_map('sanitize', $data);
+    }
+    return htmlspecialchars(trim((string)$data), ENT_QUOTES, 'UTF-8');
+}
+
+function clean_input($data) {
+    return sanitize($data);
+}
+
+function clean($data) {
+    return sanitize($data);
+}
+
+// User Authentication Checks
 function check_user_auth() {
     if (!isset($_SESSION['user_id'])) {
         header("Location: /login.php");
@@ -63,4 +79,31 @@ function check_auth() {
 
 function is_logged_in() {
     return isset($_SESSION['user_id']);
+}
+
+// Admin Authentication Checks
+function check_admin_auth() {
+    if (!isset($_SESSION['admin_logged_in']) && !isset($_SESSION['admin_id'])) {
+        header("Location: /admin/login.php");
+        exit;
+    }
+}
+
+function check_admin_login() {
+    if (!isset($_SESSION['admin_logged_in']) && !isset($_SESSION['admin_id'])) {
+        header("Location: /admin/login.php");
+        exit;
+    }
+}
+
+// Helper to fetch settings from database
+function get_setting($key, $default = '') {
+    global $conn;
+    if (!$conn) return $default;
+    $k = $conn->real_escape_string($key);
+    $res = $conn->query("SELECT value FROM settings WHERE `key` = '$k' LIMIT 1");
+    if ($res && $res->num_rows > 0) {
+        return $res->fetch_assoc()['value'];
+    }
+    return $default;
 }
