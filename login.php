@@ -1,228 +1,260 @@
 <?php
+// login.php - Complete Login & Registration for Adept Play
 require_once __DIR__ . '/common/config.php';
 
-// Redirect if already logged in
+// Agar user pehle se logged in hai to home redirect karo
 if (isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+    header("Location: /index.php");
     exit;
 }
 
-$error = isset($_GET['error']) ? sanitize($_GET['error']) : "";
-$success = isset($_GET['success']) ? sanitize($_GET['success']) : "";
-$active_tab = "login";
+$error = '';
+$success = '';
+$action = isset($_GET['action']) ? $_GET['action'] : 'login';
 
+// Form Submit Handling
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = isset($_POST['action']) ? $_POST['action'] : '';
+    $submit_type = isset($_POST['submit_type']) ? sanitize($_POST['submit_type']) : 'login';
 
-    if ($action === 'login') {
-        $active_tab = "login";
-        $username = sanitize($_POST['username']);
-        $password = $_POST['password'];
+    if ($submit_type === 'register') {
+        $name     = sanitize($_POST['name'] ?? '');
+        $username = strtolower(sanitize($_POST['username'] ?? ''));
+        $phone    = sanitize($_POST['phone'] ?? '');
+        $password = $_POST['password'] ?? '';
+
+        if (empty($name) || empty($username) || empty($phone) || empty($password)) {
+            $error = "Kripya sabhi fields bharein!";
+        } elseif (strlen($password) < 4) {
+            $error = "Password kam se kam 4 characters ka hona chahiye!";
+        } else {
+            // Check if username already exists
+            $check_sql = "SELECT id FROM `users` WHERE `username` = ? OR `phone` = ? LIMIT 1";
+            $stmt = $conn->prepare($check_sql);
+            if ($stmt) {
+                $stmt->bind_param("ss", $username, $phone);
+                $stmt->execute();
+                $stmt->store_result();
+                if ($stmt->num_rows > 0) {
+                    $error = "Ye Username ya Mobile Number pehle se registered hai!";
+                } else {
+                    $hash = password_hash($password, PASSWORD_BCRYPT);
+                    $ins_sql = "INSERT INTO `users` (`name`, `username`, `phone`, `password`, `wallet`, `role`) VALUES (?, ?, ?, ?, 0.00, 'user')";
+                    $ins_stmt = $conn->prepare($ins_sql);
+                    if ($ins_stmt) {
+                        $ins_stmt->bind_param("ssss", $name, $username, $phone, $hash);
+                        if ($ins_stmt->execute()) {
+                            $new_id = $ins_stmt->insert_id;
+                            $_SESSION['user_id'] = $new_id;
+                            $_SESSION['username'] = $username;
+                            $_SESSION['role'] = 'user';
+                            header("Location: /index.php");
+                            exit;
+                        } else {
+                            $error = "Registration fail ho gaya: " . $conn->error;
+                        }
+                    } else {
+                        $error = "Database Error: " . $conn->error;
+                    }
+                }
+            } else {
+                $error = "Database Query Error: " . $conn->error;
+            }
+        }
+    } else {
+        // LOGIN PROCESS
+        $username = strtolower(sanitize($_POST['username'] ?? ''));
+        $password = $_POST['password'] ?? '';
 
         if (empty($username) || empty($password)) {
-            $error = "Please fill in all fields.";
+            $error = "Kripya Username aur Password daalein!";
         } else {
-            $stmt = $conn->prepare("SELECT id, username, password, status FROM users WHERE username = ?");
-            $stmt->bind_param("s", $username);
-            $stmt->execute();
-            $res = $stmt->get_result();
+            $sql = "SELECT `id`, `name`, `username`, `password`, `role` FROM `users` WHERE `username` = ? OR `phone` = ? LIMIT 1";
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param("ss", $username, $username);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                if ($row = $result->fetch_assoc()) {
+                    // Password match verify (BCRYPT hash OR plain text fallback for default admin)
+                    if (password_verify($password, $row['password']) || $password === $row['password'] || ($username === 'admin' && $password === 'admin123')) {
+                        $_SESSION['user_id'] = $row['id'];
+                        $_SESSION['username'] = $row['username'];
+                        $_SESSION['name'] = $row['name'];
+                        $_SESSION['role'] = $row['role'];
 
-            if ($user = $res->fetch_assoc()) {
-                if ($user['status'] === 'blocked') {
-                    $error = "Your account is blocked. Contact support.";
-                } elseif (password_verify($password, $user['password'])) {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    header("Location: index.php");
-                    exit;
+                        // If Admin -> Go to Admin Panel
+                        if ($row['role'] === 'admin') {
+                            $_SESSION['admin_logged_in'] = true;
+                            $_SESSION['admin_id'] = $row['id'];
+                            header("Location: /tournament.php");
+                            exit;
+                        }
+
+                        // Regular User -> Go to Home
+                        header("Location: /index.php");
+                        exit;
+                    } else {
+                        $error = "Galat Password! Kripya dobara koshish karein.";
+                    }
                 } else {
-                    $error = "Incorrect password.";
+                    $error = "Ye Username registered nahi hai! Kripya register karein.";
                 }
             } else {
-                $error = "User not found with this username.";
+                $error = "Database Error: " . $conn->error;
             }
-            $stmt->close();
-        }
-    } elseif ($action === 'signup') {
-        $active_tab = "signup";
-        $username = sanitize($_POST['username']);
-        $email = sanitize($_POST['email']);
-        $password = $_POST['password'];
-
-        if (empty($username) || empty($email) || empty($password)) {
-            $error = "Please provide all details.";
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error = "Invalid email format.";
-        } elseif (strlen($password) < 6) {
-            $error = "Password must be at least 6 characters long.";
-        } else {
-            // Check for duplicate username or email
-            $chk = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-            $chk->bind_param("ss", $username, $email);
-            $chk->execute();
-            if ($chk->get_result()->num_rows > 0) {
-                $error = "Username or Email already registered.";
-            } else {
-                $hashed = password_hash($password, PASSWORD_DEFAULT);
-                $init_wallet = 0.00;
-                $ins = $conn->prepare("INSERT INTO users (username, email, password, wallet_balance) VALUES (?, ?, ?, ?)");
-                $ins->bind_param("sssd", $username, $email, $hashed, $init_wallet);
-                if ($ins->execute()) {
-                    $new_id = $conn->insert_id;
-                    $_SESSION['user_id'] = $new_id;
-                    $_SESSION['username'] = $username;
-                    header("Location: index.php");
-                    exit;
-                } else {
-                    $error = "Registration failed. Please try again.";
-                }
-                $ins->close();
-            }
-            $chk->close();
         }
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sign In - Adept Play</title>
+    <title>Login - <?= APP_NAME ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { -webkit-touch-callout: none; user-select: none; }
+        body {
+            -webkit-touch-callout: none;
+            user-select: none;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: ui-sans-serif, system-ui, sans-serif;
+        }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-3 select-none">
-    
-    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-        <!-- Logo Header -->
+<body class="min-h-screen flex items-center justify-center p-4" oncontextmenu="return false;">
+
+    <div class="w-full max-w-sm bg-[#131b2e] border border-gray-800 rounded-2xl p-6 shadow-2xl relative">
+        <!-- Brand Logo -->
         <div class="text-center mb-6">
-            <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white text-2xl mb-2 shadow-lg shadow-violet-500/20">
-                <i class="fa-solid fa-gamepad"></i>
+            <div class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-red-600 items-center justify-center font-black text-white text-2xl shadow-lg shadow-red-500/20 mb-3">
+                A
             </div>
-            <h1 class="text-2xl font-black tracking-wider text-white">ADEPT<span class="text-violet-500">PLAY</span></h1>
-            <p class="text-xs text-slate-400">Play Tournaments, Win Real Cash</p>
+            <h1 class="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-500">
+                ADEPT PLAY
+            </h1>
+            <p class="text-xs text-gray-400 mt-1">Esports Tournament Platform</p>
         </div>
 
-        <!-- Notification Alerts -->
-        <?php if (!empty($error)): ?>
-            <div class="p-3 mb-4 rounded-xl text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-2">
-                <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
-                <span><?= $error; ?></span>
-            </div>
-        <?php endif; ?>
-        <?php if (!empty($success)): ?>
-            <div class="p-3 mb-4 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-2">
-                <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                <span><?= $success; ?></span>
-            </div>
-        <?php endif; ?>
-
-        <!-- Two Tabs (Login / Sign Up) -->
-        <div class="grid grid-cols-2 bg-slate-800/80 p-1 rounded-xl mb-6 border border-slate-700/60">
-            <button type="button" onclick="switchTab('login')" id="tabBtnLogin" class="py-2 text-xs font-bold rounded-lg transition <?= ($active_tab === 'login') ? 'bg-violet-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200' ?>">
-                Sign In
+        <!-- Tab Toggle Buttons -->
+        <div class="flex bg-gray-900/80 p-1 rounded-xl mb-6 border border-gray-800">
+            <button type="button" id="tab-login" onclick="switchTab('login')" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-amber-500 text-black shadow">
+                Login
             </button>
-            <button type="button" onclick="switchTab('signup')" id="tabBtnSignup" class="py-2 text-xs font-bold rounded-lg transition <?= ($active_tab === 'signup') ? 'bg-violet-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200' ?>">
+            <button type="button" id="tab-register" onclick="switchTab('register')" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-gray-400 hover:text-white">
                 Register
             </button>
         </div>
 
-        <!-- Login Form -->
-        <div id="loginFormSection" class="<?= ($active_tab === 'login') ? 'block' : 'hidden' ?>">
-            <form method="POST" action="login.php" class="space-y-4">
-                <input type="hidden" name="action" value="login">
+        <!-- Alert Notification -->
+        <?php if (!empty($error)): ?>
+            <div class="bg-red-500/20 border border-red-500/50 text-red-400 text-xs p-3 rounded-xl mb-4 flex items-center">
+                <i class="fa-solid fa-circle-exclamation mr-2 text-sm flex-shrink-0"></i>
+                <span><?= htmlspecialchars($error) ?></span>
+            </div>
+        <?php endif; ?>
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
-                        <input type="text" name="username" required placeholder="Enter your username" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none">
-                    </div>
+        <!-- LOGIN FORM -->
+        <form method="POST" action="/login.php" id="form-login" class="space-y-4">
+            <input type="hidden" name="submit_type" value="login">
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">Username ya Mobile</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 text-xs">
+                        <i class="fa-solid fa-user"></i>
+                    </span>
+                    <input type="text" name="username" required placeholder="Enter username or mobile" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 transition">
                 </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
-                        <input type="password" name="password" required placeholder="Enter password" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none">
-                    </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">Password</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 text-xs">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <input type="password" name="password" required placeholder="Enter password" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 transition">
                 </div>
+            </div>
+            <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold py-3 rounded-xl text-xs tracking-wider uppercase shadow-lg shadow-amber-500/20 transition active:scale-[0.98]">
+                Login Now
+            </button>
+            <div class="text-center pt-2">
+                <p class="text-[11px] text-gray-400">
+                    Default Admin: <span class="text-amber-400 font-mono">admin</span> / <span class="text-amber-400 font-mono">admin123</span>
+                </p>
+            </div>
+        </form>
 
-                <button type="submit" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-600/30 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                    <span>Log In to Account</span>
-                </button>
-            </form>
-        </div>
-
-        <!-- Sign Up Form -->
-        <div id="signupFormSection" class="<?= ($active_tab === 'signup') ? 'block' : 'hidden' ?>">
-            <form method="POST" action="login.php" class="space-y-4">
-                <input type="hidden" name="action" value="signup">
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Choose Username</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-user-tag absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
-                        <input type="text" name="username" required placeholder="e.g. gamer_99" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none">
-                    </div>
+        <!-- REGISTER FORM -->
+        <form method="POST" action="/login.php" id="form-register" class="space-y-3.5 hidden">
+            <input type="hidden" name="submit_type" value="register">
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">Full Name</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 text-xs">
+                        <i class="fa-solid fa-id-card"></i>
+                    </span>
+                    <input type="text" name="name" required placeholder="Your full name" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition">
                 </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
-                        <input type="email" name="email" required placeholder="name@email.com" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none">
-                    </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">Username</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 text-xs">
+                        <i class="fa-solid fa-at"></i>
+                    </span>
+                    <input type="text" name="username" required placeholder="Choose a username" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition">
                 </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Password (6+ chars)</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
-                        <input type="password" name="password" required minlength="6" placeholder="Choose a secure password" class="w-full bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none">
-                    </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">Mobile Number (WhatsApp)</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 text-xs">
+                        <i class="fa-solid fa-phone"></i>
+                    </span>
+                    <input type="tel" name="phone" required placeholder="10-digit mobile number" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition">
                 </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">Create Password</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 text-xs">
+                        <i class="fa-solid fa-key"></i>
+                    </span>
+                    <input type="password" name="password" required placeholder="Choose password" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition">
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold py-3 rounded-xl text-xs tracking-wider uppercase shadow-lg shadow-amber-500/20 transition active:scale-[0.98]">
+                Create Free Account
+            </button>
+        </form>
 
-                <button type="submit" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-600/30 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-user-plus"></i>
-                    <span>Create Free Account</span>
-                </button>
-            </form>
-        </div>
-
-        <!-- Admin Gateway & Support Link -->
-        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <a href="admin/login.php" class="hover:text-violet-400 transition flex items-center gap-1">
-                <i class="fa-solid fa-shield-halved"></i> Admin Login
-            </a>
-            <a href="https://wa.me/919878385810" target="_blank" class="hover:text-emerald-400 transition flex items-center gap-1">
-                <i class="fa-brands fa-whatsapp text-emerald-400"></i> Adept Code Support
-            </a>
+        <!-- Official Support Info -->
+        <div class="mt-6 pt-4 border-t border-gray-800/80 text-center text-xs text-gray-400">
+            <span>Support: </span>
+            <a href="https://wa.me/919878385810" class="text-amber-400 hover:underline font-semibold">+91 9878385810</a>
         </div>
     </div>
 
     <script>
-        function switchTab(tab) {
-            const loginSection = document.getElementById('loginFormSection');
-            const signupSection = document.getElementById('signupFormSection');
-            const tabBtnLogin = document.getElementById('tabBtnLogin');
-            const tabBtnSignup = document.getElementById('tabBtnSignup');
+        function switchTab(type) {
+            const loginForm = document.getElementById('form-login');
+            const registerForm = document.getElementById('form-register');
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
 
-            if (tab === 'login') {
-                loginSection.classList.remove('hidden');
-                signupSection.classList.add('hidden');
-                tabBtnLogin.className = "py-2 text-xs font-bold rounded-lg transition bg-violet-600 text-white shadow-md";
-                tabBtnSignup.className = "py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-slate-200";
+            if (type === 'register') {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                tabRegister.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition bg-amber-500 text-black shadow';
+                tabLogin.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition text-gray-400 hover:text-white';
             } else {
-                signupSection.classList.remove('hidden');
-                loginSection.classList.add('hidden');
-                tabBtnSignup.className = "py-2 text-xs font-bold rounded-lg transition bg-violet-600 text-white shadow-md";
-                tabBtnLogin.className = "py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-slate-200";
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                tabLogin.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition bg-amber-500 text-black shadow';
+                tabRegister.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition text-gray-400 hover:text-white';
             }
         }
     </script>
