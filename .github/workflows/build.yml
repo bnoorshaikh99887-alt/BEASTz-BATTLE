@@ -21,7 +21,7 @@ jobs:
 
       - name: Generate Gradle Wrapper
         working-directory: ./android-app
-        run: gradle wrapper
+        run: gradle wrapper --gradle-version 8.0
 
       - name: Build APK
         working-directory: ./android-app
