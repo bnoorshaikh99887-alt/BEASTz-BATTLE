@@ -3,13 +3,13 @@ require_once __DIR__ . '/common/header.php';
 
 $curr_uid = (int)($_SESSION['user_id'] ?? 0);
 
-// Fetch top players by wallet / winning balance (ultra-fast indexed query)
+// Fetch top players by wallet balance (highest balance / earnings first)
 $leaderboard_res = $conn->query("
-    SELECT id, username, avatar, wallet_balance
+    SELECT id, username, avatar, wallet_balance, winning_balance
     FROM users
     WHERE (role IS NULL OR role != 'admin')
     ORDER BY wallet_balance DESC, id ASC
-    LIMIT 20
+    LIMIT 25
 ");
 
 $players = [];
@@ -17,6 +17,13 @@ if ($leaderboard_res) {
     while ($row = $leaderboard_res->fetch_assoc()) {
         $players[] = $row;
     }
+}
+
+// Fallback seed champions if database has few registered users
+if (count($players) < 3) {
+    if (!isset($players[0])) $players[0] = ['id' => 991, 'username' => 'BEAST_PRO', 'wallet_balance' => 150000.00, 'avatar' => ''];
+    if (!isset($players[1])) $players[1] = ['id' => 992, 'username' => 'HeadshotKing', 'wallet_balance' => 98500.00, 'avatar' => ''];
+    if (!isset($players[2])) $players[2] = ['id' => 993, 'username' => 'ShadowSniper', 'wallet_balance' => 74200.00, 'avatar' => ''];
 }
 
 // Current user rank & balance
@@ -44,7 +51,7 @@ foreach ($players as $idx => $p) {
         
         <!-- #2 Second Place (Left) -->
         <?php 
-            $p2 = $players[1] ?? ['username' => 'ProWarrior', 'wallet_balance' => 1500]; 
+            $p2 = $players[1]; 
             $p2_avatar = get_avatar_url($p2['avatar'] ?? '', $p2['username']);
         ?>
         <div class="flex flex-col items-center">
@@ -54,13 +61,15 @@ foreach ($players as $idx => $p) {
                     2
                 </span>
             </div>
-            <span class="text-xs font-bold text-slate-900 truncate max-w-[80px]"><?= htmlspecialchars($p2['username']); ?></span>
-            <span class="text-[11px] font-extrabold text-emerald-600 font-mono">₹<?= number_format((float)$p2['wallet_balance'], 0); ?></span>
+            <span class="text-xs font-bold text-slate-900 truncate max-w-[85px]"><?= htmlspecialchars($p2['username']); ?></span>
+            <span class="text-[11px] font-mono font-black text-emerald-600 block mt-0.5">
+                <?= format_inr($p2['wallet_balance']); ?>
+            </span>
         </div>
 
         <!-- #1 First Place (Center - Elevated with Yellow Gold Ring) -->
         <?php 
-            $p1 = $players[0] ?? ['username' => 'BEAST_KING', 'wallet_balance' => 3500]; 
+            $p1 = $players[0]; 
             $p1_avatar = get_avatar_url($p1['avatar'] ?? '', $p1['username']);
         ?>
         <div class="flex flex-col items-center -translate-y-2">
@@ -73,13 +82,15 @@ foreach ($players as $idx => $p) {
                     1
                 </span>
             </div>
-            <span class="text-sm font-black text-slate-900 truncate max-w-[90px]"><?= htmlspecialchars($p1['username']); ?></span>
-            <span class="text-xs font-black text-yellow-600 font-mono">₹<?= number_format((float)$p1['wallet_balance'], 0); ?></span>
+            <span class="text-sm font-black text-slate-900 truncate max-w-[100px]"><?= htmlspecialchars($p1['username']); ?></span>
+            <span class="text-xs font-mono font-black text-yellow-600 block mt-0.5">
+                <?= format_inr($p1['wallet_balance']); ?>
+            </span>
         </div>
 
         <!-- #3 Third Place (Right) -->
         <?php 
-            $p3 = $players[2] ?? ['username' => 'HeadshotMaster', 'wallet_balance' => 850]; 
+            $p3 = $players[2]; 
             $p3_avatar = get_avatar_url($p3['avatar'] ?? '', $p3['username']);
         ?>
         <div class="flex flex-col items-center">
@@ -89,8 +100,10 @@ foreach ($players as $idx => $p) {
                     3
                 </span>
             </div>
-            <span class="text-xs font-bold text-slate-900 truncate max-w-[80px]"><?= htmlspecialchars($p3['username']); ?></span>
-            <span class="text-[11px] font-extrabold text-emerald-600 font-mono">₹<?= number_format((float)$p3['wallet_balance'], 0); ?></span>
+            <span class="text-xs font-bold text-slate-900 truncate max-w-[85px]"><?= htmlspecialchars($p3['username']); ?></span>
+            <span class="text-[11px] font-mono font-black text-emerald-600 block mt-0.5">
+                <?= format_inr($p3['wallet_balance']); ?>
+            </span>
         </div>
 
     </div>
@@ -100,7 +113,7 @@ foreach ($players as $idx => $p) {
 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs mb-20">
     <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
         <span>Gamer</span>
-        <span>Rank</span>
+        <span>Wallet Balance</span>
     </div>
     
     <div class="divide-y divide-slate-100">
@@ -112,6 +125,9 @@ foreach ($players as $idx => $p) {
             ?>
             <div class="px-4 py-3 flex items-center justify-between <?= $is_me ? 'bg-yellow-50/50' : 'hover:bg-slate-50/80' ?> transition">
                 <div class="flex items-center gap-3">
+                    <span class="w-6 text-center text-xs font-mono font-black <?= ($rank <= 3) ? 'text-yellow-600 font-extrabold' : 'text-slate-400'; ?>">
+                        #<?= $rank; ?>
+                    </span>
                     <img src="<?= htmlspecialchars($p_avatar); ?>" alt="Av" class="w-9 h-9 rounded-full object-cover border border-slate-200 bg-slate-50">
                     <div>
                         <span class="text-xs font-bold text-slate-900 block leading-tight flex items-center gap-1.5">
@@ -120,15 +136,14 @@ foreach ($players as $idx => $p) {
                                 <span class="text-[9px] bg-yellow-400 text-black px-1.5 py-0.2 rounded font-black">YOU</span>
                             <?php endif; ?>
                         </span>
-                        <span class="text-[11px] font-extrabold text-emerald-600 font-mono">
-                            ₹<?= number_format((float)$p['wallet_balance'], 0); ?>
-                        </span>
+                        <span class="text-[10px] text-slate-400">Gamer #<?= $p['id']; ?></span>
                     </div>
                 </div>
                 <div class="text-right">
-                    <span class="text-sm font-black font-mono <?= ($rank <= 3) ? 'text-yellow-600' : 'text-slate-700'; ?>">
-                        #<?= $rank; ?>
+                    <span class="text-xs font-mono font-black text-slate-900 block">
+                        <?= format_inr($p['wallet_balance']); ?>
                     </span>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase">Balance</span>
                 </div>
             </div>
         <?php endforeach; ?>

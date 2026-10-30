@@ -27,33 +27,34 @@ $saved_upi_id = $user_info['upi_id'] ?? '';
 $u_stmt->close();
 
 // Fetch Admin Settings
-$admin_upi = "9878385810@upi";
-$admin_qr = "";
-$set_res = $conn->query("SELECT setting_key, setting_value, `key`, `value` FROM settings WHERE setting_key IN ('admin_upi_id', 'admin_qr_image') OR `key` IN ('admin_upi_id', 'admin_qr_image')");
-if ($set_res) {
-    while ($s = $set_res->fetch_assoc()) {
-        $k = $s['setting_key'] ?? $s['key'];
-        $v = !empty($s['setting_value']) ? $s['setting_value'] : ($s['value'] ?? '');
-        if ($k === 'admin_upi_id' && !empty($v)) $admin_upi = $v;
-        if ($k === 'admin_qr_image' && !empty($v)) $admin_qr = $v;
-    }
-}
+$admin_upi = get_setting('upi_id', '9878385810@upi');
+if (empty($admin_upi)) $admin_upi = '9878385810@upi';
+$admin_name = get_setting('upi_name', 'BEASTz BATTLE');
 
-// Fetch Recent Transactions
+// Fetch Pending Deposits for this user
+$pending_deposits = $conn->query("
+    SELECT id, amount, transaction_id, status, created_at 
+    FROM deposits 
+    WHERE user_id = {$user_id} AND status = 'Pending' 
+    ORDER BY id DESC 
+    LIMIT 5
+");
+
+// Fetch Recent Completed Transactions
 $history_query = "SELECT * FROM transactions WHERE user_id = {$user_id} ORDER BY id DESC LIMIT 15";
 $history_res = $conn->query($history_query);
 ?>
 
 <!-- Alert Feedback -->
 <?php if (!empty($alert_msg)): ?>
-    <div class="mb-4 p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 <?= ($alert_type === 'success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : (($alert_type === 'info') ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-rose-50 text-rose-800 border border-rose-200') ?>">
-        <i class="fa-solid <?= ($alert_type === 'success') ? 'fa-circle-check text-emerald-500' : (($alert_type === 'info') ? 'fa-circle-info text-blue-500' : 'fa-circle-exclamation text-rose-500') ?> text-sm"></i>
+    <div class="mb-4 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 <?= ($alert_type === 'success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : (($alert_type === 'info') ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-rose-50 text-rose-800 border border-rose-200') ?>">
+        <i class="fa-solid <?= ($alert_type === 'success') ? 'fa-circle-check text-emerald-600' : (($alert_type === 'info') ? 'fa-circle-info text-blue-600' : 'fa-circle-exclamation text-rose-600') ?> text-sm"></i>
         <span><?= htmlspecialchars($alert_msg); ?></span>
     </div>
 <?php endif; ?>
 
 <!-- Wallet Card (White Card with Yellow Accents) -->
-<div class="bg-white border border-slate-200 rounded-3xl p-5 mb-5 shadow-sm relative overflow-hidden">
+<div class="bg-white border border-slate-200 rounded-3xl p-5 mb-5 shadow-xs relative overflow-hidden">
     <div class="flex items-center justify-between mb-4">
         <div>
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available Balance</span>
@@ -66,13 +67,12 @@ $history_res = $conn->query($history_query);
         </div>
     </div>
 
-    <!-- Quick Actions (Yellow Add Money & Green Withdraw) -->
+    <!-- Quick Actions (Yellow Add Money & Withdraw) -->
     <div class="grid grid-cols-2 gap-2.5">
         <button type="button" onclick="openDepositModal()" class="py-2.5 px-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-circle-plus text-xs"></i>
             <span>Add Money</span>
         </button>
-
         <a href="profile.php" class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-1.5 border border-slate-200">
             <i class="fa-solid fa-paper-plane text-xs text-slate-600"></i>
             <span>Withdraw</span>
@@ -80,8 +80,37 @@ $history_res = $conn->query($history_query);
     </div>
 </div>
 
+<!-- Pending UPI UTR Deposits (Awaiting Admin Approval) -->
+<?php if ($pending_deposits && $pending_deposits->num_rows > 0): ?>
+    <div class="bg-amber-50/80 border border-amber-300 rounded-2xl p-4 mb-5 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Pending UTR Verifications
+            </h3>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                Awaiting Verification
+            </span>
+        </div>
+        <p class="text-[11px] text-amber-800">Your deposit request is under admin review. Once verified against bank records, it will be added to your balance.</p>
+        
+        <div class="space-y-2 pt-1">
+            <?php while ($pd = $pending_deposits->fetch_assoc()): ?>
+                <div class="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between text-xs">
+                    <div>
+                        <span class="font-extrabold text-slate-900 block"><?= format_inr($pd['amount']); ?></span>
+                        <span class="text-[10px] font-mono text-slate-500">UTR: <?= htmlspecialchars($pd['transaction_id']); ?></span>
+                    </div>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                        Pending Admin Credit
+                    </span>
+                </div>
+            <?php endwhile; ?>
+        </div>
+    </div>
+<?php endif; ?>
+
 <!-- Transaction Passbook -->
-<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-20">
     <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
         <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
             <i class="fa-solid fa-receipt text-yellow-500"></i> Passbook History
@@ -107,7 +136,6 @@ $history_res = $conn->query($history_query);
                             </span>
                         </div>
                     </div>
-
                     <div class="text-right">
                         <span class="font-mono font-black text-xs <?= $is_cr ? 'text-emerald-600' : 'text-slate-700'; ?>">
                             <?= $is_cr ? '+' : '-' ?><?= format_inr($tx['amount']); ?>
@@ -147,14 +175,14 @@ $history_res = $conn->query($history_query);
                 </div>
             </button>
 
-            <!-- Option 2: Direct UPI QR Code -->
+            <!-- Option 2: Direct UPI QR Code & 12-Digit UTR -->
             <button type="button" onclick="openQRModal()" class="w-full bg-slate-50 hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
-                <div class="w-10 h-10 rounded-xl bg-slate-200 text-slate-800 flex items-center justify-center text-lg font-bold">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center text-lg font-bold shadow-xs">
                     <i class="fa-solid fa-qrcode"></i>
                 </div>
                 <div>
-                    <span class="text-xs font-bold text-slate-900 block">Scan UPI QR Code</span>
-                    <span class="text-[10px] text-slate-500">Pay via scanner & submit 12-digit UTR</span>
+                    <span class="text-xs font-bold text-slate-900 block">Direct UPI QR / UTR Submission</span>
+                    <span class="text-[10px] text-slate-500">Scan QR & submit 12-digit UPI reference number</span>
                 </div>
             </button>
         </div>
@@ -168,7 +196,7 @@ $history_res = $conn->query($history_query);
             <i class="fa-solid fa-xmark"></i>
         </button>
 
-        <h3 class="text-sm font-extrabold text-slate-900 mb-1">Instant Cashfree Gateway</h3>
+        <h3 class="text-sm font-extrabold text-slate-900 mb-1">Instant Gateway Deposit</h3>
         <p class="text-[11px] text-slate-400 mb-4">Enter amount to add (Min ₹10.00)</p>
 
         <form method="POST" action="cashfree_create_order.php" class="space-y-3.5" onsubmit="var b=this.querySelector('button[type=submit]'); if(b){ b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin mr-1.5\'></i> Opening Cashfree...'; }">
@@ -180,14 +208,15 @@ $history_res = $conn->query($history_query);
                 </div>
             </div>
 
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="this.form.amount.value = 20" class="flex-1 py-1 bg-slate-100 hover:bg-yellow-100 text-slate-700 text-[10px] font-bold rounded-lg">+₹20</button>
-                <button type="button" onclick="this.form.amount.value = 50" class="flex-1 py-1 bg-slate-100 hover:bg-yellow-100 text-slate-700 text-[10px] font-bold rounded-lg">+₹50</button>
-                <button type="button" onclick="this.form.amount.value = 100" class="flex-1 py-1 bg-slate-100 hover:bg-yellow-100 text-slate-700 text-[10px] font-bold rounded-lg">+₹100</button>
-                <button type="button" onclick="this.form.amount.value = 200" class="flex-1 py-1 bg-slate-100 hover:bg-yellow-100 text-slate-700 text-[10px] font-bold rounded-lg">+₹200</button>
+            <!-- Quick Amount Badges -->
+            <div class="grid grid-cols-4 gap-2">
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=20" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹20</button>
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=50" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹50</button>
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=100" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹100</button>
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=200" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹200</button>
             </div>
 
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-md shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-1.5">
+            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-lock text-xs"></i>
                 <span>Proceed to Cashfree Payment</span>
             </button>
@@ -195,37 +224,40 @@ $history_res = $conn->query($history_query);
     </div>
 </div>
 
-<!-- Modal: QR Code Deposit -->
+<!-- Modal: QR Code & 12-Digit UTR Deposit -->
 <div id="qrModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative text-center">
+    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
         <button type="button" onclick="closeQRModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
 
         <h3 class="text-sm font-extrabold text-slate-900 mb-1">Scan & Pay via UPI</h3>
-        <p class="text-[11px] text-slate-400 mb-3">Scan QR on GPay / PhonePe / Paytm</p>
+        <p class="text-[11px] text-slate-400 mb-3">Scan QR or copy UPI ID on GPay / PhonePe / Paytm</p>
 
         <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl inline-block mb-3">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=<?= urlencode("upi://pay?pa={$admin_upi}&pn=BEASTzBATTLE&cu=INR"); ?>" alt="UPI QR" class="w-40 h-40 mx-auto rounded-lg">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=<?= urlencode("upi://pay?pa={$admin_upi}&pn=" . urlencode($admin_name) . "&cu=INR"); ?>" alt="UPI QR" class="w-40 h-40 mx-auto rounded-lg">
         </div>
 
-        <div class="bg-slate-100 p-2 rounded-xl mb-3 text-xs font-mono font-bold text-slate-800">
-            UPI: <?= htmlspecialchars($admin_upi); ?>
+        <div class="bg-slate-100 p-2.5 rounded-xl mb-3 text-xs font-mono font-black text-slate-800 flex items-center justify-between">
+            <span class="select-all">UPI: <?= htmlspecialchars($admin_upi); ?></span>
+            <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($admin_upi); ?>'); alert('UPI ID copied to clipboard!');" class="text-[10px] bg-white border border-slate-300 px-2 py-0.5 rounded font-bold">Copy</button>
         </div>
 
-        <form method="POST" action="payment_verify.php" class="space-y-2.5 text-left">
+        <form method="POST" action="payment_verify.php" class="space-y-3 text-left">
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Deposited Amount (₹)</label>
-                <input type="number" name="amount" min="10" required placeholder="50" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-yellow-400">
+                <input type="number" name="amount" min="10" step="1" required placeholder="50" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-yellow-400">
             </div>
 
             <div>
-                <label class="block text-[10px] font-bold text-slate-600 mb-1">12-Digit UPI Ref / UTR No</label>
-                <input type="text" name="transaction_id" required placeholder="e.g. 429381920192" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-yellow-400">
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">12-Digit UPI Reference / UTR Number</label>
+                <input type="text" name="transaction_id" required minlength="6" placeholder="e.g. 429381920192" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:border-yellow-400">
+                <p class="text-[10px] text-slate-400 mt-1">Found in your payment app transaction details after sending money.</p>
             </div>
 
-            <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm">
-                Submit Deposit UTR
+            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Submit 12-Digit UTR for Verification</span>
             </button>
         </form>
     </div>
@@ -234,13 +266,11 @@ $history_res = $conn->query($history_query);
 <script>
     function openDepositModal() { document.getElementById('depositChoiceModal').classList.remove('hidden'); }
     function closeDepositModal() { document.getElementById('depositChoiceModal').classList.add('hidden'); }
-
     function openCashfreeModal() {
         closeDepositModal();
         document.getElementById('cashfreeModal').classList.remove('hidden');
     }
     function closeCashfreeModal() { document.getElementById('cashfreeModal').classList.add('hidden'); }
-
     function openQRModal() {
         closeDepositModal();
         document.getElementById('qrModal').classList.remove('hidden');
