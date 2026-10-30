@@ -54,17 +54,13 @@ public class MainActivity extends Activity {
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
-protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    
-    // OneSignal Initialization
-    OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-    OneSignal.initWithContext(this);
-    OneSignal.setAppId("561bd59e-8355-47c8-88cc-0766688a105a");
-
-    // niche ka baaki code waisa hi rahega...
-    setContentView(R.layout.activity_main); 
-
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // OneSignal Initialization
+        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+        OneSignal.initWithContext(this);
+        OneSignal.setAppId("561bd59e-8355-47c8-88cc-0766688a105a");
 
         prefs = getSharedPreferences("beastz_prefs", MODE_PRIVATE);
 
