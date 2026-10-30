@@ -105,20 +105,26 @@
 <!-- SECTION 2: QUICK ACTION BUTTONS -->
 <!-- ============================================================= -->
 <div class="space-y-2 mb-4">
-        <!-- Download Real Native Android APK -->
-    <a href="/BEASTz-BATTLE.apk" download="BEASTz-BATTLE.apk" class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-950 rounded-2xl p-3.5 flex items-center justify-between shadow-md transition active:scale-95 group font-black mb-2">
+        <!-- New Update Available / App Version System -->
+    <a href="/BEASTz-BATTLE.apk" download="BEASTz-BATTLE.apk" class="w-full bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-500 hover:to-amber-500 text-slate-950 rounded-2xl p-3.5 flex items-center justify-between shadow-md transition active:scale-95 group font-black mb-2">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center text-base shadow-xs">
-                <i class="fa-brands fa-android"></i>
+            <div class="relative">
+                <div class="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center text-base shadow-xs">
+                    <i class="fa-solid fa-arrows-rotate animate-spin" style="animation-duration: 6s;"></i>
+                </div>
+                <span class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full animate-ping"></span>
             </div>
             <div class="text-left">
-                <span class="text-xs font-black text-slate-950 block">Download Real Android APK</span>
-                <span class="text-[10px] text-slate-900/80 font-bold">100% Native Signed .APK &bull; Direct Phone Install</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-black text-slate-950 block">New Update Available!</span>
+                    <span class="px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[8px] font-black uppercase">v1.2.0</span>
+                </div>
+                <span class="text-[10px] text-slate-900/90 font-bold block mt-0.5">Tap to Install Latest APK Build &bull; High Performance</span>
             </div>
         </div>
-        <div class="px-2.5 py-1 bg-slate-950 text-yellow-400 rounded-lg text-[10px] font-extrabold flex items-center gap-1 shadow-xs">
-            <i class="fa-solid fa-arrow-down text-[9px]"></i>
-            <span>APK</span>
+        <div class="px-2.5 py-1.5 bg-slate-950 text-yellow-400 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-xs group-hover:scale-105 transition">
+            <i class="fa-solid fa-cloud-arrow-down text-[10px]"></i>
+            <span>UPDATE</span>
         </div>
     </a>
 
@@ -221,7 +227,7 @@
             
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Game Character Name (IGN) <span class="text-rose-500">*</span></label>
-                <input type="text" name="game_name" value="<?= htmlspecialchars($my_ign); ?>" required placeholder="e.g. ꧁☆BEAST☆꧂" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
+                <input type="text" name="game_name" value="<?= htmlspecialchars($my_ign); ?>" required placeholder="e.g. ShadowHunter" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
             </div>
 
             <div>
@@ -287,29 +293,23 @@
                 <input type="file" id="avatarFileInput" accept="image/*" class="hidden">
             </div>
 
-            <!-- Preset Gaming Avatars Grid -->
+            <!-- Preset Gaming Avatars Grid (Pure Character Vectors, Zero Letters/Text) -->
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-2">Or Choose a Gaming Avatar</label>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Or Choose a Gaming Character Avatar</label>
                 <div class="grid grid-cols-4 gap-2">
                     <?php
-                    $presets = [
-                        ['label' => 'Ninja', 'bg' => '%23facc15', 'char' => 'N'],
-                        ['label' => 'Cyber', 'bg' => '%2338bdf8', 'char' => 'C'],
-                        ['label' => 'Venom', 'bg' => '%234ade80', 'char' => 'V'],
-                        ['label' => 'Beast', 'bg' => '%23f43f5e', 'char' => 'B'],
-                        ['label' => 'Shadow', 'bg' => '%23a855f7', 'char' => 'S'],
-                        ['label' => 'Ghost', 'bg' => '%23fb923c', 'char' => 'G'],
-                        ['label' => 'Titan', 'bg' => '%230ea5e9', 'char' => 'T'],
-                        ['label' => 'King', 'bg' => '%23eab308', 'char' => 'K'],
-                    ];
-                    foreach ($presets as $pr):
-                        $svg_uri = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='{$pr['bg']}'/><text x='50%' y='54%' font-family='sans-serif' font-weight='900' font-size='42' fill='%230f172a' text-anchor='middle' dominant-baseline='middle'>{$pr['char']}</text></svg>";
+                    global ;
+                    if (!empty()):
+                        foreach ( as ):
                     ?>
-                        <button type="button" onclick="selectPreset('<?= $svg_uri; ?>')" class="preset-btn p-1.5 rounded-xl border border-slate-200 hover:border-yellow-400 bg-slate-50 hover:bg-yellow-50 transition flex flex-col items-center">
-                            <img src="<?= $svg_uri; ?>" alt="<?= $pr['label']; ?>" class="w-10 h-10 rounded-full pointer-events-none">
-                            <span class="text-[9px] font-bold text-slate-600 mt-1"><?= $pr['label']; ?></span>
+                        <button type="button" onclick="selectPreset('<?= htmlspecialchars(['svg']); ?>')" class="preset-btn p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-yellow-400 bg-slate-50 dark:bg-slate-800 hover:bg-yellow-50 transition flex flex-col items-center">
+                            <img src="<?= htmlspecialchars(['svg']); ?>" alt="<?= ['label']; ?>" class="w-10 h-10 rounded-full pointer-events-none shadow-xs">
+                            <span class="text-[9px] font-black text-slate-700 dark:text-slate-300 mt-1"><?= ['label']; ?></span>
                         </button>
-                    <?php endforeach; ?>
+                    <?php 
+                        endforeach;
+                    endif;
+                    ?>
                 </div>
             </div>
 

@@ -141,3 +141,105 @@ window.toggleTheme = toggleTheme;
 window.setTheme = setTheme;
 window.updateThemeUI = updateThemeUI;
 window.switchAppTab = switchAppTab;
+
+
+// ============================================================
+// REAL-TIME PUSH NOTIFICATION RECEIVER (WEB + NATIVE APK)
+// ============================================================
+(function() {
+    var lastNotifId = 0;
+    try {
+        lastNotifId = parseInt(localStorage.getItem('beastz_last_notif_id') || '0', 10);
+    } catch(e) {}
+
+    // Request Web Notification Permission gracefully on interaction
+    function reqWebPerm() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+    document.addEventListener('click', reqWebPerm, { once: true });
+    document.addEventListener('touchstart', reqWebPerm, { once: true });
+
+    function showInAppAlert(title, message, url) {
+        var existing = document.getElementById('beastz-live-toast');
+        if (existing) existing.remove();
+
+        var toast = document.createElement('div');
+        toast.id = 'beastz-live-toast';
+        toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-sm z-[9999] bg-slate-900/95 border-2 border-yellow-400 text-white rounded-2xl p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md flex items-start gap-3 transition-all duration-300 transform -translate-y-10 opacity-0 cursor-pointer';
+        toast.innerHTML = 
+            '<div class="w-9 h-9 rounded-xl bg-yellow-400 text-slate-950 flex items-center justify-center text-base shrink-0 shadow-xs">' +
+                '<i class="fa-solid fa-bell animate-bounce"></i>' +
+            '</div>' +
+            '<div class="flex-1 text-left min-w-0">' +
+                '<div class="flex items-center justify-between mb-0.5">' +
+                    '<span class="text-[9px] font-black uppercase tracking-wider text-yellow-400">BEASTz ALERT &bull; NOW</span>' +
+                    '<span class="text-[10px] text-slate-400"><i class="fa-solid fa-xmark"></i></span>' +
+                '</div>' +
+                '<h4 class="text-xs font-black text-white truncate">' + title + '</h4>' +
+                '<p class="text-[11px] text-slate-300 line-clamp-2 mt-0.5">' + message + '</p>' +
+            '</div>';
+
+        toast.onclick = function() {
+            if (url) {
+                if (url.indexOf('?tab=') !== -1) {
+                    var tab = url.split('?tab=')[1];
+                    if (window.switchAppTab) window.switchAppTab(tab);
+                } else {
+                    window.location.href = url;
+                }
+            }
+            toast.remove();
+        };
+
+        document.body.appendChild(toast);
+        setTimeout(function() {
+            toast.classList.remove('-translate-y-10', 'opacity-0');
+        }, 50);
+
+        setTimeout(function() {
+            if (toast.parentNode) {
+                toast.classList.add('-translate-y-10', 'opacity-0');
+                setTimeout(function() { if (toast.parentNode) toast.remove(); }, 300);
+            }
+        }, 8000);
+    }
+
+    function checkPushAlerts() {
+        fetch('/api/get_notifications.php?since_id=' + lastNotifId)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data && data.success && data.notifications && data.notifications.length > 0) {
+                    data.notifications.forEach(function(n) {
+                        if (n.id > lastNotifId) {
+                            lastNotifId = n.id;
+                            try { localStorage.setItem('beastz_last_notif_id', lastNotifId); } catch(e) {}
+                            
+                            // 1. Android Native Notification
+                            if (window.BEASTzNative && window.BEASTzNative.postNativeNotification) {
+                                window.BEASTzNative.postNativeNotification(n.title, n.message, n.target_url);
+                            } 
+                            // 2. Web Browser Notification
+                            else if ('Notification' in window && Notification.permission === 'granted') {
+                                try {
+                                    new Notification(n.title, {
+                                        body: n.message,
+                                        icon: '/icon-192.png'
+                                    });
+                                } catch(e) {}
+                            }
+
+                            // 3. In-App Floating Toast
+                            showInAppAlert(n.title, n.message, n.target_url);
+                        }
+                    });
+                }
+            })
+            .catch(function() {});
+    }
+
+    // Check after 3 seconds, then every 20 seconds
+    setTimeout(checkPushAlerts, 3000);
+    setInterval(checkPushAlerts, 20000);
+})();

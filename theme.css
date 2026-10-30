@@ -269,3 +269,37 @@ html.dark .bg-slate-900 .bg-yellow-400 * {
     background-color: #facc15 !important;
     color: #020617 !important;
 }
+
+
+/* ============================================================ */
+/* SOLID FULL-COVER YELLOW CAPSULE SYSTEM (Dark & Light Mode) */
+/* ============================================================ */
+.category-tab.bg-yellow-400,
+html.dark .category-tab.bg-yellow-400,
+.match-tab.bg-yellow-400,
+html.dark .match-tab.bg-yellow-400,
+.admin-tab-btn.bg-yellow-400,
+html.dark .admin-tab-btn.bg-yellow-400,
+.yellow-capsule-active {
+    background-color: #facc15 !important;
+    color: #020617 !important;
+    font-weight: 900 !important;
+    border-color: #facc15 !important;
+    box-shadow: 0 2px 10px rgba(250, 204, 21, 0.45) !important;
+}
+
+.category-tab.bg-yellow-400 *,
+html.dark .category-tab.bg-yellow-400 *,
+.match-tab.bg-yellow-400 *,
+html.dark .match-tab.bg-yellow-400 *,
+.admin-tab-btn.bg-yellow-400 *,
+html.dark .admin-tab-btn.bg-yellow-400 * {
+    color: #020617 !important;
+}
+
+/* ZERO TOP PROGRESS LINE / ZERO GREEN SLIDER OVERRIDES */
+#nprogress, .nprogress-busy, [id*="progress"], [class*="progress-bar"] {
+    display: none !important;
+    height: 0 !important;
+    opacity: 0 !important;
+}

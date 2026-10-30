@@ -29,13 +29,17 @@ $pending_deposits = (int)($stats_row['pending_deposits'] ?? 0);
 $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 ?>
 
+<!-- ============================================================= -->
+<!-- TAB 1: DASHBOARD OVERVIEW -->
+<!-- ============================================================= -->
+<div id="admin-tab-overview" class="admin-spa-view space-y-4">
 <!-- Welcome Banner -->
 <div class="flex items-center justify-between mb-4">
     <div>
         <h2 class="text-base font-extrabold text-slate-900 font-display">Dashboard Overview</h2>
         <p class="text-[11px] text-slate-500">BEASTzBATTLE Real-Time Control Center</p>
     </div>
-    <a href="tournament.php" class="py-2 px-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 active:scale-95">
+    <a onclick="switchAdminTab('tournaments')" role="button" class="py-2 px-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 active:scale-95">
         <i class="fa-solid fa-plus text-[10px]"></i> New Tourney
     </a>
 </div>
@@ -47,7 +51,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
             <i class="fa-solid fa-bell text-amber-500 animate-bounce"></i>
             <span>Action Required: <?= $pending_deposits; ?> Deposits, <?= $pending_withdrawals; ?> Payouts pending review.</span>
         </div>
-        <a href="deposits.php" class="text-[10px] font-black bg-yellow-400 hover:bg-yellow-500 text-slate-950 px-2.5 py-1 rounded-lg transition shadow-xs">
+        <a onclick="switchAdminTab('deposits')" role="button" class="text-[10px] font-black bg-yellow-400 hover:bg-yellow-500 text-slate-950 px-2.5 py-1 rounded-lg transition shadow-xs">
             Review
         </a>
     </div>
@@ -68,7 +72,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
     </a>
 
     <!-- Total Tournaments -->
-    <a href="tournament.php" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-yellow-400 hover:shadow transition group">
+    <a onclick="switchAdminTab('tournaments')" role="button" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-yellow-400 hover:shadow transition group">
         <div class="flex items-center justify-between mb-2">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tournaments</span>
             <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
@@ -108,7 +112,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 <div class="space-y-2 mb-4">
     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">Quick Actions</h3>
     <div class="grid grid-cols-2 gap-2.5">
-        <a href="deposits.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+        <a onclick="switchAdminTab('deposits')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
             <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs group-hover:bg-emerald-500 group-hover:text-white transition">
                 <i class="fa-solid fa-arrow-down"></i>
             </div>
@@ -118,7 +122,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
             </div>
         </a>
 
-        <a href="withdrawals.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+        <a onclick="switchAdminTab('payouts')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
             <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-arrow-up"></i>
             </div>
@@ -128,7 +132,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
             </div>
         </a>
 
-        <a href="tournament.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+        <a onclick="switchAdminTab('tournaments')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
             <div class="w-8 h-8 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-gamepad"></i>
             </div>
@@ -138,7 +142,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
             </div>
         </a>
 
-        <a href="settings.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+        <a onclick="switchAdminTab('settings')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
             <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-sliders"></i>
             </div>
@@ -148,6 +152,42 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
             </div>
         </a>
     </div>
+</div>
+</div>
+
+<!-- ============================================================= -->
+<!-- TAB 2: TOURNAMENTS MANAGEMENT -->
+<!-- ============================================================= -->
+<div id="admin-tab-tournaments" class="admin-spa-view hidden space-y-4">
+    <?php require_once __DIR__ . '/views/tournaments_view.php'; ?>
+</div>
+
+<!-- ============================================================= -->
+<!-- TAB 3: DEPOSITS MANAGEMENT -->
+<!-- ============================================================= -->
+<div id="admin-tab-deposits" class="admin-spa-view hidden space-y-4">
+    <?php require_once __DIR__ . '/views/deposits_view.php'; ?>
+</div>
+
+<!-- ============================================================= -->
+<!-- TAB 4: PAYOUTS (WITHDRAWALS) MANAGEMENT -->
+<!-- ============================================================= -->
+<div id="admin-tab-payouts" class="admin-spa-view hidden space-y-4">
+    <?php require_once __DIR__ . '/views/payouts_view.php'; ?>
+</div>
+
+<!-- ============================================================= -->
+<!-- TAB 5: PUSH NOTIFICATIONS STUDIO (ZOMATO STYLE) -->
+<!-- ============================================================= -->
+<div id="admin-tab-notifications" class="admin-spa-view hidden space-y-4">
+    <?php require_once __DIR__ . '/views/notifications_tab.php'; ?>
+</div>
+
+<!-- ============================================================= -->
+<!-- TAB 6: SETTINGS & GATEWAY CONFIG -->
+<!-- ============================================================= -->
+<div id="admin-tab-settings" class="admin-spa-view hidden space-y-4">
+    <?php require_once __DIR__ . '/views/settings_view.php'; ?>
 </div>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>

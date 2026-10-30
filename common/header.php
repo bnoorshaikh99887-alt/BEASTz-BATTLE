@@ -123,21 +123,43 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-start overflow-x-hidden">
-    <!-- BEASTz BATTLE Esports Intro / Splash Screen -->
-    <div id="beastz-splash-screen" class="fixed inset-0 z-[9999] bg-[#070a12] flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="relative flex flex-col items-center animate-pulse">
-            <div class="w-20 h-20 rounded-3xl bg-yellow-400 text-slate-950 flex items-center justify-center text-4xl shadow-[0_0_40px_rgba(250,204,21,0.6)] mb-3.5">
-                <i class="fa-solid fa-gamepad"></i>
+    <!-- BEASTz BATTLE Ultra-Stylish Glowing Esports Intro / Splash Screen -->
+    <div id="beastz-splash-screen" class="fixed inset-0 z-[9999] bg-[#05070e] flex flex-col items-center justify-center transition-opacity duration-700 overflow-hidden" style="background: radial-gradient(circle at 50% 45%, rgba(250, 204, 21, 0.25) 0%, rgba(7, 10, 18, 0.95) 60%, #05070e 100%);">
+        <!-- Ambient Glowing Aura Rings -->
+        <div class="absolute w-72 h-72 rounded-full bg-yellow-400/10 blur-3xl animate-pulse pointer-events-none"></div>
+        
+        <div class="relative flex flex-col items-center z-10 px-6 text-center">
+            <!-- Glowing Rotating Cyber Shield Badge -->
+            <div class="relative mb-5">
+                <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-yellow-400 via-amber-400 to-yellow-500 text-slate-950 flex items-center justify-center text-4xl shadow-[0_0_50px_rgba(250,204,21,0.85)] border-2 border-white/40 transform transition hover:scale-105">
+                    <i class="fa-solid fa-gamepad text-slate-950 drop-shadow-md"></i>
+                </div>
+                <!-- Dual Outer Neon Rings -->
+                <div class="absolute -inset-2 rounded-[28px] border-2 border-yellow-400/60 animate-ping" style="animation-duration: 2.5s;"></div>
+                <div class="absolute -inset-4 rounded-[34px] border border-yellow-400/30"></div>
             </div>
-            <h1 class="text-2xl font-black text-white tracking-wider font-display">
-                BEASTz<span class="text-yellow-400">BATTLE</span>
+
+            <!-- Glowing Logo Typography -->
+            <h1 class="text-3xl sm:text-4xl font-black tracking-wider font-display text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 drop-shadow-[0_0_30px_rgba(250,204,21,0.7)]">
+                BEASTz<span class="text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]">BATTLE</span>
             </h1>
-            <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mt-1">
-                ESPORTS ARENA &bull; LEVEL UP
-            </span>
-            <div class="mt-5 flex items-center gap-2">
+            
+            <div class="flex items-center gap-2 mt-2">
+                <span class="h-[1px] w-6 bg-gradient-to-r from-transparent to-yellow-400"></span>
+                <span class="text-[10px] font-black uppercase tracking-[0.25em] text-yellow-400 font-mono">
+                    ESPORTS ARENA &bull; BATTLE GROUND
+                </span>
+                <span class="h-[1px] w-6 bg-gradient-to-l from-transparent to-yellow-400"></span>
+            </div>
+
+            <!-- Laser Power Energy Bar -->
+            <div class="w-48 h-1.5 bg-slate-900 rounded-full mt-7 overflow-hidden p-0.5 border border-yellow-500/40 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                <div class="h-full bg-gradient-to-r from-yellow-400 to-amber-300 rounded-full animate-pulse" style="width: 85%; box-shadow: 0 0 10px #facc15;"></div>
+            </div>
+
+            <div class="mt-3 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
-                <span class="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono">INITIALIZING ARENA...</span>
+                <span class="text-[9px] font-extrabold text-slate-300 uppercase tracking-widest font-mono">CONNECTING TO ARENA...</span>
             </div>
         </div>
     </div>
@@ -148,13 +170,11 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 if (splash) {
                     splash.style.opacity = '0';
                     splash.style.pointerEvents = 'none';
-                    setTimeout(function() { splash.remove(); }, 500);
+                    setTimeout(function() { splash.remove(); }, 600);
                 }
-            }, 600);
+            }, 750);
         });
     </script>
-
-
     <!-- Mobile App Container (Max Width 440px) -->
     <div class="w-full max-w-md min-h-screen bg-slate-50 border-x border-slate-200 flex flex-col relative pb-20 shadow-xl">
         

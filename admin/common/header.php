@@ -110,26 +110,25 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
             </div>
         </header>
 
-        <!-- Quick Sub-Navigation Menu (Horizontal scrolling tabs) -->
-        <div class="bg-white border-b border-slate-200 px-3 py-1.5 flex items-center gap-2 overflow-x-auto text-[11px] font-bold">
-            <a href="index.php" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap <?= ($cur_script === 'index.php') ? 'bg-yellow-400 text-slate-950 font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'; ?>">
-                Dashboard
-            </a>
-            <a href="tournament.php" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap <?= ($cur_script === 'tournament.php' || $cur_script === 'manage_tournament.php') ? 'bg-yellow-400 text-slate-950 font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'; ?>">
-                Tournaments
-            </a>
-            <a href="deposits.php" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap <?= ($cur_script === 'deposits.php') ? 'bg-yellow-400 text-slate-950 font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'; ?>">
-                Deposits
-            </a>
-            <a href="withdrawals.php" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap <?= ($cur_script === 'withdrawals.php') ? 'bg-yellow-400 text-slate-950 font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'; ?>">
-                Payouts
-            </a>
-            <a href="user.php" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap <?= ($cur_script === 'user.php') ? 'bg-yellow-400 text-slate-950 font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'; ?>">
-                Users
-            </a>
-            <a href="settings.php" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap <?= ($cur_script === 'settings.php') ? 'bg-yellow-400 text-slate-950 font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'; ?>">
-                Settings
-            </a>
+        <!-- Quick Sub-Navigation Menu (Ultra-Fast 0.01s SPA Solid Yellow Capsules) -->
+        <div class="bg-white/95 dark:bg-[#0b0f19]/95 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold no-scrollbar sticky top-12 z-40">
+            <button type="button" onclick="switchAdminTab('overview')" id="admin-nav-overview" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition bg-yellow-400 text-slate-950 font-black shadow-xs border border-yellow-400 cursor-pointer">
+                <i class="fa-solid fa-gauge mr-1"></i> Dashboard
+            </button>
+            <button type="button" onclick="switchAdminTab('tournaments')" id="admin-nav-tournaments" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
+                <i class="fa-solid fa-trophy mr-1"></i> Tournaments
+            </button>
+            <button type="button" onclick="switchAdminTab('deposits')" id="admin-nav-deposits" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
+                <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Deposits
+            </button>
+            <button type="button" onclick="switchAdminTab('payouts')" id="admin-nav-payouts" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
+                <i class="fa-solid fa-money-bill-transfer mr-1"></i> Payouts
+            </button>
+            <button type="button" onclick="switchAdminTab('notifications')" id="admin-nav-notifications" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
+                <i class="fa-solid fa-bell mr-1"></i> Push Alerts
+            </button>
+            <button type="button" onclick="switchAdminTab('settings')" id="admin-nav-settings" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
+                <i class="fa-solid fa-sliders mr-1"></i> Settings
+            </button>
         </div>
-
-        <main class="flex-1 p-3.5">
+        

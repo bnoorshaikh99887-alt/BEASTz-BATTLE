@@ -1,13 +1,13 @@
-<!-- Top 3 Sub-Tabs: Upcoming / Live / Played -->
-<div class="bg-white border-b border-slate-200 sticky top-14 z-30 mb-4 -mx-4 px-4 shadow-2xs">
-    <div class="grid grid-cols-3 text-center text-xs font-bold">
-        <button type="button" onclick="switchMatchTab('upcoming', this)" id="tabBtnUpcoming" class="match-tab py-3 border-b-2 border-yellow-400 text-slate-950 font-black transition">
+<!-- Top 3 Sub-Tabs: Upcoming / Live / Played (Full-Cover Solid Yellow Capsule Pills) -->
+<div class="bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-14 z-30 mb-4 -mx-4 px-3 py-2 shadow-xs">
+    <div class="grid grid-cols-3 gap-1.5 text-center text-xs font-bold bg-slate-100 dark:bg-slate-900/90 p-1 rounded-full border border-slate-200 dark:border-slate-800">
+        <button type="button" onclick="switchMatchTab('upcoming', this)" id="tabBtnUpcoming" class="match-tab py-1.5 px-3 rounded-full bg-yellow-400 text-slate-950 font-black shadow-xs transition-all">
             Upcoming
         </button>
-        <button type="button" onclick="switchMatchTab('live', this)" id="tabBtnLive" class="match-tab py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">
+        <button type="button" onclick="switchMatchTab('live', this)" id="tabBtnLive" class="match-tab py-1.5 px-3 rounded-full text-slate-400 hover:text-white font-bold transition-all">
             Live
         </button>
-        <button type="button" onclick="switchMatchTab('played', this)" id="tabBtnPlayed" class="match-tab py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">
+        <button type="button" onclick="switchMatchTab('played', this)" id="tabBtnPlayed" class="match-tab py-1.5 px-3 rounded-full text-slate-400 hover:text-white font-bold transition-all">
             Played
         </button>
     </div>
