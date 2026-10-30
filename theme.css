@@ -1,0 +1,216 @@
+/* BEASTz BATTLE - Cyber Esports Dark & Light Theme System */
+
+/* Immediate dark transition */
+body {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* ================= DARK MODE UNIVERSAL RULES ================= */
+html.dark body {
+    background-color: #070a12 !important;
+    color: #f1f5f9 !important;
+}
+
+/* Mobile Frame & Main App Containers */
+html.dark .min-h-screen.bg-slate-50,
+html.dark div.max-w-md.min-h-screen,
+html.dark div.max-w-sm.min-h-screen,
+html.dark div.max-w-md.bg-slate-50,
+html.dark div.max-w-sm.bg-white {
+    background-color: #0b0f19 !important;
+    border-color: #1e293b !important;
+}
+
+/* Header & Bottom Navigation */
+html.dark header {
+    background-color: rgba(11, 15, 25, 0.96) !important;
+    border-color: #1e293b !important;
+}
+html.dark nav.fixed {
+    background-color: rgba(11, 15, 25, 0.96) !important;
+    border-color: #1e293b !important;
+}
+html.dark .fixed.bottom-14 {
+    background-color: rgba(11, 15, 25, 0.96) !important;
+    border-color: #1e293b !important;
+}
+
+/* Backgrounds & Cards */
+html.dark .bg-white {
+    background-color: #131b2e !important;
+    color: #f8fafc !important;
+    border-color: #1e2d42 !important;
+}
+html.dark .bg-slate-50 {
+    background-color: #0f172a !important;
+    color: #f1f5f9 !important;
+    border-color: #1e293b !important;
+}
+html.dark .bg-slate-100 {
+    background-color: #131b2e !important;
+    color: #e2e8f0 !important;
+    border-color: #1e293b !important;
+}
+html.dark .bg-slate-200 {
+    background-color: #1e293b !important;
+    color: #94a3b8 !important;
+}
+
+/* Borders */
+html.dark .border-slate-100,
+html.dark .border-slate-200 {
+    border-color: #1e293b !important;
+}
+html.dark .divide-slate-100 > * + *,
+html.dark .divide-slate-200 > * + * {
+    border-color: #1e293b !important;
+}
+
+/* Typography */
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+    color: #f8fafc !important;
+}
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+    color: #cbd5e1 !important;
+}
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+    color: #94a3b8 !important;
+}
+
+/* Form inputs & controls */
+html.dark input,
+html.dark textarea,
+html.dark select {
+    background-color: #0b0f19 !important;
+    border-color: #1e293b !important;
+    color: #f8fafc !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #64748b !important;
+}
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+    border-color: #eab308 !important;
+    box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.25) !important;
+}
+
+/* Tournament Cards */
+html.dark .tournament-card {
+    background-color: #131b2e !important;
+    border-color: #1e2d42 !important;
+    box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.4) !important;
+}
+html.dark .tournament-card:hover {
+    border-color: #eab308 !important;
+    box-shadow: 0 6px 22px -3px rgba(234, 179, 8, 0.18) !important;
+}
+
+/* Category Filter Tabs */
+html.dark .category-tab:not(.bg-yellow-400) {
+    background-color: #131b2e !important;
+    color: #94a3b8 !important;
+    border-color: #1e293b !important;
+}
+html.dark .category-tab:not(.bg-yellow-400):hover {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+/* Match Navigation Subtabs in My Matches */
+html.dark .match-tab.text-slate-950,
+html.dark .match-tab.border-yellow-400 {
+    color: #facc15 !important;
+    border-color: #facc15 !important;
+}
+html.dark .match-tab:not(.border-yellow-400) {
+    color: #94a3b8 !important;
+}
+
+/* Modals & Dialogs */
+html.dark .modal-content,
+html.dark [id$="Modal"] .bg-white,
+html.dark [id$="Modal"] .bg-slate-50,
+html.dark [id$="modal"] .bg-white {
+    background-color: #131b2e !important;
+    border-color: #1e2d42 !important;
+}
+
+/* Color Accent Badges in Dark Mode */
+html.dark .bg-yellow-50 {
+    background-color: rgba(234, 179, 8, 0.15) !important;
+    border-color: rgba(234, 179, 8, 0.35) !important;
+    color: #fef08a !important;
+}
+html.dark .bg-yellow-100 {
+    background-color: rgba(234, 179, 8, 0.22) !important;
+    color: #fef08a !important;
+}
+html.dark .text-yellow-800,
+html.dark .text-yellow-900,
+html.dark .text-yellow-700 {
+    color: #facc15 !important;
+}
+
+html.dark .bg-emerald-50 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+    color: #6ee7b7 !important;
+}
+html.dark .bg-emerald-100 {
+    background-color: rgba(16, 185, 129, 0.22) !important;
+    color: #a7f3d0 !important;
+}
+html.dark .text-emerald-800,
+html.dark .text-emerald-700 {
+    color: #34d399 !important;
+}
+
+html.dark .bg-rose-50 {
+    background-color: rgba(244, 63, 94, 0.15) !important;
+    border-color: rgba(244, 63, 94, 0.35) !important;
+    color: #fda4af !important;
+}
+html.dark .bg-rose-100 {
+    background-color: rgba(244, 63, 94, 0.22) !important;
+    color: #fecdd3 !important;
+}
+html.dark .text-rose-800,
+html.dark .text-rose-700 {
+    color: #fb7185 !important;
+}
+
+html.dark .bg-blue-50 {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    border-color: rgba(59, 130, 246, 0.35) !important;
+    color: #93c5fd !important;
+}
+
+html.dark .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    border-color: rgba(245, 158, 11, 0.35) !important;
+    color: #fde68a !important;
+}
+
+/* Hover effects */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+    background-color: #1e293b !important;
+}
+
+/* Slot selection in modal */
+html.dark .slot-btn-free {
+    background-color: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+html.dark .slot-btn-taken {
+    background-color: #181f2f !important;
+    border-color: #26334a !important;
+    color: #64748b !important;
+}

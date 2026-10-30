@@ -43,6 +43,8 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Immediate Dark Mode Detection -->
+    <script src="/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin Control Center - BEASTzBATTLE</title>
@@ -51,7 +53,13 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/theme.css">
     <style>
         * { font-family: 'Plus Jakarta Sans', sans-serif; }
         h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
@@ -86,7 +94,10 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
                 </a>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <button type="button" onclick="toggleTheme()" title="Toggle Dark / Light Theme" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-yellow-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-yellow-400 hover:border-yellow-400 transition active:scale-90 shadow-2xs">
+                    <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
+                </button>
                 <a href="../index.php" title="Open Player View" target="_blank" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold border border-slate-200 transition flex items-center gap-1">
                     <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                     <span>Player App</span>

@@ -202,6 +202,28 @@ if (empty($support_phone)) $support_phone = '9878385810';
 </div>
 
 <!-- ============================================================= -->
+<!-- ============================================================= -->
+<!-- THEME & DISPLAY PREFERENCES (DARK / LIGHT MODE) -->
+<!-- ============================================================= -->
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-3.5">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-sm shadow-2xs">
+                <i class="fa-solid fa-moon beastz-theme-icon"></i>
+            </div>
+            <div>
+                <span class="text-xs font-extrabold text-slate-900 block beastz-theme-label">Dark Mode</span>
+                <span class="text-[10px] text-slate-400 block">Switch between Cyber Dark & Clean Light theme</span>
+            </div>
+        </div>
+        <!-- Toggle Switch -->
+        <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" onchange="toggleTheme()" class="sr-only peer beastz-theme-toggle-input">
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+        </label>
+    </div>
+</div>
+
 <!-- SECTION 2: QUICK ACTION BUTTONS -->
 <!-- ============================================================= -->
 <div class="space-y-2 mb-4">

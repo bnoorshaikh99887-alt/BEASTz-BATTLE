@@ -188,6 +188,8 @@ $has_custom_google_client = (!empty($google_client_id) && !str_contains($google_
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Immediate Dark Mode Detection -->
+    <script src="/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sign In - BEASTzBATTLE</title>
@@ -196,7 +198,13 @@ $has_custom_google_client = (!empty($google_client_id) && !str_contains($google_
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/theme.css">
     
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -211,7 +219,13 @@ $has_custom_google_client = (!empty($google_client_id) && !str_contains($google_
         
         <!-- Header Brand -->
         <div class="text-center mb-6">
-            <div class="w-14 h-14 mx-auto rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-2xl mb-3 shadow-sm font-black">
+            <!-- Theme Toggle Top Corner -->
+        <div class="absolute top-3.5 right-3.5">
+            <button type="button" onclick="toggleTheme()" title="Toggle Dark / Light Mode" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-yellow-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-yellow-400 transition active:scale-90 shadow-2xs">
+                <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
+            </button>
+        </div>
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-2xl mb-3 shadow-sm font-black">
                 <i class="fa-solid fa-gamepad"></i>
             </div>
             <h2 class="text-2xl font-black text-slate-900 tracking-tight font-brand">

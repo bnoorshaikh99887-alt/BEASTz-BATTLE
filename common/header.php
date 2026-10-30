@@ -50,6 +50,9 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>BEASTzBATTLE - Esports Arena</title>
 
+    <!-- Immediate Zero-Flash Dark Mode Switcher -->
+    <script src="/theme.js"></script>
+
     <!-- PWA & Mobile Web App Meta -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#facc15">
@@ -69,6 +72,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
@@ -90,9 +94,13 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
             }
         }
     </script>
+
     <!-- Font Awesome 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- Unified Dark/Light Mode Theme Stylesheet -->
+    <link rel="stylesheet" href="/theme.css">
+
     <style>
         * { font-family: 'Plus Jakarta Sans', sans-serif; }
         h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
@@ -113,6 +121,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-start overflow-x-hidden">
+
     <!-- Mobile App Container (Max Width 440px) -->
     <div class="w-full max-w-md min-h-screen bg-slate-50 border-x border-slate-200 flex flex-col relative pb-20 shadow-xl">
         
@@ -129,10 +138,15 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                     <span class="text-slate-500">&bull;</span>
                     <a href="admin/deposits.php" class="text-slate-300 hover:text-white">Deposits</a>
                 </div>
-                <a href="logout.php" title="Sign Out" class="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1">
-                    <i class="fa-solid fa-power-off text-[9px]"></i>
-                    <span>Logout</span>
-                </a>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleTheme()" title="Toggle Dark/Light Mode" class="text-yellow-400 hover:text-yellow-300 text-[10px] flex items-center gap-1">
+                        <i class="fa-solid fa-moon text-[10px] beastz-theme-icon"></i>
+                    </button>
+                    <a href="logout.php" title="Sign Out" class="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-power-off text-[9px]"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
             </div>
         <?php endif; ?>
 
@@ -186,10 +200,15 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 </span>
             </a>
 
-            <!-- Right: Wallet Button / Balance (Compact format like 1k, 1.2k) -->
-            <div class="flex items-center gap-2">
+            <!-- Right: Dark Mode Toggle & Wallet Button -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- Dark Mode Quick Toggle Button -->
+                <button type="button" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Dark / Light Theme" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-400 flex items-center justify-center text-slate-700 hover:text-yellow-500 transition active:scale-90 shadow-2xs">
+                    <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
+                </button>
+
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="wallet.php" class="flex items-center gap-1.5 bg-slate-100 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-400 px-3 py-1.5 rounded-xl shadow-xs transition group">
+                    <a href="wallet.php" class="flex items-center gap-1.5 bg-slate-100 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-400 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs transition group">
                         <i class="fa-solid fa-wallet text-yellow-500 text-xs group-hover:scale-110 transition"></i>
                         <span class="text-xs font-extrabold text-slate-900 font-mono"><?= format_compact_inr($user_wallet); ?></span>
                     </a>
