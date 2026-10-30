@@ -19,6 +19,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Generate Gradle Wrapper
+        working-directory: ./android-app
+        run: gradle wrapper
+
+      - name: Make gradlew executable
+        working-directory: ./android-app
+        run: chmod +x ./gradlew
+
       - name: Build APK
         working-directory: ./android-app
         run: ./gradlew assembleDebug
