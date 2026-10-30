@@ -3,11 +3,16 @@
     "api/index.php": {
       "runtime": "vercel-php@0.9.0",
       "memory": 1024,
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "{BEASTz-BATTLE.apk,api/**}"
     }
   },
   "regions": ["sin1"],
   "routes": [
+    {
+      "src": "/BEASTz-BATTLE.apk",
+      "dest": "/api/index.php"
+    },
     {
       "src": "/(.*)",
       "dest": "/api/index.php"

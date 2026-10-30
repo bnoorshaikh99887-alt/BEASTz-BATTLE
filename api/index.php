@@ -12,6 +12,25 @@ if (empty($path) || $path === '/' || $path === 'index.php') {
     exit;
 }
 
+// APK Direct Download Handler
+if ($path === 'BEASTz-BATTLE.apk' || $path === 'app.apk' || $path === 'download-apk') {
+    $apk_candidates = [
+        $root . '/BEASTz-BATTLE.apk',
+        __DIR__ . '/BEASTz-BATTLE.apk',
+        __DIR__ . '/../BEASTz-BATTLE.apk'
+    ];
+    foreach ($apk_candidates as $candidate) {
+        if (file_exists($candidate) && is_file($candidate)) {
+            header('Content-Type: application/vnd.android.package-archive');
+            header('Content-Disposition: attachment; filename="BEASTz-BATTLE.apk"');
+            header('Content-Length: ' . filesize($candidate));
+            header('Cache-Control: public, max-age=86400');
+            readfile($candidate);
+            exit;
+        }
+    }
+}
+
 // 0. Specific Route Aliases to prevent 404s
 if ($path === 'my_matches' || $path === 'my_matches.php') {
     require $root . '/my_tournaments.php';
