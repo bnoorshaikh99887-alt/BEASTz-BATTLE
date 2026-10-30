@@ -98,20 +98,16 @@ function switchAppTab(tabName, skipState) {
         window.scrollTo({ top: 0, behavior: 'instant' });
     }
 
-    // 3. Highlight active bottom tab
+    // 3. Highlight active bottom tab with transparent dark fog / shadow glow
     document.querySelectorAll('.nav-app-tab').forEach(function(btn) {
-        btn.classList.remove('text-yellow-500');
+        btn.classList.remove('active-tab', 'text-yellow-500');
         btn.classList.add('text-slate-400');
-        var dot = btn.querySelector('.nav-indicator');
-        if (dot) dot.classList.add('hidden');
     });
 
     var activeBtn = document.getElementById('nav-tab-' + tabName);
     if (activeBtn) {
         activeBtn.classList.remove('text-slate-400');
-        activeBtn.classList.add('text-yellow-500');
-        var dot = activeBtn.querySelector('.nav-indicator');
-        if (dot) dot.classList.remove('hidden');
+        activeBtn.classList.add('active-tab', 'text-yellow-500');
     }
 
     // 4. Update browser URL without network reload

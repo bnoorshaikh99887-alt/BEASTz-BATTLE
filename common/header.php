@@ -39,6 +39,8 @@ if (isset($_SESSION['user_id'])) {
     $user_avatar = get_avatar_url('', 'Guest');
 }
 
+$is_native_apk = (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', 'BEASTzNativeApp'));
+
 if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
     $is_admin = true;
 }
@@ -121,6 +123,37 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-start overflow-x-hidden">
+    <!-- BEASTz BATTLE Esports Intro / Splash Screen -->
+    <div id="beastz-splash-screen" class="fixed inset-0 z-[9999] bg-[#070a12] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="relative flex flex-col items-center animate-pulse">
+            <div class="w-20 h-20 rounded-3xl bg-yellow-400 text-slate-950 flex items-center justify-center text-4xl shadow-[0_0_40px_rgba(250,204,21,0.6)] mb-3.5">
+                <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <h1 class="text-2xl font-black text-white tracking-wider font-display">
+                BEASTz<span class="text-yellow-400">BATTLE</span>
+            </h1>
+            <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mt-1">
+                ESPORTS ARENA &bull; LEVEL UP
+            </span>
+            <div class="mt-5 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
+                <span class="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono">INITIALIZING ARENA...</span>
+            </div>
+        </div>
+    </div>
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var splash = document.getElementById('beastz-splash-screen');
+                if (splash) {
+                    splash.style.opacity = '0';
+                    splash.style.pointerEvents = 'none';
+                    setTimeout(function() { splash.remove(); }, 500);
+                }
+            }, 600);
+        });
+    </script>
+
 
     <!-- Mobile App Container (Max Width 440px) -->
     <div class="w-full max-w-md min-h-screen bg-slate-50 border-x border-slate-200 flex flex-col relative pb-20 shadow-xl">
@@ -150,18 +183,15 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
             </div>
         <?php endif; ?>
 
-        <!-- Official Native Android APK Download Banner -->
-        <div id="apk-download-banner" class="bg-slate-900 border-b border-yellow-500/50 px-3.5 py-2.5 text-white flex items-center justify-between text-xs sticky top-0 z-50 shadow-md">
-            <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-yellow-400 flex items-center justify-center text-slate-950 font-black text-sm shadow-xs shrink-0">
-                    <i class="fa-brands fa-android text-base"></i>
+        <?php if (!$is_native_apk): ?>
+        <!-- Web APK Download Banner (Web Only, Never inside APK) -->
+        <div id="apk-download-banner" class="bg-slate-900 border-b border-yellow-500/50 px-3.5 py-2 text-white flex items-center justify-between text-xs sticky top-0 z-50 shadow-md">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-yellow-400 text-slate-950 flex items-center justify-center text-sm shadow-xs shrink-0">
+                    <i class="fa-brands fa-android"></i>
                 </div>
-                <div>
-                    <div class="font-black text-[12px] text-yellow-400 flex items-center gap-1">
-                        <span>BEASTz Android App</span>
-                        <span class="px-1.5 py-0.2 rounded bg-yellow-400/20 text-yellow-300 text-[9px] font-extrabold uppercase">Real APK</span>
-                    </div>
-                    <div class="text-[10px] text-slate-300">Native 1-tap gaming, room ID alerts & payments</div>
+                <div class="font-black text-xs sm:text-sm text-yellow-400 font-display uppercase tracking-wide">
+                    BEASTzBATTLE APK DOWNLOAD
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -174,6 +204,13 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 </button>
             </div>
         </div>
+        <script>
+            if (navigator.userAgent.indexOf('BEASTzNativeApp') !== -1) {
+                var b = document.getElementById('apk-download-banner');
+                if (b) b.style.display = 'none';
+            }
+        </script>
+        <?php endif; ?>
 
         <!-- App Header (Matching Video: Avatar Left, Brand Center, Wallet Right) -->
         <header class="sticky <?= $is_admin ? 'top-7' : 'top-0' ?> z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs">

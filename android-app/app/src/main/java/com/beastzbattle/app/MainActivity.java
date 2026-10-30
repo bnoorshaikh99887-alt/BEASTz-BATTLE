@@ -17,12 +17,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
+
     private WebView webView;
-    private ProgressBar progressBar;
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 101;
     private static final String APP_URL = "https://beastz-battle.vercel.app";
@@ -37,7 +36,7 @@ public class MainActivity extends Activity {
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
 
-        // Root layout
+        // Root layout - clean, full screen without top progress line
         FrameLayout rootLayout = new FrameLayout(this);
         rootLayout.setBackgroundColor(0xFF070A12); // Deep cyber dark
 
@@ -48,19 +47,10 @@ public class MainActivity extends Activity {
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
 
-        progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        progressBar.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, 
-                8
-        ));
-        progressBar.setMax(100);
-        progressBar.setVisibility(View.GONE);
-
         rootLayout.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, 
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
-        rootLayout.addView(progressBar);
 
         setContentView(rootLayout);
 
@@ -85,35 +75,48 @@ public class MainActivity extends Activity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
-                progressBar.setVisibility(View.VISIBLE);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                progressBar.setVisibility(View.GONE);
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // Support UPI apps (PhonePe, GooglePay, Paytm, BHIM)
-                if (url.startsWith("upi://") || url.startsWith("intent://") || url.startsWith("whatsapp://")) {
+                if (url == null) return false;
+
+                // 1. Support UPI and external app intents (PhonePe, GooglePay, Paytm, BHIM, WhatsApp)
+                if (url.startsWith("upi://") || url.startsWith("intent://") || 
+                    url.startsWith("whatsapp://") || url.startsWith("phonepe://") || 
+                    url.startsWith("paytmmp://") || url.startsWith("tez://")) {
                     try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        startActivity(intent);
-                        return true;
+                        Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                        if (intent != null) {
+                            startActivity(intent);
+                            return true;
+                        }
                     } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, "Supported UPI/WhatsApp app not found on device", Toast.LENGTH_SHORT).show();
-                        return true;
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                            startActivity(intent);
+                            return true;
+                        } catch (Exception e2) {
+                            Toast.makeText(MainActivity.this, "Supported payment app not installed", Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
                     }
                 }
 
-                // Keep internal navigation inside WebView
-                if (url.contains("beastz-battle.vercel.app")) {
+                // 2. Keep Cashfree payment gateway & main domain inside WebView seamlessly
+                if (url.contains("beastz-battle.vercel.app") || 
+                    url.contains("cashfree.com") || 
+                    url.contains("cashfree") ||
+                    url.contains("merchants.cashfree.com")) {
                     return false;
                 }
 
-                // External browser for other URLs
+                // 3. Fallback to external browser for foreign links
                 try {
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                     startActivity(intent);
@@ -126,11 +129,43 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
-                if (request.isForMainFrame()) {
-                    String errorHtml = "<html><body style='background-color:#0b0f19;color:#fff;font-family:sans-serif;text-align:center;padding:50px 20px;'>"
-                            + "<h2 style='color:#facc15;'>Network Disconnected</h2>"
-                            + "<p style='color:#94a3b8;font-size:14px;'>Please check your mobile data or Wi-Fi connection.</p>"
-                            + "<button onclick='location.reload()' style='background:#facc15;color:#000;border:none;padding:12px 25px;border-radius:10px;font-weight:bold;font-size:14px;margin-top:20px;cursor:pointer;'>RETRY</button>"
+                
+                // IGNORE aborted requests (net::ERR_ABORTED / code -3 / user cancel / back press)
+                if (error != null) {
+                    int errCode = error.getErrorCode();
+                    if (errCode == -3 || errCode == WebViewClient.ERROR_UNKNOWN) {
+                        return;
+                    }
+                }
+
+                if (request != null && request.getUrl() != null) {
+                    String reqUrl = request.getUrl().toString();
+                    // Never trigger disconnect screen for Cashfree or analytics
+                    if (reqUrl.contains("cashfree.com") || reqUrl.contains("cashfree") || reqUrl.contains("analytics")) {
+                        // User cancelled payment or back pressed -> gracefully return to wallet
+                        view.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                view.loadUrl(APP_URL + "?tab=wallet");
+                            }
+                        });
+                        return;
+                    }
+                }
+
+                // Only show offline screen if the MAIN app domain itself fails to connect
+                if (request != null && request.isForMainFrame()) {
+                    String curUrl = view.getUrl();
+                    if (curUrl != null && (curUrl.contains("cashfree") || curUrl.contains("return"))) {
+                        view.loadUrl(APP_URL + "?tab=wallet");
+                        return;
+                    }
+
+                    String errorHtml = "<html><body style='background-color:#070a12;color:#ffffff;font-family:sans-serif;text-align:center;padding:60px 20px;'>"
+                            + "<div style='width:60px;height:60px;margin:0 auto 16px;background:rgba(250,204,21,0.15);border:1px solid #facc15;border-radius:18px;display:flex;align-items:center;justify-content:center;'><span style='font-size:28px;'>&#9889;</span></div>"
+                            + "<h2 style='color:#facc15;margin:0 0 8px;font-size:20px;font-weight:800;'>Network Disconnected</h2>"
+                            + "<p style='color:#94a3b8;font-size:13px;line-height:1.5;margin:0 0 24px;'>Please check your mobile data or Wi-Fi connection.</p>"
+                            + "<button onclick='location.reload()' style='background:#facc15;color:#070a12;border:none;padding:12px 30px;border-radius:12px;font-weight:900;font-size:13px;cursor:pointer;letter-spacing:0.5px;'>RETRY CONNECTION</button>"
                             + "</body></html>";
                     view.loadDataWithBaseURL(null, errorHtml, "text/html", "UTF-8", null);
                 }
@@ -138,14 +173,6 @@ public class MainActivity extends Activity {
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int newProgress) {
-                progressBar.setProgress(newProgress);
-                if (newProgress >= 100) {
-                    progressBar.setVisibility(View.GONE);
-                }
-            }
-
             // Real Profile Picture file / camera chooser
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
@@ -154,7 +181,6 @@ public class MainActivity extends Activity {
                     uploadMessage = null;
                 }
                 uploadMessage = filePathCallback;
-
                 Intent intent = fileChooserParams.createIntent();
                 try {
                     startActivityForResult(intent, FILECHOOSER_RESULTCODE);
@@ -169,7 +195,7 @@ public class MainActivity extends Activity {
         webView.loadUrl(APP_URL);
     }
 
-    @Override
+        @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == FILECHOOSER_RESULTCODE) {
             if (uploadMessage != null) {
@@ -194,10 +220,18 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
+        if (webView != null) {
+            String currentUrl = webView.getUrl();
+            // If user is inside Cashfree gateway and presses back, gracefully navigate back to wallet
+            if (currentUrl != null && (currentUrl.contains("cashfree.com") || currentUrl.contains("cashfree") || currentUrl.contains("cashfree_return") || currentUrl.contains("payment"))) {
+                webView.loadUrl(APP_URL + "?tab=wallet");
+                return;
+            }
+            if (webView.canGoBack()) {
+                webView.goBack();
+                return;
+            }
         }
+        super.onBackPressed();
     }
 }

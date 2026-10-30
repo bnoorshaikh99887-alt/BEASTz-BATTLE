@@ -1,16 +1,24 @@
 <?php
 require_once __DIR__ . '/common/header.php';
 
-// Fast 1-Roundtrip Aggregated Statistics
-$stats_row = $conn->query("
-    SELECT 
-        (SELECT COUNT(*) FROM users) as users_cnt,
-        (SELECT COUNT(*) FROM tournaments) as tourneys_cnt,
-        (SELECT COALESCE(SUM(prize_pool), 0.00) FROM tournaments WHERE LOWER(status) = 'completed') as prize_dist,
-        (SELECT COALESCE(SUM(amount), 0.00) FROM deposits WHERE LOWER(status) IN ('completed', 'success')) as total_collected,
-        (SELECT COUNT(*) FROM deposits WHERE LOWER(status) = 'pending') as pending_deposits,
-        (SELECT COUNT(*) FROM withdrawals WHERE LOWER(status) = 'pending') as pending_withdrawals
-")->fetch_assoc();
+// Ultra-Fast 0.05s Session-Cached Aggregated Statistics (15s TTL)
+$now = time();
+if (!isset($_SESSION['admin_stats_cache']) || !isset($_SESSION['admin_stats_cache_time']) || ($now - $_SESSION['admin_stats_cache_time'] > 15) || isset($_GET['refresh'])) {
+    $q = $conn->query("
+        SELECT 
+            (SELECT COUNT(*) FROM users) as users_cnt,
+            (SELECT COUNT(*) FROM tournaments) as tourneys_cnt,
+            (SELECT COALESCE(SUM(prize_pool), 0.00) FROM tournaments WHERE LOWER(status) = 'completed') as prize_dist,
+            (SELECT COALESCE(SUM(amount), 0.00) FROM deposits WHERE LOWER(status) IN ('completed', 'success')) as total_collected,
+            (SELECT COUNT(*) FROM deposits WHERE LOWER(status) = 'pending') as pending_deposits,
+            (SELECT COUNT(*) FROM withdrawals WHERE LOWER(status) = 'pending') as pending_withdrawals
+    ");
+    if ($q) {
+        $_SESSION['admin_stats_cache'] = $q->fetch_assoc();
+        $_SESSION['admin_stats_cache_time'] = $now;
+    }
+}
+$stats_row = $_SESSION['admin_stats_cache'] ?? [];
 
 $users_cnt = (int)($stats_row['users_cnt'] ?? 0);
 $tourneys_cnt = (int)($stats_row['tourneys_cnt'] ?? 0);

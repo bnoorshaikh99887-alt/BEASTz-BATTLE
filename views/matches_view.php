@@ -26,7 +26,7 @@
                             <span class="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded uppercase">
                                 <?= htmlspecialchars($t['match_type'] ?: 'SOLO'); ?> &bull; <?= htmlspecialchars($t['map'] ?: 'BERMUDA'); ?>
                             </span>
-                            <span class="text-[9px] font-black text-yellow-900 bg-yellow-400 px-2 py-0.5 rounded uppercase">
+                            <span class="text-[9px] font-black !text-black bg-yellow-400 px-2 py-0.5 rounded uppercase shadow-2xs">
                                 Slot #<?= $t['slot_no'] ?: 1; ?>
                             </span>
                         </div>
@@ -46,27 +46,32 @@
                     </div>
                     <div class="text-right">
                         <span class="text-[10px] text-slate-400 block font-semibold">Your Registered IGN</span>
-                        <span class="font-extrabold text-yellow-700"><?= htmlspecialchars($t['in_game_name'] ?? 'Player'); ?></span>
+                        <span class="font-black text-amber-500 dark:text-yellow-400"><?= htmlspecialchars($t['in_game_name'] ?? 'Player'); ?></span>
                     </div>
                 </div>
 
-                <!-- Room ID & Password Box -->
-                <div class="bg-yellow-50/70 border border-yellow-200 rounded-xl p-3 flex items-center justify-between">
+                <!-- High-Contrast IDP Box (Dark Mode & Light Mode Comfortable) -->
+                <div class="bg-slate-900 border border-yellow-500/40 rounded-xl p-3 flex items-center justify-between text-white shadow-xs">
                     <div>
-                        <span class="text-[10px] font-bold text-yellow-800 uppercase block">Custom Room Credentials</span>
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                            <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                            <span class="text-[10px] font-black text-yellow-400 uppercase tracking-wider block">
+                                CUSTOM ROOM CREDENTIALS (IDP)
+                            </span>
+                        </div>
                         <?php if (!empty($t['room_id'])): ?>
-                            <div class="text-xs text-slate-900 font-mono mt-0.5 font-bold">
-                                Room ID: <span class="text-yellow-600 font-black"><?= htmlspecialchars($t['room_id']); ?></span> &bull; 
-                                Pass: <span class="text-yellow-600 font-black"><?= htmlspecialchars($t['room_password'] ?: 'None'); ?></span>
+                            <div class="text-xs text-white font-mono mt-0.5 font-bold flex items-center gap-2">
+                                <span>ID: <strong class="text-yellow-400 font-black text-sm"><?= htmlspecialchars($t['room_id']); ?></strong></span>
+                                <span>PASS: <strong class="text-yellow-400 font-black text-sm"><?= htmlspecialchars($t['room_password'] ?: 'None'); ?></strong></span>
                             </div>
                         <?php else: ?>
-                            <span class="text-[11px] text-slate-500">
-                                <i class="fa-solid fa-clock text-yellow-500 mr-1"></i> Room ID & Pass published 10 mins before match start.
+                            <span class="text-[11px] text-slate-300 font-medium">
+                                <i class="fa-solid fa-clock text-yellow-400 mr-1"></i> Room ID & Pass published 10 mins before match start.
                             </span>
                         <?php endif; ?>
                     </div>
                     <?php if (!empty($t['room_id'])): ?>
-                        <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black text-[10px] rounded-lg shadow-xs transition">
+                        <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black text-[10px] rounded-lg shadow-xs transition active:scale-95">
                             Copy
                         </button>
                     <?php endif; ?>

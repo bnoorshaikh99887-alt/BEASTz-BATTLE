@@ -5,6 +5,40 @@ body {
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
+/* ============================================================ */
+/* BOTTOM NAVIGATION TRANSPARENT BLACK FOG / SHADOW BOX GLOW */
+/* ============================================================ */
+.nav-app-tab {
+    position: relative;
+    border: 1px solid transparent;
+}
+.nav-app-tab.active-tab {
+    background: rgba(250, 204, 21, 0.15) !important;
+    border-color: rgba(250, 204, 21, 0.35) !important;
+    box-shadow: 0 4px 15px -2px rgba(250, 204, 21, 0.25) !important;
+    color: #eab308 !important;
+}
+html.dark .nav-app-tab.active-tab {
+    background: rgba(15, 23, 42, 0.95) !important;
+    border-color: rgba(250, 204, 21, 0.45) !important;
+    box-shadow: 0 0 16px 2px rgba(0, 0, 0, 0.85), inset 0 0 10px rgba(250, 204, 21, 0.1) !important;
+    color: #facc15 !important;
+}
+
+/* ============================================================ */
+/* CRITICAL BADGE TEXT CONTRAST (Never Yellow on Yellow) */
+/* ============================================================ */
+.bg-yellow-400,
+html.dark .bg-yellow-400,
+[class*="bg-yellow-400"] {
+    background-color: #facc15 !important;
+    color: #020617 !important;
+}
+.bg-yellow-400 *,
+html.dark .bg-yellow-400 * {
+    color: #020617 !important;
+}
+
 /* ================= DARK MODE UNIVERSAL RULES ================= */
 html.dark body {
     background-color: #070a12 !important;
@@ -151,11 +185,6 @@ html.dark .bg-yellow-100 {
     background-color: rgba(234, 179, 8, 0.22) !important;
     color: #fef08a !important;
 }
-html.dark .text-yellow-800,
-html.dark .text-yellow-900,
-html.dark .text-yellow-700 {
-    color: #facc15 !important;
-}
 
 html.dark .bg-emerald-50 {
     background-color: rgba(16, 185, 129, 0.15) !important;
@@ -213,4 +242,30 @@ html.dark .slot-btn-taken {
     background-color: #181f2f !important;
     border-color: #26334a !important;
     color: #64748b !important;
+}
+
+/* ============================================================ */
+/* HIGH-CONTRAST ROOM CREDENTIALS (IDP) DARK MODE PERFECTION */
+/* ============================================================ */
+html.dark .bg-slate-900 {
+    background-color: #0b0f19 !important;
+    border-color: rgba(250, 204, 21, 0.45) !important;
+}
+html.dark .bg-slate-900 * {
+    color: #f8fafc !important;
+}
+html.dark .bg-slate-900 .text-yellow-400,
+html.dark .bg-slate-900 strong.text-yellow-400,
+html.dark .bg-slate-900 span.text-yellow-400,
+html.dark .bg-slate-900 i.text-yellow-400 {
+    color: #facc15 !important;
+}
+html.dark .bg-slate-900 .text-slate-300,
+html.dark .bg-slate-900 .text-slate-200 {
+    color: #cbd5e1 !important;
+}
+html.dark .bg-slate-900 .bg-yellow-400,
+html.dark .bg-slate-900 .bg-yellow-400 * {
+    background-color: #facc15 !important;
+    color: #020617 !important;
 }
