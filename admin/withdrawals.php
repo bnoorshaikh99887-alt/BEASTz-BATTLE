@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $amount = (float)$w['amount'];
 
             if ($w['wallet_balance'] < $amount) {
-                $msg = "User balance is less than requested amount!";
+                $msg = "Error: User wallet balance is less than the requested payout amount.";
                 $msg_type = "error";
             } else {
                 $conn->begin_transaction();
@@ -30,18 +30,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $ded = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?");
                     $ded->bind_param("di", $amount, $user_id);
                     $ded->execute();
+                    $ded->close();
 
                     // Record debit transaction
                     $desc = "UPI Payout to " . $w['upi_id'];
                     $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'debit', ?)");
                     $tx->bind_param("ids", $user_id, $amount, $desc);
                     $tx->execute();
+                    $tx->close();
 
                     // Mark completed
                     $conn->query("UPDATE withdrawals SET status = 'Completed' WHERE id = $w_id");
-
                     $conn->commit();
-                    $msg = "Withdrawal marked as Completed and " . format_inr($amount) . " debited from user wallet!";
+
+                    $msg = "Payout of " . format_inr($amount) . " successfully marked as Completed and debited from user wallet!";
                     $msg_type = "success";
                 } catch (Exception $e) {
                     $conn->rollback();
@@ -62,18 +64,26 @@ $withdrawals = $conn->query("
     SELECT w.*, u.username, u.wallet_balance 
     FROM withdrawals w 
     INNER JOIN users u ON w.user_id = u.id 
-    ORDER BY w.id DESC");
+    ORDER BY w.id DESC
+");
 ?>
 
-<div class="mb-4">
-    <h2 class="text-base font-bold text-white">UPI Withdrawal Requests</h2>
-    <p class="text-[11px] text-slate-400">Send money to user's UPI ID and mark completed</p>
+<div class="mb-5 flex items-center justify-between">
+    <div>
+        <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-hand-holding-dollar text-yellow-500"></i> UPI Withdrawal Requests
+        </h2>
+        <p class="text-xs text-slate-500">Send money to player UPI ID and mark payout completed</p>
+    </div>
+    <span class="text-xs font-bold px-3 py-1 bg-yellow-100 text-yellow-900 border border-yellow-300 rounded-full">
+        Payouts
+    </span>
 </div>
 
 <?php if (!empty($msg)): ?>
-    <div class="mb-4 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 <?= ($msg_type === 'success') ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30' ?>">
-        <i class="fa-solid <?= ($msg_type === 'success') ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-rose-400' ?>"></i>
-        <span><?= $msg; ?></span>
+    <div class="mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 <?= ($msg_type === 'success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200' ?>">
+        <i class="fa-solid <?= ($msg_type === 'success') ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-rose-600' ?> text-sm"></i>
+        <span><?= htmlspecialchars($msg); ?></span>
     </div>
 <?php endif; ?>
 
@@ -81,39 +91,52 @@ $withdrawals = $conn->query("
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
         <?php while ($w = $withdrawals->fetch_assoc()): ?>
             <?php $is_pending = ($w['status'] === 'Pending'); ?>
-            <div class="bg-slate-800/80 border <?= $is_pending ? 'border-amber-500/40 bg-slate-800' : 'border-slate-700/60' ?> rounded-2xl p-3.5 shadow-md space-y-2">
+            <div class="bg-white border <?= $is_pending ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-slate-200' ?> rounded-2xl p-4 shadow-xs space-y-3 transition">
                 <div class="flex items-start justify-between">
                     <div>
-                        <span class="text-xs font-bold text-white block">@<?= htmlspecialchars($w['username']); ?></span>
-                        <span class="text-[10px] text-slate-400"><?= date("d M Y, h:i A", strtotime($w['created_at'])); ?></span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-extrabold text-slate-900">@<?= htmlspecialchars($w['username']); ?></span>
+                            <?php if ($is_pending): ?>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                    Pending Payment
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        <span class="text-[11px] text-slate-500 block mt-0.5">
+                            <i class="fa-regular fa-clock mr-1 text-slate-400"></i><?= date("d M Y, h:i A", strtotime($w['created_at'])); ?> &bull; Current Wallet: <span class="font-bold text-slate-700"><?= format_inr($w['wallet_balance']); ?></span>
+                        </span>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-mono font-bold text-amber-400 block"><?= format_inr($w['amount']); ?></span>
-                        <span class="text-[9px] font-bold px-1.5 py-0.2 rounded <?= ($w['status'] === 'Completed') ? 'bg-emerald-500/20 text-emerald-400' : (($w['status'] === 'Rejected') ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400') ?>">
-                            <?= $w['status']; ?>
+                        <span class="text-base font-mono font-black text-slate-900 block"><?= format_inr($w['amount']); ?></span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 <?= ($w['status'] === 'Completed') ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : (($w['status'] === 'Rejected') ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200') ?>">
+                            <?= htmlspecialchars($w['status']); ?>
                         </span>
                     </div>
                 </div>
 
-                <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800 text-[10px]">
-                    <span class="text-slate-400 block">Send Payment To UPI ID:</span>
-                    <span class="font-mono text-emerald-400 font-bold select-all text-xs"><?= htmlspecialchars($w['upi_id']); ?></span>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 font-semibold block mb-0.5">Transfer To UPI ID:</span>
+                        <span class="font-mono text-slate-900 font-black select-all text-sm tracking-wide"><?= htmlspecialchars($w['upi_id']); ?></span>
+                    </div>
+                    <a href="upi://pay?pa=<?= urlencode($w['upi_id']); ?>&pn=<?= urlencode($w['username']); ?>&am=<?= $w['amount']; ?>&cu=INR" class="px-2.5 py-1 bg-white border border-slate-300 hover:border-slate-400 rounded-lg text-[11px] font-bold text-slate-700 shadow-xs flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Open UPI
+                    </a>
                 </div>
 
                 <?php if ($is_pending): ?>
                     <div class="flex items-center gap-2 pt-1">
-                        <form method="POST" action="withdrawals.php" class="flex-1" onsubmit="return confirm('Have you manually transferred <?= format_inr($w['amount']); ?> to <?= htmlspecialchars($w['upi_id']); ?>? Click OK to debit user.');">
+                        <form method="POST" action="withdrawals.php" class="flex-1" onsubmit="return confirm('Have you transferred <?= format_inr($w['amount']); ?> to <?= htmlspecialchars($w['upi_id']); ?>? Click OK to confirm payment and debit user wallet.');">
                             <input type="hidden" name="action" value="complete">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
-                            <button type="submit" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-sm">
-                                <i class="fa-solid fa-paper-plane mr-1"></i> Mark Paid & Debit
+                            <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 active:scale-95">
+                                <i class="fa-solid fa-paper-plane"></i> Mark Paid & Debit Wallet
                             </button>
                         </form>
-
-                        <form method="POST" action="withdrawals.php" onsubmit="return confirm('Reject this withdrawal request?');">
+                        <form method="POST" action="withdrawals.php" onsubmit="return confirm('Are you sure you want to reject this withdrawal request?');">
                             <input type="hidden" name="action" value="reject">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
-                            <button type="submit" class="py-1.5 px-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold transition">
+                            <button type="submit" class="py-2 px-3.5 bg-slate-100 hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 rounded-xl text-xs font-bold transition active:scale-95 flex items-center gap-1">
                                 <i class="fa-solid fa-xmark"></i> Reject
                             </button>
                         </form>
@@ -122,7 +145,10 @@ $withdrawals = $conn->query("
             </div>
         <?php endwhile; ?>
     <?php else: ?>
-        <p class="text-xs text-slate-500 text-center py-4">No withdrawal requests found.</p>
+        <div class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 shadow-xs">
+            <i class="fa-solid fa-hand-holding-dollar text-3xl text-slate-300 mb-2 block"></i>
+            <p class="text-xs font-bold">No withdrawal requests found.</p>
+        </div>
     <?php endif; ?>
 </div>
 

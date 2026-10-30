@@ -24,109 +24,119 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 <!-- Welcome Banner -->
 <div class="flex items-center justify-between mb-4">
     <div>
-        <h2 class="text-base font-bold text-white">Dashboard Overview</h2>
-        <p class="text-[11px] text-slate-400">BEASTzBATTLE Real-Time Control Center</p>
+        <h2 class="text-base font-extrabold text-slate-900 font-display">Dashboard Overview</h2>
+        <p class="text-[11px] text-slate-500">BEASTzBATTLE Real-Time Control Center</p>
     </div>
-    <a href="tournament.php" class="py-2 px-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5">
+    <a href="tournament.php" class="py-2 px-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 active:scale-95">
         <i class="fa-solid fa-plus text-[10px]"></i> New Tourney
     </a>
 </div>
 
-<!-- Alert for Pending UPI Requests -->
+<!-- Alert for Pending Requests -->
 <?php if ($pending_deposits > 0 || $pending_withdrawals > 0): ?>
-    <div class="bg-amber-500/20 border border-amber-500/30 rounded-2xl p-3 mb-4 flex items-center justify-between text-xs">
-        <div class="flex items-center gap-2 text-amber-300 font-semibold">
-            <i class="fa-solid fa-bell animate-bounce text-amber-400"></i>
-            <span>Action Required: <?= $pending_deposits; ?> Deposits, <?= $pending_withdrawals; ?> Payouts pending.</span>
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-4 flex items-center justify-between text-xs shadow-xs">
+        <div class="flex items-center gap-2 text-amber-900 font-bold">
+            <i class="fa-solid fa-bell text-amber-500 animate-bounce"></i>
+            <span>Action Required: <?= $pending_deposits; ?> Deposits, <?= $pending_withdrawals; ?> Payouts pending review.</span>
         </div>
-        <a href="deposits.php" class="text-[10px] font-bold bg-amber-500 text-slate-950 px-2.5 py-1 rounded-lg">Review</a>
+        <a href="deposits.php" class="text-[10px] font-black bg-yellow-400 hover:bg-yellow-500 text-slate-950 px-2.5 py-1 rounded-lg transition shadow-xs">
+            Review
+        </a>
     </div>
 <?php endif; ?>
 
-<!-- 2x2 Stats Grid Cards -->
+<!-- 2x2 Stats Grid Cards (White Card + Yellow / Slate Accents) -->
 <div class="grid grid-cols-2 gap-3 mb-5">
     <!-- Total Users -->
-    <a href="user.php" class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-3.5 shadow-lg block hover:border-violet-500/50 transition">
+    <a href="user.php" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-yellow-400 hover:shadow transition group">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">Users</span>
-            <div class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Gamers</span>
+            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-users"></i>
             </div>
         </div>
-        <div class="text-xl font-black text-white font-mono"><?= $users_cnt; ?></div>
-        <span class="text-[9px] text-slate-400">Registered Gamers</span>
+        <div class="text-2xl font-black text-slate-900 font-mono"><?= $users_cnt; ?></div>
+        <span class="text-[10px] text-slate-400">Registered Accounts</span>
     </a>
 
     <!-- Total Tournaments -->
-    <a href="tournament.php" class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-3.5 shadow-lg block hover:border-violet-500/50 transition">
+    <a href="tournament.php" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-yellow-400 hover:shadow transition group">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">Tournaments</span>
-            <div class="w-7 h-7 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center text-xs">
-                <i class="fa-solid fa-gamepad"></i>
-            </div>
-        </div>
-        <div class="text-xl font-black text-white font-mono"><?= $tourneys_cnt; ?></div>
-        <span class="text-[9px] text-slate-400">Created Matches</span>
-    </a>
-
-    <!-- Prize Distributed -->
-    <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-3.5 shadow-lg">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">Prize Paid</span>
-            <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tournaments</span>
+            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-trophy"></i>
             </div>
         </div>
-        <div class="text-lg font-black text-amber-400 font-mono"><?= format_inr($prize_dist); ?></div>
-        <span class="text-[9px] text-slate-400">Disbursed to Winners</span>
+        <div class="text-2xl font-black text-slate-900 font-mono"><?= $tourneys_cnt; ?></div>
+        <span class="text-[10px] text-slate-400">Matches Created</span>
+    </a>
+
+    <!-- Prize Distributed -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prize Paid</span>
+            <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-crown"></i>
+            </div>
+        </div>
+        <div class="text-xl font-black text-amber-500 font-mono"><?= format_inr($prize_dist); ?></div>
+        <span class="text-[10px] text-slate-400">Disbursed to Winners</span>
     </div>
 
     <!-- Platform Revenue -->
-    <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-3.5 shadow-lg">
+    <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">Revenue</span>
-            <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Net Revenue</span>
+            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
                 <i class="fa-solid fa-coins"></i>
             </div>
         </div>
-        <div class="text-lg font-black text-emerald-400 font-mono"><?= format_inr($total_revenue); ?></div>
-        <span class="text-[9px] text-slate-400">Net Platform Income</span>
+        <div class="text-xl font-black text-emerald-600 font-mono"><?= format_inr($total_revenue); ?></div>
+        <span class="text-[10px] text-slate-400">Net Platform Income</span>
     </div>
 </div>
 
-<!-- Quick Control Actions -->
+<!-- Quick Control Actions (White Cards with Yellow Hover) -->
 <div class="space-y-2 mb-4">
-    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Quick Actions</h3>
-    <div class="grid grid-cols-2 gap-2">
-        <a href="deposits.php" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl flex items-center gap-2.5 transition">
-            <i class="fa-solid fa-circle-down text-emerald-400 text-base"></i>
+    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">Quick Actions</h3>
+    <div class="grid grid-cols-2 gap-2.5">
+        <a href="deposits.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs group-hover:bg-emerald-500 group-hover:text-white transition">
+                <i class="fa-solid fa-arrow-down"></i>
+            </div>
             <div>
-                <span class="text-xs font-bold text-white block">UPI Deposits</span>
+                <span class="text-xs font-bold text-slate-900 block">UPI Deposits</span>
                 <span class="text-[10px] text-slate-400"><?= $pending_deposits; ?> Pending</span>
             </div>
         </a>
 
-        <a href="withdrawals.php" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl flex items-center gap-2.5 transition">
-            <i class="fa-solid fa-circle-up text-amber-400 text-base"></i>
+        <a href="withdrawals.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+                <i class="fa-solid fa-arrow-up"></i>
+            </div>
             <div>
-                <span class="text-xs font-bold text-white block">UPI Payouts</span>
+                <span class="text-xs font-bold text-slate-900 block">UPI Payouts</span>
                 <span class="text-[10px] text-slate-400"><?= $pending_withdrawals; ?> Pending</span>
             </div>
         </a>
 
-        <a href="tournament.php" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl flex items-center gap-2.5 transition">
-            <i class="fa-solid fa-trophy text-violet-400 text-base"></i>
+        <a href="tournament.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+                <i class="fa-solid fa-gamepad"></i>
+            </div>
             <div>
-                <span class="text-xs font-bold text-white block">Tournaments</span>
+                <span class="text-xs font-bold text-slate-900 block">Tournaments</span>
                 <span class="text-[10px] text-slate-400">Create & Rooms</span>
             </div>
         </a>
 
-        <a href="settings.php" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl flex items-center gap-2.5 transition">
-            <i class="fa-solid fa-qrcode text-pink-400 text-base"></i>
+        <a href="settings.php" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+                <i class="fa-solid fa-sliders"></i>
+            </div>
             <div>
-                <span class="text-xs font-bold text-white block">QR & UPI Setup</span>
-                <span class="text-[10px] text-slate-400">Payment Gateway</span>
+                <span class="text-xs font-bold text-slate-900 block">Settings</span>
+                <span class="text-[10px] text-slate-400">UPI & Gateway</span>
             </div>
         </a>
     </div>

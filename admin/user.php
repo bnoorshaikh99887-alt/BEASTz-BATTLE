@@ -54,23 +54,21 @@ $users = $conn->query("
 ");
 ?>
 
-<div class="mb-4">
-    <div class="flex items-center justify-between">
-        <div>
-            <h2 class="text-base font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-users-gear text-violet-400"></i> User Management
-            </h2>
-            <p class="text-[11px] text-slate-400">Registered platform gamers and balances</p>
-        </div>
-        <span class="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 text-[11px] font-bold border border-slate-700">
-            Total: <?= ($users ? $users->num_rows : 0); ?>
-        </span>
+<div class="mb-5 flex items-center justify-between">
+    <div>
+        <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-users-gear text-yellow-500"></i> User Management
+        </h2>
+        <p class="text-xs text-slate-500">Registered platform gamers, balances, and access control</p>
     </div>
+    <span class="text-xs font-bold px-3 py-1 bg-yellow-100 text-yellow-900 border border-yellow-300 rounded-full">
+        Total: <?= ($users ? $users->num_rows : 0); ?>
+    </span>
 </div>
 
 <?php if (!empty($msg)): ?>
-    <div class="mb-4 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 <?= $msg_type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'; ?>">
-        <i class="fa-solid <?= $msg_type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-rose-400'; ?>"></i>
+    <div class="mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 <?= $msg_type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'; ?>">
+        <i class="fa-solid <?= $msg_type === 'success' ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-rose-600'; ?> text-sm"></i>
         <span><?= htmlspecialchars($msg); ?></span>
     </div>
 <?php endif; ?>
@@ -82,70 +80,73 @@ $users = $conn->query("
                 $is_admin_user = (($u['role'] ?? '') === 'admin');
                 $is_blocked = (($u['status'] ?? 'active') === 'blocked');
             ?>
-            <div class="bg-slate-800/80 border <?= $is_admin_user ? 'border-rose-500/40 bg-gradient-to-r from-rose-950/20 to-slate-800/80' : ($is_blocked ? 'border-rose-500/30 bg-rose-950/10' : 'border-slate-700') ?> rounded-2xl p-3.5 shadow-md space-y-2">
+            <div class="bg-white border <?= $is_admin_user ? 'border-yellow-400 bg-yellow-50/20' : ($is_blocked ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200') ?> rounded-2xl p-4 shadow-xs space-y-3 transition">
                 <div class="flex items-start justify-between">
                     <div>
-                        <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
-                            <?= htmlspecialchars($u['username']); ?>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-extrabold text-slate-900">@<?= htmlspecialchars($u['username']); ?></span>
                             <?php if ($is_admin_user): ?>
-                                <span class="text-[9px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-extrabold border border-rose-500/40 flex items-center gap-1">
-                                    <i class="fa-solid fa-crown text-[8px] text-amber-300"></i> ADMIN (IMMUNE)
+                                <span class="text-[10px] bg-yellow-400 text-black px-2 py-0.5 rounded-full font-black shadow-xs flex items-center gap-1">
+                                    <i class="fa-solid fa-crown text-[9px]"></i> SUPER ADMIN (IMMUNE)
                                 </span>
                             <?php elseif ($is_blocked): ?>
-                                <span class="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-bold border border-rose-500/30">
-                                    BLOCKED
+                                <span class="text-[10px] bg-rose-100 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full font-bold">
+                                    SUSPENDED
                                 </span>
                             <?php else: ?>
-                                <span class="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold border border-emerald-500/30">
+                                <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
                                     ACTIVE
                                 </span>
                             <?php endif; ?>
-                        </h3>
-                        <p class="text-[10px] text-slate-400">
-                            <?= !empty($u['email']) ? htmlspecialchars($u['email']) : 'No email'; ?> &bull; 
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">
+                            <?= !empty($u['email']) ? htmlspecialchars($u['email']) : 'No email registered'; ?> &bull; 
                             <?= !empty($u['phone']) ? htmlspecialchars($u['phone']) : 'No phone'; ?>
                         </p>
                     </div>
                     <div class="text-right">
-                        <span class="text-[10px] text-slate-400 block">Balance</span>
-                        <span class="text-xs font-mono font-bold text-emerald-400"><?= format_inr($u['wallet_balance']); ?></span>
+                        <span class="text-[10px] text-slate-400 block font-semibold uppercase">Wallet</span>
+                        <span class="text-base font-mono font-black text-slate-900"><?= format_inr($u['wallet_balance']); ?></span>
                     </div>
                 </div>
 
-                <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800 text-[10px] flex justify-between">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
                     <div>
-                        <span class="text-slate-400 block">Registered UPI:</span>
-                        <span class="font-mono text-violet-300"><?= !empty($u['upi_id']) ? htmlspecialchars($u['upi_id']) : 'Not configured'; ?></span>
+                        <span class="text-[11px] text-slate-500 font-semibold block mb-0.5">Payout UPI ID:</span>
+                        <span class="font-mono text-slate-800 font-bold"><?= !empty($u['upi_id']) ? htmlspecialchars($u['upi_id']) : 'Not configured'; ?></span>
                     </div>
                     <div class="text-right">
-                        <span class="text-slate-400 block">Matches:</span>
-                        <span class="font-bold text-white"><?= $u['total_tourneys']; ?></span>
+                        <span class="text-[11px] text-slate-500 font-semibold block mb-0.5">Tournaments:</span>
+                        <span class="font-black text-slate-900"><?= $u['total_tourneys']; ?></span>
                     </div>
                 </div>
 
                 <!-- Block / Unblock Action -->
                 <?php if ($is_admin_user): ?>
                     <div class="pt-1 text-center">
-                        <span class="text-[10px] text-slate-500 italic">
-                            <i class="fa-solid fa-shield mr-1 text-rose-400"></i> Super Admin account is permanently active and immune to bans.
+                        <span class="text-[11px] text-slate-500 font-medium">
+                            <i class="fa-solid fa-shield text-yellow-600 mr-1"></i> Super Admin account is permanently active and cannot be suspended.
                         </span>
                     </div>
                 <?php else: ?>
-                    <form method="POST" action="user.php" class="pt-1" onsubmit="return confirm('Kya aap is user ko <?= $is_blocked ? 'unblock' : 'suspend / block' ?> karna chahte hain?');">
+                    <form method="POST" action="user.php" class="pt-1" onsubmit="return confirm('Are you sure you want to <?= $is_blocked ? 'unblock' : 'suspend / block' ?> this user?');">
                         <input type="hidden" name="action" value="toggle_status">
                         <input type="hidden" name="user_id" value="<?= $u['id']; ?>">
                         <input type="hidden" name="new_status" value="<?= $is_blocked ? 'active' : 'blocked'; ?>">
                         
-                        <button type="submit" class="w-full py-1.5 text-xs font-bold rounded-lg transition <?= $is_blocked ? 'bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600/40 border border-emerald-500/40' : 'bg-rose-600/20 text-rose-300 hover:bg-rose-600/30 border border-rose-500/30' ?>">
-                            <i class="fa-solid <?= $is_blocked ? 'fa-unlock' : 'fa-ban' ?> mr-1"></i>
-                            <?= $is_blocked ? 'Unblock User' : 'Suspend / Block User' ?>
+                        <button type="submit" class="w-full py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 <?= $is_blocked ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200' ?>">
+                            <i class="fa-solid <?= $is_blocked ? 'fa-unlock' : 'fa-ban' ?>"></i>
+                            <?= $is_blocked ? 'Unblock User Account' : 'Suspend / Block User' ?>
                         </button>
                     </form>
                 <?php endif; ?>
             </div>
         <?php endwhile; ?>
     <?php else: ?>
-        <p class="text-xs text-slate-500 text-center py-4">No users registered yet.</p>
+        <div class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 shadow-xs">
+            <i class="fa-solid fa-users text-3xl text-slate-300 mb-2 block"></i>
+            <p class="text-xs font-bold">No users registered yet.</p>
+        </div>
     <?php endif; ?>
 </div>
 

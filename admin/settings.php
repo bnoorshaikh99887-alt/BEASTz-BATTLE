@@ -25,8 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt->close();
         }
     }
-
-    $msg = "All Platform, Gateway & Google settings successfully saved!";
+    $msg = "All platform, payment gateway, and UPI settings saved successfully!";
     $msg_type = "success";
 }
 
@@ -44,10 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt->close();
 
         if (!password_verify($current_pass, $curr_hash) && $current_pass !== $curr_hash && $current_pass !== 'admin123' && $current_pass !== 'admin') {
-            $msg = "Current admin password galat hai.";
+            $msg = "Current admin password is incorrect.";
             $msg_type = "error";
         } elseif (strlen($new_pass) < 6) {
-            $msg = "New password kam se kam 6 characters ka hona chahiye.";
+            $msg = "New password must be at least 6 characters long.";
             $msg_type = "error";
         } else {
             $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
@@ -58,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $upd->close();
             }
             @$conn->query("UPDATE admin SET password = '" . $conn->real_escape_string($hashed) . "' WHERE id = {$adm_id}");
-            $msg = "Admin password successfully update ho gaya!";
+            $msg = "Admin password updated successfully!";
             $msg_type = "success";
         }
     }
@@ -75,98 +74,104 @@ $cashfree_secret = get_setting('cashfree_secret_key', CASHFREE_SECRET_KEY);
 $google_client_id = get_setting('google_client_id', '');
 ?>
 
-<div class="mb-4">
-    <h2 class="text-base font-bold text-white flex items-center gap-2">
-        <i class="fa-solid fa-sliders text-pink-500"></i> Platform & Gateway Settings
+<div class="mb-5">
+    <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-sliders text-yellow-500"></i> Platform & Gateway Settings
     </h2>
-    <p class="text-[11px] text-slate-400">Manage UPI IDs, Cashfree credentials, Google OAuth and Admin security</p>
+    <p class="text-xs text-slate-500">Manage UPI IDs, Cashfree PG credentials, customer support, and admin security</p>
 </div>
 
 <?php if (!empty($msg)): ?>
-    <div class="p-3 mb-4 rounded-xl text-xs font-semibold <?= $msg_type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'; ?> flex items-center gap-2">
-        <i class="fa-solid <?= $msg_type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-rose-400'; ?>"></i>
+    <div class="p-3.5 mb-5 rounded-2xl text-xs font-bold <?= $msg_type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'; ?> flex items-center gap-2.5">
+        <i class="fa-solid <?= $msg_type === 'success' ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-rose-600'; ?> text-sm"></i>
         <span><?= htmlspecialchars($msg); ?></span>
     </div>
 <?php endif; ?>
 
 <!-- Form 1: Gateway & Platform Config -->
-<div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-lg mb-4">
-    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-        <i class="fa-solid fa-credit-card text-emerald-400"></i> Cashfree PG & Payment Config
+<div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs mb-5">
+    <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-credit-card text-yellow-500"></i> Payment Gateway & Direct UPI Configuration
     </h3>
-    <form method="POST" action="settings.php" class="space-y-3">
+    
+    <form method="POST" action="settings.php" class="space-y-4">
         <input type="hidden" name="action" value="update_settings">
-
+        
         <div>
-            <label class="block text-[11px] font-medium text-slate-300 mb-1">Cashfree App ID (Client ID)</label>
-            <input type="text" name="cashfree_app_id" value="<?= htmlspecialchars($cashfree_app_id); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
-        </div>
-
-        <div>
-            <label class="block text-[11px] font-medium text-slate-300 mb-1">Cashfree Secret Key</label>
-            <input type="password" name="cashfree_secret_key" value="<?= htmlspecialchars($cashfree_secret); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
-        </div>
-
-        <div class="border-t border-slate-700/60 pt-3">
-            <h4 class="text-[11px] font-bold text-violet-400 mb-2">Direct UPI Settings</h4>
-            <div>
-                <label class="block text-[11px] font-medium text-slate-300 mb-1">Receiver UPI ID</label>
-                <input type="text" name="upi_id" value="<?= htmlspecialchars($upi_id); ?>" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
-            </div>
-
-            <div class="mt-2">
-                <label class="block text-[11px] font-medium text-slate-300 mb-1">Payee Name</label>
-                <input type="text" name="upi_name" value="<?= htmlspecialchars($upi_name); ?>" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
-            </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-            <div>
-                <label class="block text-[11px] font-medium text-slate-300 mb-1">Min Deposit (₹)</label>
-                <input type="number" step="1" name="min_deposit" value="<?= htmlspecialchars($min_deposit); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
-            </div>
-            <div>
-                <label class="block text-[11px] font-medium text-slate-300 mb-1">Min Payout (₹)</label>
-                <input type="number" step="1" name="min_withdrawal" value="<?= htmlspecialchars($min_withdrawal); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
-            </div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Cashfree App ID (Client ID)</label>
+            <input type="text" name="cashfree_app_id" value="<?= htmlspecialchars($cashfree_app_id); ?>" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-mono">
         </div>
 
         <div>
-            <label class="block text-[11px] font-medium text-slate-300 mb-1">Official WhatsApp Support No</label>
-            <input type="text" name="whatsapp_support" value="<?= htmlspecialchars($whatsapp_support); ?>" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Cashfree Secret Key</label>
+            <input type="password" name="cashfree_secret_key" value="<?= htmlspecialchars($cashfree_secret); ?>" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-mono">
         </div>
 
-        <div class="border-t border-slate-700/60 pt-3">
-            <h4 class="text-[11px] font-bold text-blue-400 mb-1 flex items-center gap-1.5">
-                <i class="fa-brands fa-google"></i> Google OAuth Client ID (Optional)
+        <div class="border-t border-slate-200 pt-4">
+            <h4 class="text-xs font-black text-slate-900 mb-3 flex items-center gap-1.5">
+                <i class="fa-solid fa-qrcode text-yellow-500"></i> Direct UPI Deposit Settings
             </h4>
-            <p class="text-[10px] text-slate-400 mb-2">If you have a Google Cloud OAuth Client ID, paste it here to enable Google One-Tap. Otherwise, Instant Gmail Login works automatically!</p>
-            <input type="text" name="google_client_id" value="<?= htmlspecialchars($google_client_id); ?>" placeholder="e.g. 123456789-abc.apps.googleusercontent.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Receiver UPI ID</label>
+                <input type="text" name="upi_id" value="<?= htmlspecialchars($upi_id); ?>" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-mono font-bold">
+            </div>
+            <div class="mt-3">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Payee Name (Shown on UPI QR)</label>
+                <input type="text" name="upi_name" value="<?= htmlspecialchars($upi_name); ?>" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-bold">
+            </div>
         </div>
 
-        <button type="submit" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs transition shadow-md shadow-violet-600/30">
-            Save All Platform Settings
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Min Deposit (₹)</label>
+                <input type="number" step="1" name="min_deposit" value="<?= htmlspecialchars($min_deposit); ?>" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-mono font-bold">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Min Payout (₹)</label>
+                <input type="number" step="1" name="min_withdrawal" value="<?= htmlspecialchars($min_withdrawal); ?>" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-mono font-bold">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Official WhatsApp & Phone Support Number</label>
+            <input type="text" name="whatsapp_support" value="<?= htmlspecialchars($whatsapp_support); ?>" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-mono font-bold">
+        </div>
+
+        <div class="border-t border-slate-200 pt-4">
+            <h4 class="text-xs font-black text-slate-900 mb-1 flex items-center gap-1.5">
+                <i class="fa-brands fa-google text-blue-500"></i> Google OAuth Client ID (Optional)
+            </h4>
+            <p class="text-[11px] text-slate-500 mb-2">If you have a Google Cloud OAuth Client ID, paste it here to enable Google One-Tap. Instant Gmail Login works automatically without any configuration!</p>
+            <input type="text" name="google_client_id" value="<?= htmlspecialchars($google_client_id); ?>" placeholder="e.g. 123456789-abc.apps.googleusercontent.com" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-mono">
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-black font-extrabold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-2 active:scale-95">
+            <i class="fa-solid fa-floppy-disk"></i> Save Platform & Gateway Settings
         </button>
     </form>
 </div>
 
 <!-- Form 2: Admin Password Change -->
-<div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-lg mb-4">
-    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-        <i class="fa-solid fa-lock text-rose-400"></i> Change Admin Password
+<div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs mb-5">
+    <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-lock text-yellow-500"></i> Update Admin Password
     </h3>
-    <form method="POST" action="settings.php" class="space-y-3">
+    
+    <form method="POST" action="settings.php" class="space-y-4">
         <input type="hidden" name="action" value="update_admin_auth">
+        
         <div>
-            <label class="block text-[11px] font-medium text-slate-300 mb-1">Current Password</label>
-            <input type="password" name="current_password" required placeholder="Enter current password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Current Admin Password</label>
+            <input type="password" name="current_password" required placeholder="Enter current password" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none">
         </div>
+        
         <div>
-            <label class="block text-[11px] font-medium text-slate-300 mb-1">New Password (Min 6 chars)</label>
-            <input type="password" name="new_password" required minlength="6" placeholder="Enter new password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
+            <label class="block text-xs font-bold text-slate-700 mb-1">New Admin Password (Minimum 6 characters)</label>
+            <input type="password" name="new_password" required minlength="6" placeholder="Enter new password" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none">
         </div>
-        <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition shadow-md shadow-rose-600/30">
-            Update Admin Password
+
+        <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white font-extrabold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-2 active:scale-95">
+            <i class="fa-solid fa-key text-yellow-400"></i> Update Admin Password
         </button>
     </form>
 </div>
