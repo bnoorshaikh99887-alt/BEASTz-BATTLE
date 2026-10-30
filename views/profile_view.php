@@ -298,13 +298,13 @@
                 <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Or Choose a Gaming Character Avatar</label>
                 <div class="grid grid-cols-4 gap-2">
                     <?php
-                    global ;
-                    if (!empty()):
-                        foreach ( as ):
+                    global $BEASTZ_GAMING_AVATARS;
+                    if (!empty($BEASTZ_GAMING_AVATARS)):
+                        foreach ($BEASTZ_GAMING_AVATARS as $pr):
                     ?>
-                        <button type="button" onclick="selectPreset('<?= htmlspecialchars(['svg']); ?>')" class="preset-btn p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-yellow-400 bg-slate-50 dark:bg-slate-800 hover:bg-yellow-50 transition flex flex-col items-center">
-                            <img src="<?= htmlspecialchars(['svg']); ?>" alt="<?= ['label']; ?>" class="w-10 h-10 rounded-full pointer-events-none shadow-xs">
-                            <span class="text-[9px] font-black text-slate-700 dark:text-slate-300 mt-1"><?= ['label']; ?></span>
+                        <button type="button" onclick="selectPreset('<?= htmlspecialchars($pr['svg']); ?>')" class="preset-btn p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-yellow-400 bg-slate-50 dark:bg-slate-800 hover:bg-yellow-50 transition flex flex-col items-center">
+                            <img src="<?= htmlspecialchars($pr['svg']); ?>" alt="<?= $pr['label']; ?>" class="w-10 h-10 rounded-full pointer-events-none shadow-xs">
+                            <span class="text-[9px] font-black text-slate-700 dark:text-slate-300 mt-1"><?= $pr['label']; ?></span>
                         </button>
                     <?php 
                         endforeach;

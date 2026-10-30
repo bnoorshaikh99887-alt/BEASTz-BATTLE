@@ -77,13 +77,16 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     ]
 ];
 
-function get_avatar_url(,  = "Gamer") {
-    if (!empty() && (str_starts_with(, "http") || str_starts_with(, "data:image"))) {
-        return ;
+function get_avatar_url($avatar_str = '', $username = 'Gamer') {
+    if (!empty($avatar_str) && (str_starts_with($avatar_str, 'http') || str_starts_with($avatar_str, 'data:image'))) {
+        return $avatar_str;
     }
-    global ;
-     = abs(crc32( ?: 'Gamer')) % count();
-    return []['svg'];
+    global $BEASTZ_GAMING_AVATARS;
+    if (empty($BEASTZ_GAMING_AVATARS)) {
+        return 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($username ?: 'Gamer');
+    }
+    $idx = abs(crc32($username ?: 'Gamer')) % count($BEASTZ_GAMING_AVATARS);
+    return $BEASTZ_GAMING_AVATARS[$idx]['svg'];
 }
 
     if (!function_exists('format_compact_inr')) {
