@@ -17,19 +17,16 @@ if ($path === 'my_matches' || $path === 'my_matches.php') {
     require $root . '/my_tournaments.php';
     exit;
 }
-
 if ($path === 'leaderboard' || $path === 'leaderboard.php') {
     require $root . '/leaderboard.php';
     exit;
 }
-
 if ($path === 'tournament.php' || $path === 'tournament' || $path === 'tournaments.php' || $path === 'tournaments') {
     if (file_exists($root . '/admin/tournament.php')) {
         require $root . '/admin/tournament.php';
         exit;
     }
 }
-
 if ($path === 'manage_tournament.php' || $path === 'manage_tournament') {
     if (file_exists($root . '/admin/manage_tournament.php')) {
         require $root . '/admin/manage_tournament.php';
@@ -39,7 +36,7 @@ if ($path === 'manage_tournament.php' || $path === 'manage_tournament') {
 
 $file = $root . '/' . $path;
 
-// 1. Direct file match (.php or static files like images/css)
+// 1. Direct file match (.php or static files like images/css/manifest/sw.js)
 if (is_file($file)) {
     $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
     if ($ext === 'php') {
@@ -59,6 +56,10 @@ if (is_file($file)) {
         'ico'  => 'image/x-icon',
         'json' => 'application/json'
     ];
+    if ($ext === 'js' && basename($file) === 'sw.js') {
+        header('Service-Worker-Allowed: /');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+    }
     header('Content-Type: ' . ($mimeTypes[$ext] ?? 'application/octet-stream'));
     readfile($file);
     exit;

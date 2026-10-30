@@ -23,7 +23,7 @@ if (isset($_SESSION['user_id'])) {
             $logged_username = $u['username'] ?? '';
             $user_role = $u['role'] ?? 'user';
             $user_avatar = !empty($u['avatar']) ? $u['avatar'] : 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($logged_username);
-
+            
             // Check if profile setup is pending (except on complete_profile.php itself)
             $curr_script = basename($_SERVER['PHP_SELF'] ?? '');
             if ($curr_script !== 'complete_profile.php' && $curr_script !== 'logout.php') {
@@ -47,12 +47,24 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>BEASTzBATTLE - Esports Arena</title>
+
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#facc15">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BEASTz BATTLE">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+
     <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -80,6 +92,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     </script>
     <!-- Font Awesome 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <style>
         * { font-family: 'Plus Jakarta Sans', sans-serif; }
         h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
@@ -123,6 +136,30 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
             </div>
         <?php endif; ?>
 
+        <!-- In-App PWA Install Banner -->
+        <div id="pwa-install-banner" class="hidden bg-slate-900 border-b border-yellow-500/50 px-3.5 py-2.5 text-white items-center justify-between text-xs sticky top-0 z-50 shadow-md">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-yellow-400 flex items-center justify-center text-slate-950 font-black text-sm shadow-xs shrink-0">
+                    <i class="fa-solid fa-download"></i>
+                </div>
+                <div>
+                    <div class="font-black text-[12px] text-yellow-400 flex items-center gap-1">
+                        <span>Install BEASTz App</span>
+                        <span class="px-1.5 py-0.2 rounded bg-yellow-400/20 text-yellow-300 text-[9px] font-extrabold uppercase">APK Free</span>
+                    </div>
+                    <div class="text-[10px] text-slate-300">Fast 1-tap gaming & real-time alerts</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="pwa-install-btn" class="bg-yellow-400 hover:bg-yellow-500 active:scale-95 text-slate-950 font-black text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition">
+                    INSTALL
+                </button>
+                <button id="pwa-dismiss-btn" class="text-slate-400 hover:text-white p-1 text-xs" title="Dismiss">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- App Header (Matching Video: Avatar Left, Brand Center, Wallet Right) -->
         <header class="sticky <?= $is_admin ? 'top-7' : 'top-0' ?> z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs">
             <!-- Left: Avatar leading to Profile -->
@@ -149,7 +186,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 </span>
             </a>
 
-            <!-- Right: Wallet Button / Balance (Matching Video) -->
+            <!-- Right: Wallet Button / Balance (Compact format like 1k, 1.2k) -->
             <div class="flex items-center gap-2">
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <a href="wallet.php" class="flex items-center gap-1.5 bg-slate-100 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-400 px-3 py-1.5 rounded-xl shadow-xs transition group">

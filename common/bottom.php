@@ -6,7 +6,6 @@
                 <?php
                 $active_page = basename($_SERVER['PHP_SELF'] ?? '');
                 ?>
-
                 <!-- 1. Home -->
                 <a href="index.php" class="flex flex-col items-center py-1 transition <?= ($active_page === 'index.php') ? 'text-yellow-500' : 'text-slate-400 hover:text-slate-600' ?>">
                     <div class="relative">
@@ -54,7 +53,7 @@
         </nav>
     </div>
 
-    <!-- Security & Native Mobile App Protection JS -->
+    <!-- Security, Native Protection & PWA App Engine -->
     <script>
         // Disable Right Click Context Menu
         document.addEventListener('contextmenu', function(e) {
@@ -75,6 +74,60 @@
                 }
             }
         });
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                    console.log('BEASTz PWA Service Worker active:', reg.scope);
+                }).catch((err) => {
+                    console.warn('SW registration skipped:', err);
+                });
+            });
+        }
+
+        // PWA In-App Install Prompt Handler
+        let deferredPrompt;
+        const pwaBanner = document.getElementById('pwa-install-banner');
+        const pwaInstallBtn = document.getElementById('pwa-install-btn');
+        const pwaDismissBtn = document.getElementById('pwa-dismiss-btn');
+
+        // Check if already running in standalone mode (installed app)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        if (!isStandalone) {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                if (!sessionStorage.getItem('pwa_banner_dismissed') && pwaBanner) {
+                    pwaBanner.classList.remove('hidden');
+                    pwaBanner.classList.add('flex');
+                }
+            });
+
+            if (pwaInstallBtn) {
+                pwaInstallBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        deferredPrompt = null;
+                        if (pwaBanner) pwaBanner.classList.add('hidden');
+                    }
+                });
+            }
+
+            if (pwaDismissBtn) {
+                pwaDismissBtn.addEventListener('click', () => {
+                    if (pwaBanner) pwaBanner.classList.add('hidden');
+                    sessionStorage.setItem('pwa_banner_dismissed', '1');
+                });
+            }
+
+            window.addEventListener('appinstalled', () => {
+                if (pwaBanner) pwaBanner.classList.add('hidden');
+                deferredPrompt = null;
+            });
+        }
     </script>
 </body>
 </html>
