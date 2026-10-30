@@ -5,6 +5,38 @@ $tournament_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $msg = "";
 $msg_type = "";
 
+// Helper Function to Trigger OneSignal Push Notification via REST API
+function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home") {
+    $content = array("en" => $message);
+    $headings = array("en" => $title);
+    
+    $fields = array(
+        'app_id' => "561bd59e-8355-47c8-88cc-0766688a105a",
+        'included_segments' => array('All'),
+        'contents' => $content,
+        'headings' => $headings,
+        'data' => array('url' => $targetUrl)
+    );
+    
+    $fields = json_encode($fields);
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json; charset=utf-8',
+        'Authorization: Basic Os_v2_app_kyn5lhudkvd4rcgma5tgrcqqlk3p4m4t5ybe45fzfmbcgueakfolptqrqiewnrmp67mi4pxk5whye36b55sm47l7qmqtdbv2uffjsay'
+    ));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+    curl_setopt($ch, CURLOPT_HEADER, FALSE);
+    curl_setopt($ch, CURLOPT_POST, TRUE);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return $response;
+}
+
 // Fetch Tournament Details
 $stmt = $conn->prepare("
     SELECT t.*, 
@@ -42,6 +74,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $t['room_id'] = $room_id;
             $t['room_password'] = $room_password;
             $t['status'] = $status;
+
+            // Trigger Push Notification when Room ID is updated/live
+            if (!empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
+                sendOneSignalNotification(
+                    "🔥 Room ID & Password Out!", 
+                    "Match: " . $t['title'] . " | Room ID: " . $room_id . " | Pass: " . $room_password, 
+                    "/?tab=tournaments"
+                );
+            }
         } else {
             $msg = "Update failed: " . $u_stmt->error;
             $msg_type = "error";
@@ -123,6 +164,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $msg = "Match results successfully published! Total " . format_inr($total_distributed) . " credited to gamer wallets based on kills and rankings.";
         $msg_type = "success";
         $t['status'] = 'completed';
+
+        // Trigger Push Notification for Results Declared
+        sendOneSignalNotification(
+            "🏆 Results Declared!", 
+            "Match results for '" . $t['title'] . "' have been published. Check your wallet & rankings!", 
+            "/?tab=tournaments"
+        );
+
     } catch (Exception $e) {
         $conn->rollback();
         $msg = "Distribution Error: " . $e->getMessage();
