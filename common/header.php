@@ -36,7 +36,7 @@ if (isset($_SESSION['user_id'])) {
         $stmt->close();
     }
 } else {
-    $user_avatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=guest';
+    $user_avatar = get_avatar_url('', 'Guest');
 }
 
 if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
@@ -126,7 +126,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
         <!-- App Header (Matching Video: Avatar Left, Brand Center, Wallet Right) -->
         <header class="sticky <?= $is_admin ? 'top-7' : 'top-0' ?> z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs">
             <!-- Left: Avatar leading to Profile -->
-            <a href="profile.php" class="flex items-center gap-2 group">
+            <a href="profile.php?change_photo=1" title="Click to Change Profile Photo" class="flex items-center gap-2 group">
                 <div class="relative">
                     <img src="<?= htmlspecialchars($user_avatar); ?>" alt="Avatar" class="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 shadow-sm bg-slate-100">
                     <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>

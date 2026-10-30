@@ -42,7 +42,19 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     if (!function_exists('clean_input')) { function clean_input($data) { return sanitize($data); } }
 
     if (!function_exists('format_inr')) {
-        function format_inr($amount) {
+        function get_avatar_url($avatar_str, $username = "Gamer") {
+        if (!empty($avatar_str) && (str_starts_with($avatar_str, "http") || str_starts_with($avatar_str, "data:image"))) {
+            return $avatar_str;
+        }
+        $name = trim($username ?: "Gamer");
+        $initial = strtoupper(substr($name, 0, 1));
+        if (empty($initial)) $initial = "B";
+        $colors = ["%23facc15", "%2338bdf8", "%234ade80", "%23f43f5e", "%23a855f7", "%23fb923c"];
+        $idx = abs(crc32($name)) % count($colors);
+        $bg = $colors[$idx];
+        return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='{$bg}'/><text x='50%' y='54%' font-family='sans-serif' font-weight='900' font-size='42' fill='%230f172a' text-anchor='middle' dominant-baseline='middle'>{$initial}</text></svg>";
+    }
+    function format_inr($amount) {
             return '₹' . number_format((float)$amount, 2);
         }
     }

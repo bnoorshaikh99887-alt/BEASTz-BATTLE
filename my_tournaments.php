@@ -4,9 +4,9 @@ check_user_auth();
 
 $user_id = (int)$_SESSION['user_id'];
 
-// Fetch User's Upcoming Matches
+// 1. Fetch User's Upcoming Matches
 $upcoming_query = "
-    SELECT t.*, p.in_game_name, p.created_at as joined_at,
+    SELECT t.*, p.slot_no, p.in_game_name, p.game_id as player_game_id, p.created_at as joined_at,
     (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count
     FROM participants p
     INNER JOIN tournaments t ON p.tournament_id = t.id
@@ -15,9 +15,9 @@ $upcoming_query = "
 ";
 $upcoming_matches = $conn->query($upcoming_query);
 
-// Fetch User's Live Matches
+// 2. Fetch User's Live Matches
 $live_query = "
-    SELECT t.*, p.in_game_name, p.created_at as joined_at,
+    SELECT t.*, p.slot_no, p.in_game_name, p.game_id as player_game_id, p.created_at as joined_at,
     (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count
     FROM participants p
     INNER JOIN tournaments t ON p.tournament_id = t.id
@@ -26,9 +26,9 @@ $live_query = "
 ";
 $live_matches = $conn->query($live_query);
 
-// Fetch User's Completed / Played Matches
+// 3. Fetch User's Completed / Played Matches
 $played_query = "
-    SELECT t.*, p.in_game_name, p.created_at as joined_at,
+    SELECT t.*, p.slot_no, p.in_game_name, p.kills, p.rank_no, p.prize_won, p.game_id as player_game_id, p.created_at as joined_at,
     (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count,
     u.username as winner_name
     FROM participants p
@@ -39,47 +39,57 @@ $played_query = "
 ";
 $played_matches = $conn->query($played_query);
 
-// Fetch all participants for winners modal display
-$all_winners_data = [];
-$completed_tourneys = $conn->query("
-    SELECT t.id, t.title, t.prize_pool, t.winner_user_id, u.username as winner_name, u.avatar as winner_avatar
-    FROM tournaments t
-    LEFT JOIN users u ON t.winner_user_id = u.id
-    WHERE LOWER(t.status) = 'completed'
+// Fetch winners / leader list for winners modal
+$winners_by_tourney = [];
+$winners_res = $conn->query("
+    SELECT p.tournament_id, p.in_game_name, p.kills, p.rank_no, p.prize_won, u.username
+    FROM participants p
+    INNER JOIN users u ON p.user_id = u.id
+    WHERE p.prize_won > 0 OR p.rank_no > 0
+    ORDER BY p.rank_no ASC, p.prize_won DESC
 ");
-if ($completed_tourneys) {
-    while ($w = $completed_tourneys->fetch_assoc()) {
-        $all_winners_data[$w['id']] = $w;
+if ($winners_res) {
+    while ($wrow = $winners_res->fetch_assoc()) {
+        $tid_w = (int)$wrow['tournament_id'];
+        if (!isset($winners_by_tourney[$tid_w])) $winners_by_tourney[$tid_w] = [];
+        $winners_by_tourney[$tid_w][] = $wrow;
     }
 }
 ?>
 
-<!-- 3 Navigation Tabs (Upcoming, Live, Played) Matching Video -->
-<div class="mb-4 bg-white border-b border-slate-200 -mx-3.5 px-3.5 flex items-center justify-around">
-    <button type="button" onclick="switchTab('upcoming', this)" class="match-tab active-match-tab py-2.5 px-4 text-xs font-bold text-slate-900 border-b-2 border-yellow-400 transition">
-        Upcoming
-    </button>
-    <button type="button" onclick="switchTab('live', this)" class="match-tab py-2.5 px-4 text-xs font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-900 transition">
-        Live
-    </button>
-    <button type="button" onclick="switchTab('played', this)" class="match-tab py-2.5 px-4 text-xs font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-900 transition">
-        Played
-    </button>
+<!-- Top 3 Sub-Tabs: Upcoming / Live / Played -->
+<div class="bg-white border-b border-slate-200 sticky top-14 z-30 mb-4 -mx-4 px-4 shadow-2xs">
+    <div class="grid grid-cols-3 text-center text-xs font-bold">
+        <button type="button" onclick="switchMatchTab('upcoming', this)" id="tabBtnUpcoming" class="match-tab py-3 border-b-2 border-yellow-400 text-slate-950 font-black transition">
+            Upcoming
+        </button>
+        <button type="button" onclick="switchMatchTab('live', this)" id="tabBtnLive" class="match-tab py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">
+            Live
+        </button>
+        <button type="button" onclick="switchMatchTab('played', this)" id="tabBtnPlayed" class="match-tab py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">
+            Played
+        </button>
+    </div>
 </div>
 
 <!-- ============================================================= -->
 <!-- TAB 1: UPCOMING MATCHES -->
 <!-- ============================================================= -->
-<div id="tabContentUpcoming" class="tab-pane space-y-3">
+<div id="tabContentUpcoming" class="tab-pane space-y-3 mb-20">
     <?php if ($upcoming_matches && $upcoming_matches->num_rows > 0): ?>
         <?php while ($t = $upcoming_matches->fetch_assoc()): ?>
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow transition">
-                <div class="flex items-start justify-between mb-2">
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-start justify-between gap-2">
                     <div>
-                        <span class="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded uppercase">
-                            <?= htmlspecialchars($t['match_type'] ?: 'SOLO'); ?> &bull; <?= htmlspecialchars($t['map'] ?: 'BERMUDA'); ?>
-                        </span>
-                        <h3 class="text-sm font-extrabold text-slate-900 mt-1">
+                        <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                            <span class="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded uppercase">
+                                <?= htmlspecialchars($t['match_type'] ?: 'SOLO'); ?> &bull; <?= htmlspecialchars($t['map'] ?: 'BERMUDA'); ?>
+                            </span>
+                            <span class="text-[9px] font-black text-yellow-900 bg-yellow-400 px-2 py-0.5 rounded uppercase">
+                                Slot #<?= $t['slot_no'] ?: 1; ?>
+                            </span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-slate-900">
                             <?= htmlspecialchars($t['title']); ?>
                         </h3>
                     </div>
@@ -88,35 +98,34 @@ if ($completed_tourneys) {
                     </span>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 mb-3">
+                <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <div>
-                        <span class="text-[10px] text-slate-400 block">Match Time:</span>
+                        <span class="text-[10px] text-slate-400 block font-semibold">Match Time</span>
                         <span class="font-bold text-slate-800"><?= date('d M, h:i A', strtotime($t['match_time'])); ?></span>
                     </div>
                     <div class="text-right">
-                        <span class="text-[10px] text-slate-400 block">Registered IGN:</span>
-                        <span class="font-bold text-slate-800"><?= htmlspecialchars($t['in_game_name'] ?? 'Player'); ?></span>
+                        <span class="text-[10px] text-slate-400 block font-semibold">Your Registered IGN</span>
+                        <span class="font-extrabold text-yellow-700"><?= htmlspecialchars($t['in_game_name'] ?? 'Player'); ?></span>
                     </div>
                 </div>
 
                 <!-- Room ID & Password Box -->
-                <div class="bg-yellow-50/60 border border-yellow-200 rounded-xl p-3 flex items-center justify-between">
+                <div class="bg-yellow-50/70 border border-yellow-200 rounded-xl p-3 flex items-center justify-between">
                     <div>
-                        <span class="text-[10px] font-bold text-yellow-800 uppercase block">Tournament Credentials</span>
+                        <span class="text-[10px] font-bold text-yellow-800 uppercase block">Custom Room Credentials</span>
                         <?php if (!empty($t['room_id'])): ?>
                             <div class="text-xs text-slate-900 font-mono mt-0.5 font-bold">
-                                Room ID: <span class="text-yellow-600"><?= htmlspecialchars($t['room_id']); ?></span> &bull; 
-                                Pass: <span class="text-yellow-600"><?= htmlspecialchars($t['room_password'] ?: 'N/A'); ?></span>
+                                Room ID: <span class="text-yellow-600 font-black"><?= htmlspecialchars($t['room_id']); ?></span> &bull; 
+                                Pass: <span class="text-yellow-600 font-black"><?= htmlspecialchars($t['room_password'] ?: 'None'); ?></span>
                             </div>
                         <?php else: ?>
                             <span class="text-[11px] text-slate-500">
-                                <i class="fa-solid fa-clock text-yellow-500 mr-1"></i> Room ID & Pass shared 10 mins before match.
+                                <i class="fa-solid fa-clock text-yellow-500 mr-1"></i> Room ID & Pass published 10 mins before match start.
                             </span>
                         <?php endif; ?>
                     </div>
-
                     <?php if (!empty($t['room_id'])): ?>
-                        <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-bold text-[10px] rounded-lg shadow-xs transition">
+                        <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black text-[10px] rounded-lg shadow-xs transition">
                             Copy
                         </button>
                     <?php endif; ?>
@@ -130,7 +139,7 @@ if ($completed_tourneys) {
             </div>
             <h4 class="text-sm font-bold text-slate-800">No upcoming matches</h4>
             <p class="text-xs text-slate-500 mt-1 mb-4">You have not joined any upcoming tournaments yet.</p>
-            <a href="index.php" class="inline-block px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-bold rounded-xl text-xs shadow-xs transition">
+            <a href="index.php" class="inline-block px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-xs transition">
                 Browse Tournaments &rarr;
             </a>
         </div>
@@ -140,21 +149,26 @@ if ($completed_tourneys) {
 <!-- ============================================================= -->
 <!-- TAB 2: LIVE MATCHES -->
 <!-- ============================================================= -->
-<div id="tabContentLive" class="tab-pane hidden space-y-3">
+<div id="tabContentLive" class="tab-pane hidden space-y-3 mb-20">
     <?php if ($live_matches && $live_matches->num_rows > 0): ?>
         <?php while ($t = $live_matches->fetch_assoc()): ?>
-            <div class="bg-white border-2 border-emerald-400 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-                <div class="flex items-center gap-1.5 text-emerald-600 text-[10px] font-black uppercase mb-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span>MATCH CURRENTLY LIVE</span>
+            <div class="bg-white border-2 border-emerald-400 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 text-emerald-600 text-[10px] font-black uppercase">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        <span>MATCH CURRENTLY LIVE</span>
+                    </div>
+                    <span class="text-xs font-black px-2 py-0.5 rounded-lg bg-yellow-400 text-black">
+                        Your Slot: #<?= $t['slot_no'] ?: 1; ?>
+                    </span>
                 </div>
 
-                <h3 class="text-sm font-extrabold text-slate-900 mb-2">
+                <h3 class="text-sm font-extrabold text-slate-900">
                     <?= htmlspecialchars($t['title']); ?>
                 </h3>
 
                 <!-- Room ID & Password Display -->
-                <div class="bg-slate-900 text-white p-3 rounded-xl mb-3 flex items-center justify-between">
+                <div class="bg-slate-900 text-white p-3 rounded-xl flex items-center justify-between">
                     <div>
                         <span class="text-[10px] text-slate-400 block uppercase font-mono">Custom Room Credentials</span>
                         <div class="text-xs font-mono font-bold mt-0.5">
@@ -170,7 +184,7 @@ if ($completed_tourneys) {
                 </div>
 
                 <p class="text-[11px] text-slate-500">
-                    Open Free Fire &rarr; Custom Room &rarr; Enter Room ID and Password above to play now!
+                    Open Free Fire &rarr; Custom Room &rarr; Enter Room ID and sit in <strong class="text-slate-900">Slot #<?= $t['slot_no'] ?: 1; ?></strong>!
                 </p>
             </div>
         <?php endwhile; ?>
@@ -186,53 +200,82 @@ if ($completed_tourneys) {
 </div>
 
 <!-- ============================================================= -->
-<!-- TAB 3: PLAYED MATCHES (Exact Layout & Winners Button From Video) -->
+<!-- TAB 3: PLAYED MATCHES (Performance & Actual Prize Won) -->
 <!-- ============================================================= -->
-<div id="tabContentPlayed" class="tab-pane hidden space-y-3">
+<div id="tabContentPlayed" class="tab-pane hidden space-y-3 mb-20">
     <?php if ($played_matches && $played_matches->num_rows > 0): ?>
         <?php while ($t = $played_matches->fetch_assoc()): ?>
             <?php
-                $is_i_winner = ((int)$t['winner_user_id'] === $user_id);
-                $winner_label = !empty($t['winner_name']) ? htmlspecialchars($t['winner_name']) : 'noor';
+                $kills = (int)($t['kills'] ?? 0);
+                $rank_no = (int)($t['rank_no'] ?? 0);
+                $prize_won = (float)($t['prize_won'] ?? 0.00);
+                $per_kill = (float)($t['per_kill'] ?? 0.00);
+                $tid_p = (int)$t['id'];
+
+                $tourney_winners_json = htmlspecialchars(json_encode($winners_by_tourney[$tid_p] ?? []));
             ?>
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow transition">
-                <div class="flex items-start justify-between gap-2 mb-2">
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow transition space-y-3">
+                <div class="flex items-start justify-between gap-2">
                     <div>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <span class="text-[9px] font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                Slot #<?= $t['slot_no'] ?: 1; ?>
+                            </span>
+                            <span class="text-[9px] font-bold text-slate-400">
+                                <?= date('d M, h:i A', strtotime($t['match_time'])); ?>
+                            </span>
+                        </div>
                         <h3 class="text-sm font-extrabold text-slate-900 leading-tight">
                             <?= htmlspecialchars($t['title']); ?>
                         </h3>
                     </div>
-                    <!-- Yellow "Winners" Button Matching Video -->
-                    <button type="button" onclick="openWinnersModal('<?= htmlspecialchars(addslashes($t['title'])); ?>', '<?= htmlspecialchars(addslashes($winner_label)); ?>', '<?= format_inr($t['prize_pool']); ?>', 4)" class="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black text-[11px] rounded-lg shadow-xs transition shrink-0">
+
+                    <!-- Yellow "Winners" Button -->
+                    <button type="button" 
+                            onclick="openWinnersModal('<?= htmlspecialchars(addslashes($t['title'])); ?>', '<?= $tourney_winners_json; ?>')" 
+                            class="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black text-[11px] rounded-lg shadow-xs transition shrink-0">
                         Winners
                     </button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 text-xs mb-3">
-                    <div class="space-y-1">
-                        <div class="text-slate-600">
-                            Entry Fee: <span class="font-extrabold text-slate-900"><?= format_inr($t['entry_fee']); ?></span>
-                        </div>
-                        <div class="text-slate-600">
-                            Prize Pool: <span class="font-extrabold text-amber-500"><?= format_inr($t['prize_pool']); ?></span>
-                        </div>
+                <div class="grid grid-cols-3 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Entry Fee</span>
+                        <span class="font-extrabold text-slate-900"><?= format_inr($t['entry_fee']); ?></span>
                     </div>
-                    <div class="text-right space-y-1 text-slate-500 text-[11px]">
-                        <div><i class="fa-regular fa-calendar text-yellow-500 mr-1"></i><?= date('d M', strtotime($t['match_time'])); ?></div>
-                        <div><i class="fa-regular fa-clock text-yellow-500 mr-1"></i><?= date('h:i A', strtotime($t['match_time'])); ?></div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Your Kills</span>
+                        <span class="font-extrabold text-slate-900"><?= $kills; ?> Kills</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block">Per Kill Rate</span>
+                        <span class="font-extrabold text-emerald-600 font-mono"><?= format_inr($per_kill); ?></span>
                     </div>
                 </div>
 
-                <!-- Won Result Badge Matching Video -->
-                <?php if ($is_i_winner): ?>
-                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-trophy text-emerald-500"></i>
-                        <span>You won <?= format_inr($t['prize_pool']); ?> (Position #1)</span>
+                <!-- Performance Breakdown & Actual Winnings -->
+                <?php if ($prize_won > 0): ?>
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-trophy text-emerald-600 text-sm"></i>
+                            <div>
+                                <span class="font-black text-sm text-emerald-900 block leading-tight">
+                                    You won <?= format_inr($prize_won); ?>
+                                </span>
+                                <span class="text-[10px] text-emerald-700">
+                                    <?= $kills; ?> Kills @ <?= format_inr($per_kill); ?>
+                                    <?= ($rank_no > 0) ? " + Position #{$rank_no} Bonus" : ""; ?>
+                                </span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 font-black">
+                            CREDITED
+                        </span>
                     </div>
                 <?php else: ?>
-                    <div class="bg-slate-50 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-xl text-[11px] font-semibold flex items-center justify-between">
-                        <span>Match Ended</span>
-                        <span class="text-slate-900 font-bold">Winner: @<?= $winner_label; ?></span>
+                    <div class="bg-slate-50 border border-slate-200 text-slate-600 px-3 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-between">
+                        <span>Match Completed &bull; <?= $kills; ?> Kills</span>
+                        <span class="text-slate-400 font-mono">No Prize Won</span>
                     </div>
                 <?php endif; ?>
             </div>
@@ -243,43 +286,30 @@ if ($completed_tourneys) {
                 <i class="fa-solid fa-trophy"></i>
             </div>
             <h4 class="text-sm font-bold text-slate-800">No played matches yet</h4>
-            <p class="text-xs text-slate-500 mt-1">Your past tournament results and winnings will appear here.</p>
+            <p class="text-xs text-slate-500 mt-1">Your past tournament results and earned winnings will appear here.</p>
         </div>
     <?php endif; ?>
 </div>
 
 <!-- ============================================================= -->
-<!-- MODAL: TOURNAMENT WINNERS (Exact Match to Video Frame 0:33) -->
+<!-- MODAL: TOURNAMENT WINNERS -->
 <!-- ============================================================= -->
 <div id="winnersModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative">
+    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative max-h-[85vh] overflow-y-auto">
         <button type="button" onclick="closeWinnersModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
 
-        <h3 class="text-sm font-extrabold text-slate-900 text-center mb-1">Tournament Winners</h3>
-        <p class="text-[11px] text-slate-400 text-center mb-4" id="winnersMatchTitle">Match Results</p>
+        <div class="text-center mb-4">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-xl mb-2 shadow-xs">
+                <i class="fa-solid fa-crown"></i>
+            </div>
+            <h3 class="text-base font-extrabold text-slate-900" id="winnersModalTitle">Match Winners</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Top performers and prize earners</p>
+        </div>
 
-        <!-- Winners Table (Matching Video) -->
-        <div class="border border-slate-200 rounded-2xl overflow-hidden mb-4">
-            <table class="w-full text-left text-xs">
-                <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                    <tr>
-                        <th class="py-2.5 px-3">Rank</th>
-                        <th class="py-2.5 px-2">Player</th>
-                        <th class="py-2.5 px-2 text-right">Prize</th>
-                        <th class="py-2.5 px-3 text-right">Kills</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 font-semibold" id="winnersTableBody">
-                    <tr>
-                        <td class="py-3 px-3 text-slate-900 font-bold">#1</td>
-                        <td class="py-3 px-2 text-slate-900" id="winnerRowPlayer">noor</td>
-                        <td class="py-3 px-2 text-right font-extrabold text-emerald-600 font-mono" id="winnerRowPrize">₹15</td>
-                        <td class="py-3 px-3 text-right font-bold text-slate-700" id="winnerRowKills">4</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div id="winnersListContainer" class="space-y-2 mb-4">
+            <!-- Dynamically populated -->
         </div>
 
         <button type="button" onclick="closeWinnersModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition">
@@ -289,43 +319,73 @@ if ($completed_tourneys) {
 </div>
 
 <script>
-    // Tab Switcher
-    function switchTab(tabName, btn) {
+    function switchMatchTab(tab, btn) {
         document.querySelectorAll('.match-tab').forEach(b => {
-            b.classList.remove('border-yellow-400', 'text-slate-900');
+            b.classList.remove('border-yellow-400', 'text-slate-950', 'font-black');
             b.classList.add('border-transparent', 'text-slate-500');
         });
         btn.classList.remove('border-transparent', 'text-slate-500');
-        btn.classList.add('border-yellow-400', 'text-slate-900');
+        btn.classList.add('border-yellow-400', 'text-slate-950', 'font-black');
 
-        document.getElementById('tabContentUpcoming').classList.add('hidden');
-        document.getElementById('tabContentLive').classList.add('hidden');
-        document.getElementById('tabContentPlayed').classList.add('hidden');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
 
-        if (tabName === 'upcoming') document.getElementById('tabContentUpcoming').classList.remove('hidden');
-        if (tabName === 'live') document.getElementById('tabContentLive').classList.remove('hidden');
-        if (tabName === 'played') document.getElementById('tabContentPlayed').classList.remove('hidden');
+        if (tab === 'upcoming') {
+            document.getElementById('tabContentUpcoming').classList.remove('hidden');
+        } else if (tab === 'live') {
+            document.getElementById('tabContentLive').classList.remove('hidden');
+        } else if (tab === 'played') {
+            document.getElementById('tabContentPlayed').classList.remove('hidden');
+        }
     }
 
-    // Winners Modal Handler
-    function openWinnersModal(title, player, prize, kills) {
-        document.getElementById('winnersMatchTitle').innerText = title;
-        document.getElementById('winnerRowPlayer').innerText = player;
-        document.getElementById('winnerRowPrize').innerText = prize;
-        document.getElementById('winnerRowKills').innerText = kills || 4;
+    function copyCredentials(room, pass) {
+        const text = "Room ID: " + room + "\nPassword: " + pass;
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Room ID & Password copied to clipboard!");
+        });
+    }
+
+    function openWinnersModal(title, winnersJsonStr) {
+        document.getElementById('winnersModalTitle').innerText = title;
+        const container = document.getElementById('winnersListContainer');
+        container.innerHTML = '';
+
+        let winners = [];
+        try {
+            winners = JSON.parse(winnersJsonStr) || [];
+        } catch(e) {
+            winners = [];
+        }
+
+        if (winners.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No winner data published yet.</p>';
+        } else {
+            winners.forEach((w, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs';
+                
+                const rankText = w.rank_no > 0 ? '#' + w.rank_no : (idx + 1);
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-yellow-400 text-slate-950 font-black flex items-center justify-center text-[10px]">
+                            ${rankText}
+                        </span>
+                        <div>
+                            <span class="font-extrabold text-slate-900 block">${w.in_game_name || w.username}</span>
+                            <span class="text-[10px] text-slate-500">${w.kills} Kills</span>
+                        </div>
+                    </div>
+                    <span class="font-mono font-black text-emerald-600">₹${parseFloat(w.prize_won).toFixed(2)}</span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
         document.getElementById('winnersModal').classList.remove('hidden');
     }
 
     function closeWinnersModal() {
         document.getElementById('winnersModal').classList.add('hidden');
-    }
-
-    // Copy credentials helper
-    function copyCredentials(roomId, pass) {
-        const text = "Room ID: " + roomId + " Password: " + pass;
-        navigator.clipboard.writeText(text).then(() => {
-            alert("Room Credentials Copied: " + text);
-        });
     }
 </script>
 
