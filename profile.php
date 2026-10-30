@@ -6,10 +6,12 @@ $user_id = (int)$_SESSION['user_id'];
 $msg = "";
 $msg_type = "";
 
+// -------------------------------------------------------------
 // 1. Handle Profile Avatar Update
+// -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_avatar') {
-    $chosen_avatar = sanitize($_POST['avatar'] ?? '');
-    if (!empty($chosen_avatar)) {
+    $chosen_avatar = trim($_POST['avatar'] ?? '');
+    if (!empty($chosen_avatar) && (str_starts_with($chosen_avatar, 'http') || str_starts_with($chosen_avatar, 'data:image'))) {
         $upd = $conn->prepare("UPDATE users SET avatar = ? WHERE id = ?");
         if ($upd) {
             $upd->bind_param("si", $chosen_avatar, $user_id);
@@ -22,19 +24,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
             $upd->close();
         }
+    } else {
+        $msg = "Please select an avatar or upload an image.";
+        $msg_type = "error";
     }
 }
 
-// 2. Handle Account Settings Update (IGN & Free Fire UID)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_game_id') {
+// -------------------------------------------------------------
+// 2. Handle Account Settings Update (IGN, Game UID, Phone, UPI)
+// -------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_account_settings') {
     $game_name = sanitize($_POST['game_name'] ?? '');
     $game_id = sanitize($_POST['game_id'] ?? '');
+    $phone = sanitize($_POST['phone'] ?? '');
+    $upi_id = sanitize($_POST['upi_id'] ?? '');
 
-    $upd = $conn->prepare("UPDATE users SET game_name = ?, game_id = ? WHERE id = ?");
+    $upd = $conn->prepare("UPDATE users SET game_name = ?, game_id = ?, phone = IF(? != '', ?, phone), upi_id = IF(? != '', ?, upi_id) WHERE id = ?");
     if ($upd) {
-        $upd->bind_param("ssi", $game_name, $game_id, $user_id);
+        $upd->bind_param("ssssssi", $game_name, $game_id, $phone, $phone, $upi_id, $upi_id, $user_id);
         if ($upd->execute()) {
-            $msg = "Account details (IGN & Game UID) saved successfully!";
+            $msg = "Account settings saved successfully!";
             $msg_type = "success";
         } else {
             $msg = "Update failed: " . $upd->error;
@@ -44,14 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// -------------------------------------------------------------
 // 3. Handle UPI Withdrawal Request
+// -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'request_withdrawal') {
     $amount = (float)($_POST['amount'] ?? 0.00);
     $upi_id = sanitize($_POST['upi_id'] ?? '');
     $min_wdr = (float)get_setting('min_withdrawal', '50.00');
 
-    // Fetch user current balances
-    $u_stmt = $conn->prepare("SELECT wallet_balance, winning_balance FROM users WHERE id = ?");
+    $u_stmt = $conn->prepare("SELECT wallet_balance FROM users WHERE id = ?");
     $u_stmt->bind_param("i", $user_id);
     $u_stmt->execute();
     $u_bal = $u_stmt->get_result()->fetch_assoc();
@@ -71,16 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } else {
         $conn->begin_transaction();
         try {
-            // Record Withdrawal Request
             $w_stmt = $conn->prepare("INSERT INTO withdrawals (user_id, amount, upi_id, status) VALUES (?, ?, ?, 'Pending')");
             $w_stmt->bind_param("ids", $user_id, $amount, $upi_id);
             $w_stmt->execute();
             $w_stmt->close();
 
-            // Save UPI ID to user profile
             $conn->query("UPDATE users SET upi_id = '" . $conn->real_escape_string($upi_id) . "' WHERE id = {$user_id}");
-
             $conn->commit();
+
             $msg = "Withdrawal request of " . format_inr($amount) . " submitted! Payout will be verified within 15-30 mins.";
             $msg_type = "success";
         } catch (Exception $e) {
@@ -91,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Fetch Full Profile Info
+// Fetch Full Fresh Profile Info
 $stmt = $conn->prepare("SELECT username, email, phone, wallet_balance, upi_id, avatar, game_name, game_id FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -102,6 +110,7 @@ $my_avatar = get_avatar_url($me['avatar'] ?? '', $me['username']);
 $my_ign = !empty($me['game_name']) ? $me['game_name'] : '';
 $my_game_id = !empty($me['game_id']) ? $me['game_id'] : '';
 $my_phone = !empty($me['phone']) ? $me['phone'] : '';
+$my_upi = !empty($me['upi_id']) ? $me['upi_id'] : '';
 
 // Fetch Recent Transactions
 $tx_res = $conn->query("SELECT * FROM transactions WHERE user_id = {$user_id} ORDER BY id DESC LIMIT 10");
@@ -119,17 +128,18 @@ if (empty($support_phone)) $support_phone = '9878385810';
     </div>
 <?php endif; ?>
 
-<!-- Top Profile Header -->
-<div class="text-center pt-2 pb-6">
-    <div class="relative inline-block mb-3 cursor-pointer group" onclick="openAvatarModal()">
+<!-- Top Profile Header (Clean & Fast) -->
+<div class="text-center pt-2 pb-5">
+    <div class="relative inline-block mb-2.5 cursor-pointer group" onclick="openAvatarModal()" title="Click to Change Photo">
         <img id="profileHeaderAvatar" src="<?= htmlspecialchars($my_avatar); ?>" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-4 border-yellow-400 shadow-md bg-slate-100 mx-auto transition group-hover:scale-105">
-        <button type="button" class="absolute bottom-0 right-0 w-7 h-7 bg-yellow-400 text-slate-950 border-2 border-white rounded-full flex items-center justify-center text-xs shadow-md group-hover:bg-yellow-500 transition">
+        <div class="absolute bottom-0 right-0 w-7 h-7 bg-yellow-400 text-slate-950 border-2 border-white rounded-full flex items-center justify-center text-xs shadow-md group-hover:bg-yellow-500 transition">
             <i class="fa-solid fa-camera text-[10px]"></i>
-        </button>
+        </div>
     </div>
-    <div class="block">
-        <button type="button" onclick="openAvatarModal()" class="text-[11px] font-bold text-yellow-600 hover:text-yellow-700 underline mb-2">
-            Change Profile Photo
+    
+    <div>
+        <button type="button" onclick="openAvatarModal()" class="text-[11px] font-bold text-yellow-600 hover:text-yellow-700 underline mb-1">
+            Change Photo
         </button>
     </div>
     
@@ -137,171 +147,143 @@ if (empty($support_phone)) $support_phone = '9878385810';
         <?= htmlspecialchars($me['username']); ?>
     </h2>
     <span class="text-xs text-slate-500 block">
-        <?= !empty($me['email']) ? htmlspecialchars($me['email']) : '+91 ' . htmlspecialchars($my_phone); ?>
+        <?= !empty($me['email']) ? htmlspecialchars($me['email']) : (!empty($my_phone) ? '+91 ' . htmlspecialchars($my_phone) : 'Player'); ?>
     </span>
 
-    <div class="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 bg-yellow-50 border border-yellow-300 rounded-full text-xs font-black text-yellow-900">
+    <div class="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 bg-yellow-50 border border-yellow-300 rounded-full text-xs font-black text-yellow-900">
         <i class="fa-solid fa-wallet text-yellow-500"></i>
         <span>Balance: <?= format_inr($me['wallet_balance']); ?></span>
     </div>
 </div>
 
-<!-- Profile Navigation Menu Cards -->
-<div class="space-y-2.5 mb-6">
-    
-    <!-- 0. Change Avatar Photo -->
-    <button type="button" onclick="openAvatarModal()" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-xs transition group">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-sm group-hover:bg-yellow-400 group-hover:text-black transition">
-                <i class="fa-solid fa-image"></i>
-            </div>
-            <div class="text-left">
-                <span class="text-xs font-bold text-slate-900 block">Change Profile Photo</span>
-                <span class="text-[10px] text-slate-400">Choose from 12 gamer avatars or upload custom image</span>
-            </div>
-        </div>
-        <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-800 transition"></i>
-    </button>
-
-    <!-- 1. Account Settings -->
-    <button type="button" onclick="openAccountModal()" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-xs transition group">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-sm group-hover:bg-yellow-100 group-hover:text-yellow-700 transition">
-                <i class="fa-regular fa-user"></i>
-            </div>
-            <div class="text-left">
-                <span class="text-xs font-bold text-slate-900 block">Account Settings</span>
-                <span class="text-[10px] text-slate-400">
-                    IGN: <strong class="text-slate-700"><?= !empty($my_ign) ? htmlspecialchars($my_ign) : 'Not set'; ?></strong> &bull; 
-                    UID: <strong class="text-slate-700"><?= !empty($my_game_id) ? htmlspecialchars($my_game_id) : 'Not set'; ?></strong>
-                </span>
-            </div>
-        </div>
-        <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-800 transition"></i>
-    </button>
-
-    <!-- 2. Wallet & Cashout -->
-    <a href="wallet.php" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-xs transition group">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-sm group-hover:bg-yellow-100 group-hover:text-yellow-700 transition">
-                <i class="fa-solid fa-wallet"></i>
-            </div>
-            <div class="text-left">
-                <span class="text-xs font-bold text-slate-900 block">Deposit & Withdraw</span>
-                <span class="text-[10px] text-slate-400">Add cash or withdraw to your UPI ID</span>
-            </div>
-        </div>
-        <span class="text-xs font-extrabold text-slate-900 font-mono"><?= format_inr($me['wallet_balance']); ?></span>
-    </a>
-
-    <!-- 3. WhatsApp Support -->
-    <a href="https://wa.me/91<?= $support_phone; ?>?text=<?= urlencode('Hello BEASTzBATTLE Support, I need help with my account: @' . $me['username']); ?>" target="_blank" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-xs transition group">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base group-hover:bg-emerald-500 group-hover:text-white transition">
-                <i class="fa-brands fa-whatsapp"></i>
-            </div>
-            <div class="text-left">
-                <span class="text-xs font-bold text-slate-900 block">WhatsApp Support</span>
-                <span class="text-[10px] text-slate-400">+91 <?= htmlspecialchars($support_phone); ?> (Instant Reply)</span>
-            </div>
-        </div>
-        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Online</span>
-    </a>
-
-    <!-- 4. Direct Call Support -->
-    <a href="tel:<?= $support_phone; ?>" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-xs transition group">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center text-sm group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
-                <i class="fa-solid fa-phone"></i>
-            </div>
-            <div class="text-left">
-                <span class="text-xs font-bold text-slate-900 block">Phone Customer Helpline</span>
-                <span class="text-[10px] text-slate-400"><?= htmlspecialchars($support_phone); ?></span>
-            </div>
-        </div>
-        <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-800 transition"></i>
-    </a>
-</div>
-
-<!-- Logout -->
-<div class="text-center pb-8">
-    <a href="logout.php" class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 transition px-4 py-2 rounded-xl bg-rose-50 border border-rose-200">
-        <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        <span>Logout Account</span>
-    </a>
-</div>
-
 <!-- ============================================================= -->
-<!-- MODAL: CHANGE PROFILE PHOTO (12 Gamer Avatars + Custom Upload) -->
+<!-- SECTION 1: ACCOUNT SETTINGS & IN-GAME PROFILE (PRIMARY VIEW) -->
 <!-- ============================================================= -->
-<div id="avatarModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <button type="button" onclick="closeAvatarModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-base">
-            <i class="fa-solid fa-xmark"></i>
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-3.5">
+    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-id-badge"></i>
+            </div>
+            <span class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Account Settings</span>
+        </div>
+        <button type="button" onclick="openAccountModal()" class="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-lg text-[10px] shadow-xs transition active:scale-95 flex items-center gap-1">
+            <i class="fa-solid fa-pen-to-square text-[9px]"></i>
+            <span>Edit</span>
         </button>
+    </div>
 
-        <div class="text-center mb-4">
-            <div class="w-16 h-16 rounded-full overflow-hidden border-3 border-yellow-400 mx-auto mb-2 shadow-sm bg-slate-100">
-                <img id="avatarPreviewImg" src="<?= htmlspecialchars($my_avatar); ?>" alt="Preview" class="w-full h-full object-cover">
-            </div>
-            <h3 class="text-sm font-extrabold text-slate-900">Choose Profile Photo</h3>
-            <p class="text-[11px] text-slate-400">Pick a gamer avatar or upload your photo</p>
+    <div class="grid grid-cols-2 gap-2.5 text-xs">
+        <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+            <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Game Name (IGN)</span>
+            <span class="font-extrabold text-slate-800 break-all">
+                <?= !empty($my_ign) ? htmlspecialchars($my_ign) : '<span class="text-rose-500 font-semibold text-[11px]">Not configured</span>'; ?>
+            </span>
         </div>
-
-        <form method="POST" action="profile.php" class="space-y-4">
-            <input type="hidden" name="action" value="update_avatar">
-            <input type="hidden" name="avatar" id="selectedAvatarInput" value="<?= htmlspecialchars($me['avatar'] ?? ''); ?>">
-
-            <!-- 12 Gamer Presets Grid -->
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-2">Popular Gamer Avatars</label>
-                <div class="grid grid-cols-4 gap-2.5">
-                    <?php
-                    $presets = [
-                        ['label' => 'Dragon', 'color' => '%23f59e0b', 'icon' => '🐉'],
-                        ['label' => 'Ninja', 'color' => '%2306b6d4', 'icon' => '🥷'],
-                        ['label' => 'Skull', 'color' => '%238b5cf6', 'icon' => '💀'],
-                        ['label' => 'Lion', 'color' => '%23facc15', 'icon' => '🦁'],
-                        ['label' => 'Fire', 'color' => '%23ef4444', 'icon' => '🔥'],
-                        ['label' => 'Wolf', 'color' => '%2364748b', 'icon' => '🐺'],
-                        ['label' => 'Crown', 'color' => '%23eab308', 'icon' => '👑'],
-                        ['label' => 'Ghost', 'color' => '%2310b981', 'icon' => '👻'],
-                        ['label' => 'Robot', 'color' => '%233b82f6', 'icon' => '🤖'],
-                        ['label' => 'Tiger', 'color' => '%23f97316', 'icon' => '🐯'],
-                        ['label' => 'Samurai', 'color' => '%23ec4899', 'icon' => '⚔️'],
-                        ['label' => 'Viper', 'color' => '%2314b8a6', 'icon' => '🐍'],
-                    ];
-                    foreach ($presets as $idx => $pr):
-                        $svg_uri = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='{$pr['color']}'/><text x='50%' y='58%' font-size='44' text-anchor='middle' dominant-baseline='middle'>{$pr['icon']}</text></svg>";
-                    ?>
-                        <button type="button" onclick="selectPreset('<?= $svg_uri; ?>')" class="preset-btn p-1 rounded-2xl border-2 border-slate-200 hover:border-yellow-400 bg-slate-50 transition flex flex-col items-center">
-                            <img src="<?= $svg_uri; ?>" alt="<?= $pr['label']; ?>" class="w-12 h-12 rounded-full pointer-events-none">
-                            <span class="text-[9px] font-bold text-slate-600 mt-1"><?= $pr['label']; ?></span>
-                        </button>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <!-- Custom Photo Upload / URL -->
-            <div class="border-t border-slate-200 pt-3">
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Or Upload from Phone</label>
-                <input type="file" id="avatarFileInput" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-yellow-400 file:text-black hover:file:bg-yellow-500 cursor-pointer">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Or Paste Image URL</label>
-                <input type="url" id="avatarUrlInput" placeholder="https://example.com/my-photo.jpg" oninput="handleUrlInput(this.value)" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
-            </div>
-
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-black font-extrabold rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-floppy-disk"></i> Save Profile Photo
-            </button>
-        </form>
+        <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+            <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Free Fire UID</span>
+            <span class="font-mono font-bold text-slate-800 break-all">
+                <?= !empty($my_game_id) ? htmlspecialchars($my_game_id) : '<span class="text-rose-500 font-semibold text-[11px]">Not configured</span>'; ?>
+            </span>
+        </div>
+        <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+            <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Registered Phone</span>
+            <span class="font-mono font-bold text-slate-800">
+                <?= !empty($my_phone) ? '+91 ' . htmlspecialchars($my_phone) : '<span class="text-slate-400">None</span>'; ?>
+            </span>
+        </div>
+        <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+            <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Payout UPI ID</span>
+            <span class="font-mono font-bold text-slate-800 truncate block">
+                <?= !empty($my_upi) ? htmlspecialchars($my_upi) : '<span class="text-slate-400">Not set</span>'; ?>
+            </span>
+        </div>
     </div>
 </div>
 
 <!-- ============================================================= -->
-<!-- MODAL: ACCOUNT SETTINGS (IGN & Free Fire Game ID) -->
+<!-- SECTION 2: QUICK ACTION BUTTONS -->
+<!-- ============================================================= -->
+<div class="space-y-2 mb-4">
+    <!-- Change Avatar Button -->
+    <button type="button" onclick="openAvatarModal()" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs transition group">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-black transition">
+                <i class="fa-solid fa-camera"></i>
+            </div>
+            <div class="text-left">
+                <span class="text-xs font-bold text-slate-900 block">Change Profile Photo</span>
+                <span class="text-[10px] text-slate-400">Upload your image or pick a gaming avatar</span>
+            </div>
+        </div>
+        <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-800 transition"></i>
+    </button>
+
+    <!-- WhatsApp Support -->
+    <a href="https://wa.me/91<?= preg_replace('/\D/', '', $support_phone); ?>?text=Hello%20BEASTzBATTLE%20Support" target="_blank" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs transition group">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs group-hover:bg-emerald-500 group-hover:text-white transition">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+            </div>
+            <div class="text-left">
+                <span class="text-xs font-bold text-slate-900 block">Customer Support (WhatsApp)</span>
+                <span class="text-[10px] text-emerald-600 font-semibold">+91 <?= htmlspecialchars($support_phone); ?> &bull; 24/7 Live</span>
+            </div>
+        </div>
+        <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-800 transition"></i>
+    </a>
+
+    <!-- Sign Out -->
+    <a href="logout.php" class="w-full bg-white hover:bg-rose-50/50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs transition group text-rose-600">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-xs group-hover:bg-rose-600 group-hover:text-white transition">
+                <i class="fa-solid fa-power-off"></i>
+            </div>
+            <span class="text-xs font-bold block">Sign Out / Logout</span>
+        </div>
+        <i class="fa-solid fa-chevron-right text-xs text-rose-400 transition"></i>
+    </a>
+</div>
+
+<!-- ============================================================= -->
+<!-- SECTION 3: RECENT PASSBOOK TRANSACTIONS -->
+<!-- ============================================================= -->
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-8">
+    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+            <span class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Passbook History</span>
+        </div>
+        <a href="wallet.php" class="text-[10px] font-bold text-yellow-600 hover:underline">Deposit / Withdraw</a>
+    </div>
+
+    <div class="space-y-2">
+        <?php if ($tx_res && $tx_res->num_rows > 0): ?>
+            <?php while ($tx = $tx_res->fetch_assoc()): ?>
+                <div class="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
+                    <div class="pr-2">
+                        <span class="font-bold text-slate-900 block text-[11px] leading-tight">
+                            <?= htmlspecialchars($tx['description'] ?? 'Transaction'); ?>
+                        </span>
+                        <span class="text-[9px] text-slate-400">
+                            <?= date('d M Y, h:i A', strtotime($tx['created_at'])); ?>
+                        </span>
+                    </div>
+                    <span class="font-black font-mono whitespace-nowrap text-xs <?= ($tx['type'] === 'credit') ? 'text-emerald-600' : 'text-rose-600'; ?>">
+                        <?= ($tx['type'] === 'credit') ? '+' : '-'; ?><?= format_inr($tx['amount']); ?>
+                    </span>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <p class="text-center py-4 text-xs text-slate-400">No passbook transactions recorded yet.</p>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- MODAL 1: ACCOUNT SETTINGS (IGN, Free Fire Game ID, Phone, UPI) -->
 <!-- ============================================================= -->
 <div id="accountModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
     <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative">
@@ -310,28 +292,113 @@ if (empty($support_phone)) $support_phone = '9878385810';
         </button>
 
         <div class="text-center mb-4">
-            <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 mx-auto mb-2 shadow-xs bg-slate-100">
-                <img src="<?= htmlspecialchars($my_avatar); ?>" alt="Avatar" class="w-full h-full object-cover">
+            <div class="w-12 h-12 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-lg font-black mx-auto mb-2 shadow-xs">
+                <i class="fa-solid fa-user-gear"></i>
             </div>
             <h3 class="text-sm font-extrabold text-slate-900">Account Settings</h3>
             <p class="text-[11px] text-slate-400">Save your in-game identity for tournaments</p>
         </div>
 
-        <form method="POST" action="profile.php" class="space-y-3.5">
-            <input type="hidden" name="action" value="update_game_id">
-
+        <form method="POST" action="profile.php" class="space-y-3">
+            <input type="hidden" name="action" value="update_account_settings">
+            
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Game Character Name (IGN)</label>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Game Character Name (IGN) <span class="text-rose-500">*</span></label>
                 <input type="text" name="game_name" value="<?= htmlspecialchars($my_ign); ?>" required placeholder="e.g. ꧁☆BEAST☆꧂" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Game UID (Free Fire / BGMI ID)</label>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Free Fire Game UID <span class="text-rose-500">*</span></label>
                 <input type="text" name="game_id" value="<?= htmlspecialchars($my_game_id); ?>" required placeholder="e.g. 2839221886" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
 
-            <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">WhatsApp Phone Number</label>
+                <input type="tel" name="phone" value="<?= htmlspecialchars($my_phone); ?>" placeholder="10-digit mobile" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Default Payout UPI ID</label>
+                <input type="text" name="upi_id" value="<?= htmlspecialchars($my_upi); ?>" placeholder="e.g. yourname@upi" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none">
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95">
                 Save Account Details
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- MODAL 2: CHANGE PROFILE PHOTO (WITH FAST CANVAS RESIZER) -->
+<!-- ============================================================= -->
+<div id="avatarModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <button type="button" onclick="closeAvatarModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-base">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="text-center mb-3">
+            <h3 class="text-sm font-extrabold text-slate-900">Change Profile Photo</h3>
+            <p class="text-[11px] text-slate-400">Upload a picture from phone or select an avatar</p>
+        </div>
+
+        <form method="POST" action="profile.php" id="avatarForm" class="space-y-4">
+            <input type="hidden" name="action" value="update_avatar">
+            <input type="hidden" name="avatar" id="selectedAvatarInput" value="<?= htmlspecialchars($my_avatar); ?>">
+
+            <!-- Live Preview -->
+            <div class="text-center">
+                <div class="relative inline-block">
+                    <img id="avatarPreviewImg" src="<?= htmlspecialchars($my_avatar); ?>" alt="Preview" class="w-20 h-20 rounded-full object-cover border-4 border-yellow-400 shadow-sm mx-auto bg-slate-100">
+                    <div id="uploadSpinner" class="hidden absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white text-xs">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    </div>
+                </div>
+                <span class="block text-[10px] text-slate-400 mt-1">Photo Preview</span>
+            </div>
+
+            <!-- Upload Custom Image (With Client-Side HTML5 Canvas Downscaler) -->
+            <div class="bg-yellow-50/70 border border-yellow-200 rounded-2xl p-3 text-center">
+                <label for="avatarFileInput" class="block cursor-pointer">
+                    <div class="w-10 h-10 mx-auto rounded-full bg-yellow-400 text-slate-950 flex items-center justify-center text-base mb-1.5 shadow-xs">
+                        <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                    </div>
+                    <span class="text-xs font-black text-slate-900 block">Upload from Phone Gallery / Camera</span>
+                    <span class="text-[10px] text-slate-500 block mt-0.5">Auto-optimized for ultra fast loading</span>
+                </label>
+                <input type="file" id="avatarFileInput" accept="image/*" class="hidden">
+            </div>
+
+            <!-- Preset Gaming Avatars Grid -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-2">Or Choose a Gaming Avatar</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <?php
+                    $presets = [
+                        ['label' => 'Ninja', 'bg' => '%23facc15', 'char' => 'N'],
+                        ['label' => 'Cyber', 'bg' => '%2338bdf8', 'char' => 'C'],
+                        ['label' => 'Venom', 'bg' => '%234ade80', 'char' => 'V'],
+                        ['label' => 'Beast', 'bg' => '%23f43f5e', 'char' => 'B'],
+                        ['label' => 'Shadow', 'bg' => '%23a855f7', 'char' => 'S'],
+                        ['label' => 'Ghost', 'bg' => '%23fb923c', 'char' => 'G'],
+                        ['label' => 'Titan', 'bg' => '%230ea5e9', 'char' => 'T'],
+                        ['label' => 'King', 'bg' => '%23eab308', 'char' => 'K'],
+                    ];
+                    foreach ($presets as $pr):
+                        $svg_uri = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='{$pr['bg']}'/><text x='50%' y='54%' font-family='sans-serif' font-weight='900' font-size='42' fill='%230f172a' text-anchor='middle' dominant-baseline='middle'>{$pr['char']}</text></svg>";
+                    ?>
+                        <button type="button" onclick="selectPreset('<?= $svg_uri; ?>')" class="preset-btn p-1.5 rounded-xl border border-slate-200 hover:border-yellow-400 bg-slate-50 hover:bg-yellow-50 transition flex flex-col items-center">
+                            <img src="<?= $svg_uri; ?>" alt="<?= $pr['label']; ?>" class="w-10 h-10 rounded-full pointer-events-none">
+                            <span class="text-[9px] font-bold text-slate-600 mt-1"><?= $pr['label']; ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <button type="submit" id="saveAvatarBtn" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>Save Profile Photo</span>
             </button>
         </form>
     </div>
@@ -344,7 +411,6 @@ if (empty($support_phone)) $support_phone = '9878385810';
     function closeAvatarModal() {
         document.getElementById('avatarModal').classList.add('hidden');
     }
-
     function openAccountModal() {
         document.getElementById('accountModal').classList.remove('hidden');
     }
@@ -359,38 +425,57 @@ if (empty($support_phone)) $support_phone = '9878385810';
         if (headerImg) headerImg.src = svgData;
     }
 
-    function handleUrlInput(url) {
-        if (url && url.startsWith('http')) {
-            document.getElementById('selectedAvatarInput').value = url;
-            document.getElementById('avatarPreviewImg').src = url;
-        }
-    }
+    // High performance client-side canvas compressor (downscales to 256x256 max)
+    const avatarInput = document.getElementById('avatarFileInput');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-    // Handle Local File Upload to base64
-    document.getElementById('avatarFileInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                alert('Please choose an image under 2MB.');
-                return;
-            }
+            const spinner = document.getElementById('uploadSpinner');
+            if (spinner) spinner.classList.remove('hidden');
+
             const reader = new FileReader();
             reader.onload = function(evt) {
-                const base64 = evt.target.result;
-                document.getElementById('selectedAvatarInput').value = base64;
-                document.getElementById('avatarPreviewImg').src = base64;
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 256;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = Math.round(width);
+                    canvas.height = Math.round(height);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // Compress to lightweight JPEG quality 0.8 (~20KB)
+                    const compressedDataUri = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    document.getElementById('selectedAvatarInput').value = compressedDataUri;
+                    document.getElementById('avatarPreviewImg').src = compressedDataUri;
+                    const headerImg = document.getElementById('profileHeaderAvatar');
+                    if (headerImg) headerImg.src = compressedDataUri;
+
+                    if (spinner) spinner.classList.add('hidden');
+                };
+                img.src = evt.target.result;
             };
             reader.readAsDataURL(file);
-        }
-    });
-
-    // Automatically open avatar modal if change_photo is in URL
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('change_photo') === '1') {
-            openAvatarModal();
-        }
-    });
+        });
+    }
 </script>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>

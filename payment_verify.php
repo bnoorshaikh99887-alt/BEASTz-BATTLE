@@ -23,34 +23,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Check if this UTR has already been submitted
-        $chk = $conn->prepare("SELECT id, status FROM deposits WHERE transaction_id = ? LIMIT 1");
-        if ($chk) {
-            $chk->bind_param("s", $utr);
-            $chk->execute();
-            $existing_dep = $chk->get_result()->fetch_assoc();
-            $chk->close();
+        try {
+            // Check if this UTR has already been submitted
+            $chk = $conn->prepare("SELECT id, status FROM deposits WHERE transaction_id = ? OR utr = ? LIMIT 1");
+            if ($chk) {
+                $chk->bind_param("ss", $utr, $utr);
+                $chk->execute();
+                $existing_dep = $chk->get_result()->fetch_assoc();
+                $chk->close();
 
-            if ($existing_dep) {
-                safe_redirect("wallet.php?error=" . urlencode("This UPI Reference / UTR has already been submitted (" . $existing_dep['status'] . ")."));
-                exit;
+                if ($existing_dep) {
+                    safe_redirect("wallet.php?error=" . urlencode("This UPI Reference / UTR has already been submitted (" . $existing_dep['status'] . ")."));
+                    exit;
+                }
             }
-        }
 
-        // Insert new deposit with status 'Pending' for Admin Panel verification
-        $ins = $conn->prepare("INSERT INTO deposits (user_id, amount, transaction_id, status) VALUES (?, ?, ?, 'Pending')");
-        if ($ins) {
-            $ins->bind_param("ids", $user_id, $deposit_amount, $utr);
-            if ($ins->execute()) {
-                $ins->close();
-                safe_redirect("wallet.php?success=" . urlencode("Deposit request of " . format_inr($deposit_amount) . " (UTR: " . $utr . ") submitted! Admin will verify and credit your wallet shortly."));
-                exit;
+            // Generate unique order ID
+            $unique_order_id = 'ORD_' . time() . '_' . mt_rand(1000, 9999);
+
+            // Insert new deposit with status 'Pending' for Admin Panel verification
+            $ins = $conn->prepare("INSERT INTO deposits (user_id, order_id, amount, method, status, reference_id, transaction_id, utr) VALUES (?, ?, ?, 'UPI', 'Pending', '', ?, ?)");
+            if ($ins) {
+                $ins->bind_param("isdss", $user_id, $unique_order_id, $deposit_amount, $utr, $utr);
+                if ($ins->execute()) {
+                    $ins->close();
+                    safe_redirect("wallet.php?success=" . urlencode("Deposit request of " . format_inr($deposit_amount) . " (UTR: " . $utr . ") submitted! Admin will verify and credit your wallet shortly."));
+                    exit;
+                } else {
+                    $err = $ins->error;
+                    $ins->close();
+                    safe_redirect("wallet.php?error=" . urlencode("Unable to record deposit: " . $err));
+                    exit;
+                }
             } else {
-                $err = $ins->error;
-                $ins->close();
-                safe_redirect("wallet.php?error=" . urlencode("Database error: " . $err));
+                safe_redirect("wallet.php?error=" . urlencode("Database preparation failed. Please try again."));
                 exit;
             }
+        } catch (Throwable $t) {
+            safe_redirect("wallet.php?error=" . urlencode("Deposit submission error: " . $t->getMessage()));
+            exit;
         }
     }
 
@@ -65,21 +76,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Double Spending Prevention
-    $chk = $conn->prepare("SELECT id FROM transactions WHERE description LIKE ?");
-    $search_pattern = "%" . $razorpay_payment_id . "%";
-    $chk->bind_param("s", $search_pattern);
-    $chk->execute();
-    if ($chk->get_result()->num_rows > 0) {
-        $chk->close();
-        safe_redirect("wallet.php?error=" . urlencode("This payment has already been credited to your wallet."));
-        exit;
-    }
-    $chk->close();
-
-    // Credit User Wallet
-    $conn->begin_transaction();
     try {
+        // Double Spending Prevention
+        $chk = $conn->prepare("SELECT id FROM transactions WHERE description LIKE ?");
+        $search_pattern = "%" . $razorpay_payment_id . "%";
+        $chk->bind_param("s", $search_pattern);
+        $chk->execute();
+        if ($chk->get_result()->num_rows > 0) {
+            $chk->close();
+            safe_redirect("wallet.php?error=" . urlencode("This payment has already been credited to your wallet."));
+            exit;
+        }
+        $chk->close();
+
+        // Credit User Wallet
+        $conn->begin_transaction();
         $upd = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
         $upd->bind_param("di", $deposit_amount, $user_id);
         $upd->execute();
@@ -91,15 +102,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tx->execute();
         $tx->close();
 
-        $dep = $conn->prepare("INSERT INTO deposits (user_id, amount, transaction_id, status) VALUES (?, ?, ?, 'Completed')");
-        $dep->bind_param("ids", $user_id, $deposit_amount, $razorpay_payment_id);
+        $order_id = 'RZP_' . time() . '_' . mt_rand(1000, 9999);
+        $dep = $conn->prepare("INSERT INTO deposits (user_id, order_id, amount, method, status, transaction_id, utr) VALUES (?, ?, ?, 'Razorpay', 'Completed', ?, ?)");
+        $dep->bind_param("isdss", $user_id, $order_id, $deposit_amount, $razorpay_payment_id, $razorpay_payment_id);
         $dep->execute();
         $dep->close();
 
         $conn->commit();
         safe_redirect("wallet.php?success=" . urlencode("Payment of " . format_inr($deposit_amount) . " successfully added to your wallet!"));
         exit;
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $conn->rollback();
         safe_redirect("wallet.php?error=" . urlencode("Database error processing payment: " . $e->getMessage()));
         exit;

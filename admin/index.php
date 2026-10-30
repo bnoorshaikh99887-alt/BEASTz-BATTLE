@@ -7,7 +7,7 @@ $stats_row = $conn->query("
         (SELECT COUNT(*) FROM users) as users_cnt,
         (SELECT COUNT(*) FROM tournaments) as tourneys_cnt,
         (SELECT COALESCE(SUM(prize_pool), 0.00) FROM tournaments WHERE LOWER(status) = 'completed') as prize_dist,
-        (SELECT COALESCE(SUM(t.entry_fee), 0.00) FROM participants p INNER JOIN tournaments t ON p.tournament_id = t.id) as total_collected,
+        (SELECT COALESCE(SUM(amount), 0.00) FROM deposits WHERE LOWER(status) IN ('completed', 'success')) as total_collected,
         (SELECT COUNT(*) FROM deposits WHERE LOWER(status) = 'pending') as pending_deposits,
         (SELECT COUNT(*) FROM withdrawals WHERE LOWER(status) = 'pending') as pending_withdrawals
 ")->fetch_assoc();

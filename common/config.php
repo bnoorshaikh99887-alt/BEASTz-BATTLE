@@ -159,13 +159,6 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
         }
     }
 
-    // Auto-heal admin user status if logged in
-    if (!empty($_SESSION['admin_id']) || (!empty($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
-        $adm_uid = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
-        if ($adm_uid > 0 && $conn && !$conn->connect_error) {
-            @$conn->query("UPDATE users SET status = 'active' WHERE id = {$adm_uid} AND role = 'admin'");
-        }
-    }
 
     // =========================================================================
     // ✅ CASHFREE LIVE PRODUCTION CREDENTIALS
