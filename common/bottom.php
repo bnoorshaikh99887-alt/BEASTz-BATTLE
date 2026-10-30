@@ -1,54 +1,43 @@
 </main>
 
-        <!-- Fixed Bottom App Navigation (Exact 4 Tabs Matching Video) -->
+        <!-- Fixed Bottom App Navigation (Exact 4 Tabs - Ultra Fast 0ms Client-Side Switching) -->
         <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-200 py-1.5 px-2 z-50 shadow-lg">
             <div class="grid grid-cols-4 text-center">
-                <?php
-                $active_page = basename($_SERVER['PHP_SELF'] ?? '');
-                ?>
                 <!-- 1. Home -->
-                <a href="index.php" class="flex flex-col items-center py-1 transition <?= ($active_page === 'index.php') ? 'text-yellow-500' : 'text-slate-400 hover:text-slate-600' ?>">
+                <button type="button" onclick="switchAppTab('home')" id="nav-tab-home" class="nav-app-tab flex flex-col items-center py-1 transition text-yellow-500 cursor-pointer">
                     <div class="relative">
                         <i class="fa-solid fa-house text-lg mb-0.5"></i>
-                        <?php if ($active_page === 'index.php'): ?>
-                            <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
-                        <?php endif; ?>
+                        <span class="nav-indicator absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
                     </div>
                     <span class="text-[10px] font-bold tracking-tight">Home</span>
-                </a>
+                </button>
 
                 <!-- 2. My Matches -->
-                <a href="my_tournaments.php" class="flex flex-col items-center py-1 transition <?= ($active_page === 'my_tournaments.php') ? 'text-yellow-500' : 'text-slate-400 hover:text-slate-600' ?>">
+                <button type="button" onclick="switchAppTab('matches')" id="nav-tab-matches" class="nav-app-tab flex flex-col items-center py-1 transition text-slate-400 hover:text-slate-600 cursor-pointer">
                     <div class="relative">
                         <i class="fa-solid fa-trophy text-lg mb-0.5"></i>
-                        <?php if ($active_page === 'my_tournaments.php'): ?>
-                            <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
-                        <?php endif; ?>
+                        <span class="nav-indicator hidden absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
                     </div>
                     <span class="text-[10px] font-bold tracking-tight">My Matches</span>
-                </a>
+                </button>
 
                 <!-- 3. Wallet / Store -->
-                <a href="wallet.php" class="flex flex-col items-center py-1 transition <?= ($active_page === 'wallet.php') ? 'text-yellow-500' : 'text-slate-400 hover:text-slate-600' ?>">
+                <button type="button" onclick="switchAppTab('wallet')" id="nav-tab-wallet" class="nav-app-tab flex flex-col items-center py-1 transition text-slate-400 hover:text-slate-600 cursor-pointer">
                     <div class="relative">
                         <i class="fa-solid fa-wallet text-lg mb-0.5"></i>
-                        <?php if ($active_page === 'wallet.php'): ?>
-                            <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
-                        <?php endif; ?>
+                        <span class="nav-indicator hidden absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
                     </div>
                     <span class="text-[10px] font-bold tracking-tight">Wallet</span>
-                </a>
+                </button>
 
                 <!-- 4. Leaderboard -->
-                <a href="leaderboard.php" class="flex flex-col items-center py-1 transition <?= ($active_page === 'leaderboard.php') ? 'text-yellow-500' : 'text-slate-400 hover:text-slate-600' ?>">
+                <button type="button" onclick="switchAppTab('leaderboard')" id="nav-tab-leaderboard" class="nav-app-tab flex flex-col items-center py-1 transition text-slate-400 hover:text-slate-600 cursor-pointer">
                     <div class="relative">
                         <i class="fa-solid fa-chart-simple text-lg mb-0.5"></i>
-                        <?php if ($active_page === 'leaderboard.php'): ?>
-                            <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
-                        <?php endif; ?>
+                        <span class="nav-indicator hidden absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-yellow-400 rounded-full"></span>
                     </div>
                     <span class="text-[10px] font-bold tracking-tight">Leaderboard</span>
-                </a>
+                </button>
             </div>
         </nav>
     </div>
@@ -75,59 +64,14 @@
             }
         });
 
-        // PWA Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then((reg) => {
-                    console.log('BEASTz PWA Service Worker active:', reg.scope);
-                }).catch((err) => {
-                    console.warn('SW registration skipped:', err);
-                });
-            });
-        }
-
-        // PWA In-App Install Prompt Handler
-        let deferredPrompt;
-        const pwaBanner = document.getElementById('pwa-install-banner');
-        const pwaInstallBtn = document.getElementById('pwa-install-btn');
-        const pwaDismissBtn = document.getElementById('pwa-dismiss-btn');
-
-        // Check if already running in standalone mode (installed app)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-
-        if (!isStandalone) {
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                if (!sessionStorage.getItem('pwa_banner_dismissed') && pwaBanner) {
-                    pwaBanner.classList.remove('hidden');
-                    pwaBanner.classList.add('flex');
-                }
-            });
-
-            if (pwaInstallBtn) {
-                pwaInstallBtn.addEventListener('click', async () => {
-                    if (deferredPrompt) {
-                        deferredPrompt.prompt();
-                        const { outcome } = await deferredPrompt.userChoice;
-                        deferredPrompt = null;
-                        if (pwaBanner) pwaBanner.classList.add('hidden');
-                    }
-                });
+        // Initialize active tab from query string if given
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var reqTab = params.get('tab');
+            if (reqTab) {
+                switchAppTab(reqTab, true);
             }
-
-            if (pwaDismissBtn) {
-                pwaDismissBtn.addEventListener('click', () => {
-                    if (pwaBanner) pwaBanner.classList.add('hidden');
-                    sessionStorage.setItem('pwa_banner_dismissed', '1');
-                });
-            }
-
-            window.addEventListener('appinstalled', () => {
-                if (pwaBanner) pwaBanner.classList.add('hidden');
-                deferredPrompt = null;
-            });
-        }
+        })();
     </script>
 </body>
 </html>

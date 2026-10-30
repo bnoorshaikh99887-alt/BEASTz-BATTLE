@@ -1,9 +1,8 @@
-// BEASTz BATTLE - Real-Time Dark / Light Mode Switcher Engine
+// BEASTz BATTLE - Real-Time Dark / Light Mode & SPA Tab Switcher Engine
 
 (function() {
     try {
         var savedTheme = localStorage.getItem('beastz_theme');
-        // Default to dark for elite esports experience if not explicitly light
         if (savedTheme === 'light') {
             document.documentElement.classList.remove('dark');
         } else {
@@ -67,6 +66,75 @@ function setTheme(themeName) {
     updateThemeUI();
 }
 
+// ============================================================
+// ULTRA-FAST ZERO-RELOAD SINGLE-PAGE APPLICATION (SPA) ENGINE
+// ============================================================
+function switchAppTab(tabName, skipState) {
+    var views = document.querySelectorAll('.spa-tab-view');
+    if (views.length === 0) {
+        // Fallback if not inside unified SPA container
+        var fallbackUrls = {
+            'home': 'index.php',
+            'matches': 'my_tournaments.php',
+            'wallet': 'wallet.php',
+            'leaderboard': 'leaderboard.php',
+            'profile': 'profile.php'
+        };
+        if (fallbackUrls[tabName]) {
+            window.location.href = fallbackUrls[tabName];
+        }
+        return;
+    }
+
+    // 1. Hide all views
+    views.forEach(function(el) {
+        el.classList.add('hidden');
+    });
+
+    // 2. Show requested view
+    var target = document.getElementById('spa-tab-' + tabName);
+    if (target) {
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    // 3. Highlight active bottom tab
+    document.querySelectorAll('.nav-app-tab').forEach(function(btn) {
+        btn.classList.remove('text-yellow-500');
+        btn.classList.add('text-slate-400');
+        var dot = btn.querySelector('.nav-indicator');
+        if (dot) dot.classList.add('hidden');
+    });
+
+    var activeBtn = document.getElementById('nav-tab-' + tabName);
+    if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('text-yellow-500');
+        var dot = activeBtn.querySelector('.nav-indicator');
+        if (dot) dot.classList.remove('hidden');
+    }
+
+    // 4. Update browser URL without network reload
+    if (!skipState && window.history && window.history.replaceState) {
+        var urlMap = {
+            'home': 'index.php',
+            'matches': 'my_tournaments.php',
+            'wallet': 'wallet.php',
+            'leaderboard': 'leaderboard.php',
+            'profile': 'profile.php'
+        };
+        if (urlMap[tabName]) {
+            window.history.replaceState({ tab: tabName }, '', urlMap[tabName]);
+        }
+    }
+}
+
+window.addEventListener('popstate', function(e) {
+    if (e.state && e.state.tab) {
+        switchAppTab(e.state.tab, true);
+    }
+});
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', updateThemeUI);
 } else {
@@ -76,3 +144,4 @@ if (document.readyState === 'loading') {
 window.toggleTheme = toggleTheme;
 window.setTheme = setTheme;
 window.updateThemeUI = updateThemeUI;
+window.switchAppTab = switchAppTab;

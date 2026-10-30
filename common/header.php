@@ -178,7 +178,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
         <!-- App Header (Matching Video: Avatar Left, Brand Center, Wallet Right) -->
         <header class="sticky <?= $is_admin ? 'top-7' : 'top-0' ?> z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs">
             <!-- Left: Avatar leading to Profile -->
-            <a href="profile.php" title="My Profile & Account Settings" class="flex items-center gap-2 group">
+            <button type="button" onclick="switchAppTab('profile')" title="My Profile & Account Settings" class="flex items-center gap-2 group cursor-pointer text-left">
                 <div class="relative">
                     <img src="<?= htmlspecialchars($user_avatar); ?>" alt="Avatar" class="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 shadow-sm bg-slate-100">
                     <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
@@ -189,17 +189,17 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                     </span>
                     <span class="text-[10px] text-slate-400">View Profile</span>
                 </div>
-            </a>
+            </button>
 
             <!-- Center: App Logo / Title -->
-            <a href="index.php" class="flex items-center gap-1.5">
+            <button type="button" onclick="switchAppTab('home')" class="flex items-center gap-1.5 cursor-pointer">
                 <div class="w-7 h-7 rounded-lg bg-yellow-400 flex items-center justify-center text-slate-950 shadow-xs font-black">
                     <i class="fa-solid fa-gamepad text-xs"></i>
                 </div>
                 <span class="text-base font-black tracking-tight text-slate-900 font-display">
                     BEASTz<span class="text-yellow-500">BATTLE</span>
                 </span>
-            </a>
+            </button>
 
             <!-- Right: Dark Mode Toggle & Wallet Button -->
             <div class="flex items-center gap-1.5 sm:gap-2">
@@ -209,10 +209,10 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 </button>
 
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="wallet.php" class="flex items-center gap-1.5 bg-slate-100 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-400 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs transition group">
+                    <button type="button" onclick="switchAppTab('wallet')" class="flex items-center gap-1.5 bg-slate-100 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-400 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs transition group cursor-pointer">
                         <i class="fa-solid fa-wallet text-yellow-500 text-xs group-hover:scale-110 transition"></i>
-                        <span class="text-xs font-extrabold text-slate-900 font-mono"><?= format_compact_inr($user_wallet); ?></span>
-                    </a>
+                        <span id="header-wallet-balance" class="text-xs font-extrabold text-slate-900 font-mono"><?= format_compact_inr($user_wallet); ?></span>
+                    </button>
                 <?php else: ?>
                     <a href="login.php" class="text-xs bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5">
                         <i class="fa-brands fa-google text-xs"></i>
