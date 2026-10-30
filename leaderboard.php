@@ -63,7 +63,7 @@ foreach ($players as $idx => $p) {
             </div>
             <span class="text-xs font-bold text-slate-900 truncate max-w-[85px]"><?= htmlspecialchars($p2['username']); ?></span>
             <span class="text-[11px] font-mono font-black text-emerald-600 block mt-0.5">
-                <?= format_inr($p2['wallet_balance']); ?>
+                <?= format_compact_inr($p2['wallet_balance']); ?>
             </span>
         </div>
 
@@ -84,7 +84,7 @@ foreach ($players as $idx => $p) {
             </div>
             <span class="text-sm font-black text-slate-900 truncate max-w-[100px]"><?= htmlspecialchars($p1['username']); ?></span>
             <span class="text-xs font-mono font-black text-yellow-600 block mt-0.5">
-                <?= format_inr($p1['wallet_balance']); ?>
+                <?= format_compact_inr($p1['wallet_balance']); ?>
             </span>
         </div>
 
@@ -102,7 +102,7 @@ foreach ($players as $idx => $p) {
             </div>
             <span class="text-xs font-bold text-slate-900 truncate max-w-[85px]"><?= htmlspecialchars($p3['username']); ?></span>
             <span class="text-[11px] font-mono font-black text-emerald-600 block mt-0.5">
-                <?= format_inr($p3['wallet_balance']); ?>
+                <?= format_compact_inr($p3['wallet_balance']); ?>
             </span>
         </div>
 
@@ -141,7 +141,7 @@ foreach ($players as $idx => $p) {
                 </div>
                 <div class="text-right">
                     <span class="text-xs font-mono font-black text-slate-900 block">
-                        <?= format_inr($p['wallet_balance']); ?>
+                        <?= format_compact_inr($p['wallet_balance']); ?>
                     </span>
                     <span class="text-[9px] font-bold text-slate-400 uppercase">Balance</span>
                 </div>
@@ -161,7 +161,7 @@ foreach ($players as $idx => $p) {
                 <?= htmlspecialchars($my_name); ?> (You)
             </span>
             <span class="text-xs font-extrabold text-emerald-600 font-mono">
-                <?= format_inr($my_earnings); ?>
+                <?= format_compact_inr($my_earnings); ?>
             </span>
         </div>
     </div>

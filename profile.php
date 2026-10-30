@@ -152,7 +152,7 @@ if (empty($support_phone)) $support_phone = '9878385810';
 
     <div class="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 bg-yellow-50 border border-yellow-300 rounded-full text-xs font-black text-yellow-900">
         <i class="fa-solid fa-wallet text-yellow-500"></i>
-        <span>Balance: <?= format_inr($me['wallet_balance']); ?></span>
+        <span>Balance: <?= format_compact_inr($me['wallet_balance']); ?></span>
     </div>
 </div>
 

@@ -34,7 +34,7 @@ $played_query = "
     FROM participants p
     INNER JOIN tournaments t ON p.tournament_id = t.id
     LEFT JOIN users u ON t.winner_user_id = u.id
-    WHERE p.user_id = {$user_id} AND LOWER(t.status) = 'completed'
+    WHERE p.user_id = {$user_id} AND LOWER(t.status) = 'completed' AND (t.match_time >= NOW() - INTERVAL 24 HOUR OR t.id >= (SELECT COALESCE(MAX(id)-15, 0) FROM tournaments))
     ORDER BY t.id DESC
 ";
 $played_matches = $conn->query($played_query);
@@ -94,7 +94,7 @@ if ($winners_res) {
                         </h3>
                     </div>
                     <span class="text-xs font-extrabold text-amber-500">
-                        Pool: <?= format_inr($t['prize_pool']); ?>
+                        Pool: <?= format_compact_inr($t['prize_pool']); ?>
                     </span>
                 </div>
 
@@ -168,20 +168,36 @@ if ($winners_res) {
                 </h3>
 
                 <!-- Room ID & Password Display -->
-                <div class="bg-slate-900 text-white p-3 rounded-xl flex items-center justify-between">
-                    <div>
-                        <span class="text-[10px] text-slate-400 block uppercase font-mono">Custom Room Credentials</span>
-                        <div class="text-xs font-mono font-bold mt-0.5">
-                            ID: <span class="text-yellow-400 font-extrabold"><?= htmlspecialchars($t['room_id'] ?: 'Pending'); ?></span> | 
-                            Pass: <span class="text-yellow-400 font-extrabold"><?= htmlspecialchars($t['room_password'] ?: 'Pending'); ?></span>
+                <?php if (str_contains($t['room_id'] ?? '', 'REVIEW') || str_contains($t['room_password'] ?? '', 'Support')): ?>
+                    <div class="bg-rose-50 border border-rose-300 p-3 rounded-xl flex items-center justify-between text-xs">
+                        <div>
+                            <span class="text-[10px] font-black text-rose-700 uppercase tracking-wider block">
+                                <i class="fa-solid fa-triangle-exclamation mr-1"></i> Match Under Review
+                            </span>
+                            <span class="text-xs font-black text-rose-950 block mt-0.5">
+                                <?= htmlspecialchars($t['room_password']); ?>
+                            </span>
                         </div>
+                        <a href="https://wa.me/919878385810?text=Hello%20Support%20Match%20Review%20#<?= $t['id']; ?>" target="_blank" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] rounded-lg shadow-xs flex items-center gap-1">
+                            <i class="fa-brands fa-whatsapp"></i> Support
+                        </a>
                     </div>
-                    <?php if (!empty($t['room_id'])): ?>
-                        <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black text-[10px] rounded-lg">
-                            Copy
-                        </button>
-                    <?php endif; ?>
-                </div>
+                <?php else: ?>
+                    <div class="bg-slate-900 text-white p-3 rounded-xl flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block uppercase font-mono">Custom Room Credentials</span>
+                            <div class="text-xs font-mono font-bold mt-0.5">
+                                ID: <span class="text-yellow-400 font-extrabold"><?= htmlspecialchars($t['room_id'] ?: 'Pending'); ?></span> | 
+                                Pass: <span class="text-yellow-400 font-extrabold"><?= htmlspecialchars($t['room_password'] ?: 'Pending'); ?></span>
+                            </div>
+                        </div>
+                        <?php if (!empty($t['room_id'])): ?>
+                            <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black text-[10px] rounded-lg">
+                                Copy
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
 
                 <p class="text-[11px] text-slate-500">
                     Open Free Fire &rarr; Custom Room &rarr; Enter Room ID and sit in <strong class="text-slate-900">Slot #<?= $t['slot_no'] ?: 1; ?></strong>!

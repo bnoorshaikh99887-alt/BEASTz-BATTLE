@@ -154,7 +154,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <a href="wallet.php" class="flex items-center gap-1.5 bg-slate-100 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-400 px-3 py-1.5 rounded-xl shadow-xs transition group">
                         <i class="fa-solid fa-wallet text-yellow-500 text-xs group-hover:scale-110 transition"></i>
-                        <span class="text-xs font-extrabold text-slate-900 font-mono"><?= format_inr($user_wallet); ?></span>
+                        <span class="text-xs font-extrabold text-slate-900 font-mono"><?= format_compact_inr($user_wallet); ?></span>
                     </a>
                 <?php else: ?>
                     <a href="login.php" class="text-xs bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5">

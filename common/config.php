@@ -54,6 +54,32 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
         $bg = $colors[$idx];
         return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='{$bg}'/><text x='50%' y='54%' font-family='sans-serif' font-weight='900' font-size='42' fill='%230f172a' text-anchor='middle' dominant-baseline='middle'>{$initial}</text></svg>";
     }
+    
+    if (!function_exists('format_compact_inr')) {
+        function format_compact_inr($amount) {
+            $amount = (float)$amount;
+            if ($amount < 1000) {
+                return '₹' . number_format($amount, ($amount == floor($amount)) ? 0 : 2);
+            } elseif ($amount < 1000000) {
+                $k = $amount / 1000;
+                $rounded = round($k, 1);
+                if ($rounded == floor($rounded)) {
+                    return '₹' . (int)$rounded . 'k';
+                } else {
+                    return '₹' . number_format($rounded, 1) . 'k';
+                }
+            } else {
+                $m = $amount / 1000000;
+                $rounded = round($m, 1);
+                if ($rounded == floor($rounded)) {
+                    return '₹' . (int)$rounded . 'M';
+                } else {
+                    return '₹' . number_format($rounded, 1) . 'M';
+                }
+            }
+        }
+    }
+
     function format_inr($amount) {
             return '₹' . number_format((float)$amount, 2);
         }
