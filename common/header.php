@@ -150,25 +150,26 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
             </div>
         <?php endif; ?>
 
-        <!-- In-App PWA Install Banner -->
-        <div id="pwa-install-banner" class="hidden bg-slate-900 border-b border-yellow-500/50 px-3.5 py-2.5 text-white items-center justify-between text-xs sticky top-0 z-50 shadow-md">
+        <!-- Official Native Android APK Download Banner -->
+        <div id="apk-download-banner" class="bg-slate-900 border-b border-yellow-500/50 px-3.5 py-2.5 text-white flex items-center justify-between text-xs sticky top-0 z-50 shadow-md">
             <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-yellow-400 flex items-center justify-center text-slate-950 font-black text-sm shadow-xs shrink-0">
-                    <i class="fa-solid fa-download"></i>
+                    <i class="fa-brands fa-android text-base"></i>
                 </div>
                 <div>
                     <div class="font-black text-[12px] text-yellow-400 flex items-center gap-1">
-                        <span>Install BEASTz App</span>
-                        <span class="px-1.5 py-0.2 rounded bg-yellow-400/20 text-yellow-300 text-[9px] font-extrabold uppercase">APK Free</span>
+                        <span>BEASTz Android App</span>
+                        <span class="px-1.5 py-0.2 rounded bg-yellow-400/20 text-yellow-300 text-[9px] font-extrabold uppercase">Real APK</span>
                     </div>
-                    <div class="text-[10px] text-slate-300">Fast 1-tap gaming & real-time alerts</div>
+                    <div class="text-[10px] text-slate-300">Native 1-tap gaming, room ID alerts & payments</div>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button id="pwa-install-btn" class="bg-yellow-400 hover:bg-yellow-500 active:scale-95 text-slate-950 font-black text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition">
-                    INSTALL
-                </button>
-                <button id="pwa-dismiss-btn" class="text-slate-400 hover:text-white p-1 text-xs" title="Dismiss">
+                <a href="/BEASTz-BATTLE.apk" download="BEASTz-BATTLE.apk" class="bg-yellow-400 hover:bg-yellow-500 active:scale-95 text-slate-950 font-black text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-download text-[10px]"></i>
+                    <span>DOWNLOAD</span>
+                </a>
+                <button type="button" onclick="document.getElementById('apk-download-banner').style.display='none'" class="text-slate-400 hover:text-white p-1 text-xs" title="Dismiss">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>

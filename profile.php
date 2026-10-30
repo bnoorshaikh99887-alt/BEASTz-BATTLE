@@ -227,6 +227,23 @@ if (empty($support_phone)) $support_phone = '9878385810';
 <!-- SECTION 2: QUICK ACTION BUTTONS -->
 <!-- ============================================================= -->
 <div class="space-y-2 mb-4">
+        <!-- Download Real Native Android APK -->
+    <a href="/BEASTz-BATTLE.apk" download="BEASTz-BATTLE.apk" class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-950 rounded-2xl p-3.5 flex items-center justify-between shadow-md transition active:scale-95 group font-black mb-2">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center text-base shadow-xs">
+                <i class="fa-brands fa-android"></i>
+            </div>
+            <div class="text-left">
+                <span class="text-xs font-black text-slate-950 block">Download Real Android APK</span>
+                <span class="text-[10px] text-slate-900/80 font-bold">100% Native Signed .APK &bull; Direct Phone Install</span>
+            </div>
+        </div>
+        <div class="px-2.5 py-1 bg-slate-950 text-yellow-400 rounded-lg text-[10px] font-extrabold flex items-center gap-1 shadow-xs">
+            <i class="fa-solid fa-arrow-down text-[9px]"></i>
+            <span>APK</span>
+        </div>
+    </a>
+
     <!-- Change Avatar Button -->
     <button type="button" onclick="openAvatarModal()" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs transition group">
         <div class="flex items-center gap-3">
