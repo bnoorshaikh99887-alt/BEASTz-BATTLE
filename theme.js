@@ -458,7 +458,7 @@ var LiveSyncEngine = (function() {
                                 '<div><span class="text-[10px] text-slate-400 block">Payout Destination UPI:</span>' +
                                 '<span class="font-mono font-bold text-slate-900 select-all text-xs">' + escapeHtml(w.upi_id) + '</span></div>' +
                                 '<div class="flex items-center gap-1.5">' +
-                                    '<form method="POST" class="inline" onsubmit="return confirm('Approve and send targeted Push Notification?')">' +
+                                    '<form method="POST" class="inline" onsubmit="return confirm(\'Approve and send targeted Push Notification?\')">' +
                                         '<input type="hidden" name="withdrawal_id" value="' + w.id + '">' +
                                         '<input type="hidden" name="action" value="complete">' +
                                         '<button type="submit" class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl text-xs font-black shadow-xs transition active:scale-95 flex items-center gap-1">' +

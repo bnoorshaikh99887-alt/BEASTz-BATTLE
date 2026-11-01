@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $_SESSION['admin_logged_in'] = true;
             
             if (function_exists('set_user_remember_token')) { set_user_remember_token(1, 'admin'); }
-            ['active_panel'] = 'admin';
+            $_SESSION['active_panel'] = 'admin';
             setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
             setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
             header("Location: admin/index.php");
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $_SESSION['admin_logged_in'] = true;
                             
                             if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
-                            ['active_panel'] = 'admin';
+                            $_SESSION['active_panel'] = 'admin';
                             setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
                             setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
                             header("Location: admin/index.php");
@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $_SESSION['user_logged_in'] = true;
                             
                             if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'user'); }
-                            ['active_panel'] = 'user';
+                            $_SESSION['active_panel'] = 'user';
                             setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
                             setcookie('beastz_active_panel', 'user', time() + (365 * 24 * 3600), '/');
                             header("Location: index.php");
