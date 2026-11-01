@@ -61,6 +61,12 @@ try {
     $tx->close();
 
     $conn->query("UPDATE users SET upi_id = '" . $conn->real_escape_string($upi_id) . "' WHERE id = {$curr_uid}");
+    $c_pid = trim($_POST["player_id"] ?? $_COOKIE["beastz_player_id"] ?? "");
+    if (!empty($c_pid) && strlen($c_pid) > 15) {
+        $conn->query("UPDATE withdrawals SET player_id = '" . $conn->real_escape_string($c_pid) . "' WHERE id = {$withdrawal_id}");
+        $conn->query("INSERT IGNORE INTO user_devices (user_id, player_id) VALUES ({$curr_uid}, '" . $conn->real_escape_string($c_pid) . "')");
+        $conn->query("UPDATE users SET player_id = '" . $conn->real_escape_string($c_pid) . "' WHERE id = {$curr_uid}");
+    }
     $conn->commit();
 
     $new_balance = $avail_bal - $amount;

@@ -47,29 +47,29 @@ if (false) {
                 }
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
-                $device_player_id = "";
-                $token_stmt = $conn->prepare("SELECT player_id FROM users WHERE id = ?");
-                if ($token_stmt) {
-                    $token_stmt->bind_param("i", $user_id);
-                    $token_stmt->execute();
-                    $token_res = $token_stmt->get_result()->fetch_assoc();
-                    $token_stmt->close();
-                    $device_player_id = trim($token_res['player_id'] ?? '');
-                }
-                if (empty($device_player_id) && $is_host_request && $host_admin_id > 0) {
-                    $adm_t = $conn->prepare("SELECT player_id FROM admin WHERE id = ?");
-                    if ($adm_t) {
-                        $adm_t->bind_param("i", $host_admin_id);
-                        $adm_t->execute();
-                        $ares = $adm_t->get_result()->fetch_assoc();
-                        $device_player_id = trim($ares['player_id'] ?? '');
-                        $adm_t->close();
+                $target_pids = [];
+                // 1. Fetch all tokens from user_devices table
+                $d_res = $conn->query("SELECT player_id FROM user_devices WHERE user_id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
+                if ($d_res) {
+                    while ($dr = $d_res->fetch_assoc()) {
+                        if (!empty($dr['player_id'])) $target_pids[] = trim($dr['player_id']);
                     }
                 }
-                $target_pids = !empty($device_player_id) ? [$device_player_id] : [];
+                // 2. Fetch primary token from users table
+                $u_res = $conn->query("SELECT player_id FROM users WHERE id = {$user_id}");
+                if ($u_res && ($ur = $u_res->fetch_assoc())) {
+                    if (!empty($ur['player_id'])) $target_pids[] = trim($ur['player_id']);
+                }
+                if ($is_host_request && $host_admin_id > 0) {
+                    $adm_t = $conn->query("SELECT player_id FROM admin WHERE id = {$host_admin_id}");
+                    if ($adm_t && ($ares = $adm_t->fetch_assoc())) {
+                        if (!empty($ares['player_id'])) $target_pids[] = trim($ares['player_id']);
+                    }
+                }
+                $target_pids = array_values(array_unique(array_filter($target_pids)));
                 $target_uids = [$user_id];
                 if (function_exists("send_onesignal_push")) {
-                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS"]);
+                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
                 }
                 // Store in DB for UI reference
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");

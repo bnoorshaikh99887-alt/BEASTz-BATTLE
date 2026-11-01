@@ -11,6 +11,12 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     if (ob_get_level() === 0) {
         ob_start();
     }
+    // Prevent stale caching in Android WebView and mobile browsers
+    if (!headers_sent()) {
+        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+        header("Cache-Control: post-check=0, pre-check=0", false);
+        header("Pragma: no-cache");
+    }
 
     // Helper functions (defined early so they are always available)
     if (!function_exists("str_contains")) {
@@ -300,6 +306,22 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
             }
         }
     }
+    // =========================================================================
+    // ✅ AUTO-SYNC ONESIGNAL DEVICE TOKEN (player_id) & USER_DEVICES
+    // =========================================================================
+    $sync_pid = trim($_COOKIE["beastz_player_id"] ?? $_REQUEST["player_id"] ?? "");
+    if (!empty($sync_pid) && strlen($sync_pid) > 15 && $conn && !$conn->connect_error) {
+        $logged_uid = (int)($_SESSION["user_id"] ?? 0);
+        if ($logged_uid > 0) {
+            @$conn->query("INSERT IGNORE INTO user_devices (user_id, player_id) VALUES ({$logged_uid}, '" . $conn->real_escape_string($sync_pid) . "')");
+            @$conn->query("UPDATE users SET player_id = '" . $conn->real_escape_string($sync_pid) . "' WHERE id = {$logged_uid} AND (player_id IS NULL OR player_id = '')");
+        }
+        $logged_aid = (int)($_SESSION["admin_id"] ?? $_SESSION["worker_id"] ?? 0);
+        if ($logged_aid > 0) {
+            @$conn->query("UPDATE admin SET player_id = '" . $conn->real_escape_string($sync_pid) . "' WHERE id = {$logged_aid} AND (player_id IS NULL OR player_id = '')");
+        }
+    }
+
     // =========================================================================
     // ✅ CASHFREE LIVE PRODUCTION CREDENTIALS
     // =========================================================================

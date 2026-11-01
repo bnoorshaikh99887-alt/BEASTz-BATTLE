@@ -189,7 +189,7 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);

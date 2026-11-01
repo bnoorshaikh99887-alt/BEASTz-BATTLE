@@ -1,7 +1,6 @@
-// BEASTz BATTLE Service Worker
-const CACHE_NAME = 'beastz-battle-cache-v1';
+// BEASTz BATTLE Service Worker v3 - Anti-Stale Caching Engine
+const CACHE_NAME = 'beastz-battle-cache-v3';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -28,12 +27,17 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle standard GET requests
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Cache-first for images, json, icons
-  if (url.pathname.match(/\.(png|jpg|jpeg|svg|gif|json|ico)$/)) {
+  // NEVER cache HTML navigations or PHP dynamic pages to guarantee instant login/logout/action state
+  if (event.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.pathname === '/' || url.pathname.includes('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Cache-first only for static icons and images
+  if (url.pathname.match(/\.(png|jpg|jpeg|svg|gif|ico|woff2)$/)) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
@@ -49,7 +53,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for dynamic PHP pages & APIs to always keep live match data & wallet fresh
+  // Default network-first for everything else
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );

@@ -82,7 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $push_res = send_onesignal_push($idp_title, $idp_body, "/?tab=matches", $pids, $uids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tournament_id]);
                 @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($idp_title) . "', '" . $conn->real_escape_string($idp_body) . "', '/?tab=matches', 'ROOM_IDP')");
                 
-                $msg = "Room IDP saved and instant push alert dispatched to joined players! (" . count($uids) . " players notified)";
+                if (empty($uids)) {
+                    $msg = "Room ID & Password saved! (Push alert was NOT dispatched because 0 players have joined this match).";
+                } else {
+                    $msg = "Room IDP saved and instant push alert dispatched to joined players! (" . count($uids) . " players notified)";
+                }
             }
         } else {
             $msg = "Failed to update room: " . $u_stmt->error;

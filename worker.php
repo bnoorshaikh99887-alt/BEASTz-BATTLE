@@ -295,11 +295,10 @@ if ($nt_q) {
                 <button type="button" onclick="toggleTheme()" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
                     <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
                 </button>
-                <?php if ($is_master): ?>
-                <a href="admin/index.php" class="px-3 py-1.5 rounded-xl bg-yellow-400 text-slate-950 text-xs font-bold flex items-center gap-1 shadow-xs">
-                    <i class="fa-solid fa-shield"></i> <span class="hidden sm:inline">Admin Panel</span>
-                </a>
-                <?php endif; ?>
+                <!-- Worker Header Brand -->
+                <div class="px-2.5 py-1 rounded-xl bg-yellow-400/20 text-yellow-400 border border-yellow-400/30 text-xs font-black flex items-center gap-1">
+                    <i class="fa-solid fa-gamepad"></i> <span>WORKER STUDIO</span>
+                </div>
                 <a href="index.php" target="_blank" class="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold flex items-center gap-1">
                     <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> <span class="hidden sm:inline">User App</span>
                 </a>

@@ -26,9 +26,12 @@ function get_onesignal_key() {
  * @param array $player_ids   Array of OneSignal device player_id UUIDs
  * @param array $user_ids     Array of database user IDs
  * @param array $extra_data   Additional custom payload data
+ * @param bool  $allow_broadcast If false, notifications with empty targets will NEVER broadcast to all users!
  * @return array
  */
-function send_onesignal_push($title, $message, $target_url = "/?tab=home", $player_ids = [], $user_ids = [], $extra_data = []) {
+function send_onesignal_push($title, $message, $target_url = "/?tab=home", $player_ids = [], $user_ids = [], $extra_data = [], $allow_broadcast = false) {
+    global $conn;
+
     $payload = [
         "app_id" => ONESIGNAL_APP_ID,
         "headings" => ["en" => (string)$title],
@@ -43,35 +46,71 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
         "android_sound" => "notification"
     ];
 
+    if (!is_array($player_ids)) $player_ids = !empty($player_ids) ? [$player_ids] : [];
+    if (!is_array($user_ids)) $user_ids = !empty($user_ids) ? [$user_ids] : [];
+
+    // Filter user IDs
+    $cleaned_uids = array_values(array_unique(array_filter(array_map("strval", $user_ids), function($v) {
+        return $v !== "" && $v !== "0";
+    })));
+
+    // Deep token lookup: If database connection is active, query both user_devices and users
+    if (!empty($cleaned_uids) && $conn && !$conn->connect_error) {
+        $escaped_uids = array_map(function($u) use ($conn) { return (int)$u; }, $cleaned_uids);
+        $escaped_uids = array_filter($escaped_uids, function($u) { return $u > 0; });
+        if (!empty($escaped_uids)) {
+            $uid_list = implode(",", $escaped_uids);
+            
+            // 1. Fetch all registered devices for these users
+            $q_dev = @$conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$uid_list}) AND player_id IS NOT NULL AND player_id != ''");
+            if ($q_dev) {
+                while ($r = $q_dev->fetch_assoc()) {
+                    if (!empty($r['player_id'])) $player_ids[] = trim($r['player_id']);
+                }
+            }
+
+            // 2. Fetch primary token from users table
+            $q_usr = @$conn->query("SELECT player_id FROM users WHERE id IN ({$uid_list}) AND player_id IS NOT NULL AND player_id != ''");
+            if ($q_usr) {
+                while ($r = $q_usr->fetch_assoc()) {
+                    if (!empty($r['player_id'])) $player_ids[] = trim($r['player_id']);
+                }
+            }
+        }
+    }
+
     $has_direct_targets = false;
 
     // 1. Direct Device Tokens / Player IDs
-    if (!empty($player_ids)) {
-        if (!is_array($player_ids)) $player_ids = [$player_ids];
-        $cleaned_pids = array_values(array_unique(array_filter($player_ids, function($v) {
-            return !empty($v) && is_string($v) && strlen(trim($v)) > 15;
-        })));
-        if (!empty($cleaned_pids)) {
-            $payload["include_player_ids"] = $cleaned_pids;
-            $has_direct_targets = true;
-        }
+    $cleaned_pids = array_values(array_unique(array_filter($player_ids, function($v) {
+        return !empty($v) && is_string($v) && strlen(trim($v)) > 15;
+    })));
+
+    if (!empty($cleaned_pids)) {
+        $payload["include_player_ids"] = $cleaned_pids;
+        $has_direct_targets = true;
     }
 
     // 2. User ID mapping (External User IDs)
-    if (!empty($user_ids)) {
-        if (!is_array($user_ids)) $user_ids = [$user_ids];
-        $cleaned_uids = array_values(array_unique(array_filter(array_map("strval", $user_ids), function($v) {
-            return $v !== "" && $v !== "0";
-        })));
-        if (!empty($cleaned_uids)) {
-            $payload["include_external_user_ids"] = $cleaned_uids;
-            $has_direct_targets = true;
-        }
+    if (!empty($cleaned_uids)) {
+        $payload["include_external_user_ids"] = $cleaned_uids;
+        $has_direct_targets = true;
     }
 
-    // 3. If no targeted devices or user IDs, broadcast to all subscribed users
+    // 3. CRITICAL INVERSION FIX:
+    // If no direct recipients are targeted, ONLY broadcast if explicitly allowed!
     if (!$has_direct_targets) {
-        $payload["included_segments"] = ["Total Subscriptions"];
+        if ($allow_broadcast) {
+            $payload["included_segments"] = ["Total Subscriptions"];
+        } else {
+            // Targeted push with 0 participants or unmapped tokens - DO NOT SPAM OTHER GAMERS!
+            return [
+                "success" => false,
+                "reason" => "No registered player IDs or user tokens enrolled for this targeted event",
+                "http_code" => 200,
+                "skipped_broadcast" => true
+            ];
+        }
     }
 
     $json_payload = json_encode($payload);
@@ -105,8 +144,8 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
 
 // Backwards compatibility alias
 if (!function_exists("send_player_push_notification")) {
-    function send_player_push_notification($player_ids, $title, $message, $target_url = "/?tab=wallet", $extra_data = []) {
-        return send_onesignal_push($title, $message, $target_url, $player_ids, [], $extra_data);
+    function send_player_push_notification($player_ids, $title, $message, $target_url = "/?tab=wallet", $extra_data = [], $allow_broadcast = false) {
+        return send_onesignal_push($title, $message, $target_url, $player_ids, [], $extra_data, $allow_broadcast);
     }
 }
 ?>

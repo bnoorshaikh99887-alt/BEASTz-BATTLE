@@ -374,11 +374,21 @@ var LiveSyncEngine = (function() {
                 }
             }
 
-            // In-App Alert if Admin Just Completed User's Payout
+            // In-App & Native Push Alert when Payout is Completed
             if (data.user.recent_completed_withdrawal) {
                 var rc = data.user.recent_completed_withdrawal;
-                if (lastCompletedWithdrawalId !== null && lastCompletedWithdrawalId !== rc.id) {
-                    showInAppAlert('Payout of ' + rc.formatted_amount + ' completed! Transferred to ' + rc.upi_id, 'success');
+                var alertedKey = "beastz_alerted_payout_" + rc.id;
+                var alreadyAlerted = false;
+                try { alreadyAlerted = (localStorage.getItem(alertedKey) === "true"); } catch(e) {}
+                if (!alreadyAlerted) {
+                    try { localStorage.setItem(alertedKey, "true"); } catch(e) {}
+                    var pMsg = "Payout of " + rc.formatted_amount + " completed! Transferred to " + rc.upi_id;
+                    showInAppAlert(pMsg, "success");
+                    if (window.BEASTzNative && typeof window.BEASTzNative.postNativeNotification === "function") {
+                        try {
+                            window.BEASTzNative.postNativeNotification("Withdrawal Successful! " + rc.formatted_amount, pMsg, "/?tab=wallet");
+                        } catch(e) {}
+                    }
                 }
                 lastCompletedWithdrawalId = rc.id;
             }
