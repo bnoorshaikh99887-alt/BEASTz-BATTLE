@@ -275,13 +275,14 @@ $support_phone = get_setting('support_phone', '9878385810');
 // -------------------------------------------------------------
 // 6. FETCH TOURNAMENTS & BOOKED SLOTS MAP
 // -------------------------------------------------------------
+$joined_filter = ($curr_uid > 0) ? " AND t.id NOT IN (SELECT tournament_id FROM participants WHERE user_id = {$curr_uid}) " : "";
 $tournaments_res = $conn->query("
     SELECT t.id, t.title, t.game, t.map, t.match_type, t.entry_fee, t.per_kill, t.prize_pool, t.match_time, 
     t.total_slots, t.joined_slots, t.status, 
     COALESCE(t.game_name, t.game, 'Free Fire') as display_game,
     (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count
     FROM tournaments t
-    WHERE t.status != 'completed'
+    WHERE t.status != 'completed' {$joined_filter}
     ORDER BY t.match_time ASC, t.id DESC
 ");
 
