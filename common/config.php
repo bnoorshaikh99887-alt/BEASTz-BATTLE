@@ -208,13 +208,13 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     // =========================================================================
     // ✅ 1-YEAR PERSISTENT LOGIN AUTO-RESTORE FOR BOTH ADMIN & USER ROLES
     // =========================================================================
-    if ((empty($_SESSION['user_id']) && empty($_SESSION['admin_id'])) && !empty($_COOKIE['adept_remember']) && $conn && !$conn->connect_error) {
+    if (!empty($_COOKIE['adept_remember']) && $conn && !$conn->connect_error) {
         $rem_token = trim($_COOKIE['adept_remember']);
         if (preg_match('/^[a-f0-9]{32,128}$/i', $rem_token)) {
-            $pref_panel = $_COOKIE['beastz_active_panel'] ?? '';
+            $pref_panel = $_COOKIE['beastz_active_panel'] ?? $_COOKIE['active_panel'] ?? '';
             $is_restored = false;
 
-            // 1. If active panel was admin, check admin table first
+            // 1. Check admin table first if pref is admin or empty
             if ($pref_panel === 'admin' || empty($pref_panel)) {
                 $a_stmt = $conn->prepare("SELECT id, username, role, status FROM admin WHERE remember_token = ? LIMIT 1");
                 if ($a_stmt) {
@@ -255,16 +255,21 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
                             $_SESSION['user_id'] = $aid;
                             $_SESSION['username'] = $u['username'];
                             $_SESSION['role'] = 'admin';
-                            $_SESSION['admin_role'] = 'super_admin';
-                            $_SESSION['is_super_admin'] = true;
+                            $_SESSION['admin_role'] = ($u['username'] === 'anonymous.349') ? 'super_admin' : 'host_admin';
+                            $_SESSION['is_super_admin'] = ($u['username'] === 'anonymous.349' || $u['username'] === 'admin');
                             $_SESSION['admin_logged_in'] = true;
-                            $_SESSION['active_panel'] = 'admin';
+                            if ($pref_panel === 'user' && isset($_GET['view']) && $_GET['view'] === 'player') {
+                                $_SESSION['active_panel'] = 'user';
+                            } else {
+                                $_SESSION['active_panel'] = 'admin';
+                            }
                             $is_restored = true;
                         } elseif (($u['status'] ?? 'active') !== 'blocked') {
                             $_SESSION['user_id'] = (int)$u['id'];
                             $_SESSION['username'] = $u['username'];
                             $_SESSION['email'] = $u['email'];
                             $_SESSION['role'] = $u['role'] ?? 'user';
+                            $_SESSION['user_logged_in'] = true;
                             $_SESSION['active_panel'] = 'user';
                             $is_restored = true;
                         }
@@ -274,7 +279,6 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
             }
         }
     }
-
     // =========================================================================
     // ✅ CASHFREE LIVE PRODUCTION CREDENTIALS
     // =========================================================================

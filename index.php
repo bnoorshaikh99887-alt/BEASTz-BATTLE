@@ -5,16 +5,18 @@ require_once __DIR__ . '/common/config.php';
 // ✅ SESSION PERSISTENCE & REFRESH ROUTER
 // Retains exact logged-in role & panel across reloads / APK restarts
 // =============================================================
-$is_admin_session = (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'));
-$active_panel = $_SESSION['active_panel'] ?? $_COOKIE['active_panel'] ?? '';
+$is_admin_session = (!empty($_SESSION['admin_id']) || (!empty($_SESSION['role']) && $_SESSION['role'] === 'admin') || !empty($_SESSION['admin_logged_in']));
+$active_panel = $_SESSION['active_panel'] ?? $_COOKIE['beastz_active_panel'] ?? $_COOKIE['active_panel'] ?? '';
 
 if ($is_admin_session) {
     if (isset($_GET['view']) && $_GET['view'] === 'player') {
         $_SESSION['active_panel'] = 'user';
         setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
+        setcookie('beastz_active_panel', 'user', time() + (365 * 24 * 3600), '/');
     } elseif ($active_panel === 'admin' || !isset($_GET['view'])) {
         $_SESSION['active_panel'] = 'admin';
         setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+        setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
         safe_redirect("admin/index.php");
         exit;
     }

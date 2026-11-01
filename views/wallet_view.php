@@ -45,7 +45,7 @@
             </h3>
             <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">Processing</span>
         </div>
-        <div class="space-y-1.5 pt-1">
+        <div id="user-pending-withdrawals-list" class="space-y-1.5 pt-1">
             <?php while ($pw = $pending_withdrawals->fetch_assoc()): ?>
                 <div class="bg-white p-2.5 rounded-xl border border-blue-100 flex items-center justify-between text-xs">
                     <div>

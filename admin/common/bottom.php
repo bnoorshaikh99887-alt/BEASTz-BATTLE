@@ -56,53 +56,125 @@ if (
     <!-- Ultra-Fast Admin SPA Engine -->
     <script>
     function switchAdminTab(tabName, skipState) {
+        if (!tabName) tabName = 'overview';
+        tabName = String(tabName).toLowerCase().replace('admin-tab-', '').trim();
+
+        // Canonical Tab Alias Map (Prevents blank screen bugs on any tab variation)
+        var aliasMap = {
+            'dashboard': 'overview',
+            'home': 'overview',
+            'overview': 'overview',
+            'tourney': 'tournaments',
+            'tourneys': 'tournaments',
+            'tournament': 'tournaments',
+            'tournaments': 'tournaments',
+            'deposit': 'deposits',
+            'deposits': 'deposits',
+            'payout': 'payouts',
+            'payouts': 'payouts',
+            'withdrawals': 'payouts',
+            'withdrawal': 'payouts',
+            'broadcast': 'notifications',
+            'notification': 'notifications',
+            'notifications': 'notifications',
+            'notif': 'notifications',
+            'user': 'users',
+            'users': 'users',
+            'gamer': 'users',
+            'gamers': 'users',
+            'admin': 'admins',
+            'admins': 'admins',
+            'manage_admins': 'admins',
+            'setting': 'settings',
+            'settings': 'settings'
+        };
+
+        if (aliasMap[tabName]) {
+            tabName = aliasMap[tabName];
+        }
+
         var views = document.querySelectorAll('.admin-spa-view');
         if (views.length === 0) return;
 
+        var target = document.getElementById('admin-tab-' + tabName);
+        if (!target) {
+            tabName = 'overview';
+            target = document.getElementById('admin-tab-overview');
+        }
+
+        if (!target) return;
+
+        // 1. Hide all views
         views.forEach(function(el) {
             el.classList.add('hidden');
         });
 
-        var target = document.getElementById('admin-tab-' + tabName);
-        if (target) {
-            target.classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'instant' });
-        }
+        // 2. Unhide target
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'instant' });
 
-        // Top capsule tabs
+        // 3. Highlight Top Capsule Nav
+        var actPillClasses = ['bg-yellow-400', 'text-slate-950', 'border-yellow-400', 'font-black', 'shadow-xs'];
+        var inactPillClasses = ['text-slate-400', 'hover:text-white', 'font-bold', 'bg-slate-900', 'border-slate-800'];
+        
         document.querySelectorAll('.admin-tab-btn').forEach(function(btn) {
-            btn.classList.remove('bg-yellow-400', 'text-slate-950', 'border-yellow-400', 'font-black', 'shadow-xs');
-            btn.classList.add('text-slate-400', 'bg-slate-900', 'border-slate-800');
+            actPillClasses.forEach(function(c) { btn.classList.remove(c); });
+            inactPillClasses.forEach(function(c) { btn.classList.add(c); });
         });
+
         var activeTop = document.getElementById('admin-nav-' + tabName);
         if (activeTop) {
-            activeTop.classList.remove('text-slate-400', 'bg-slate-900', 'border-slate-800');
-            activeTop.classList.add('bg-yellow-400', 'text-slate-950', 'border-yellow-400', 'font-black', 'shadow-xs');
+            inactPillClasses.forEach(function(c) { activeTop.classList.remove(c); });
+            actPillClasses.forEach(function(c) { activeTop.classList.add(c); });
+            try {
+                activeTop.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            } catch(e) {}
         }
 
-        // Bottom icons
+        // 4. Highlight Bottom Navigation Icons
         document.querySelectorAll('.admin-bottom-tab').forEach(function(btn) {
             btn.classList.remove('text-yellow-500', 'font-black');
             btn.classList.add('text-slate-400');
         });
+
         var activeBottom = document.getElementById('admin-bottom-' + tabName);
         if (activeBottom) {
             activeBottom.classList.remove('text-slate-400');
             activeBottom.classList.add('text-yellow-500', 'font-black');
         }
 
-        // Update URL hash/query without reload
+        // 5. Update URL query without page reload
         if (!skipState && window.history && window.history.replaceState) {
-            window.history.replaceState({ adminTab: tabName }, '', 'index.php?tab=' + tabName);
+            window.history.replaceState({ adminTab: tabName }, '', 'index.php?tab=' + encodeURIComponent(tabName));
         }
+
+        // 6. Persist active tab and role across reloads / APK restarts
+        try {
+            localStorage.setItem('beastz_active_admin_tab', tabName);
+            localStorage.setItem('beastz_active_panel', 'admin');
+        } catch(e) {}
     }
 
-    // Auto-activate requested tab from URL
+    // Browser back/forward button support
+    window.addEventListener('popstate', function(e) {
+        if (e.state && e.state.adminTab) {
+            switchAdminTab(e.state.adminTab, true);
+        }
+    });
+
+    // Auto-restore requested or last active tab on page load/refresh
     (function() {
         var params = new URLSearchParams(window.location.search);
         var reqTab = params.get('tab');
+        if (!reqTab) {
+            try {
+                reqTab = localStorage.getItem('beastz_active_admin_tab');
+            } catch(e) {}
+        }
         if (reqTab) {
             switchAdminTab(reqTab, true);
+        } else {
+            switchAdminTab('overview', true);
         }
     })();
     </script>

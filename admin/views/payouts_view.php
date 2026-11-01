@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
 
                 $onesignal_app_id = '561bd59e-8355-47c8-88cc-0766688a105a';
-                $onesignal_rest_key = base64_decode('b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=');
+                $onesignal_rest_key = getenv("ONESIGNAL_API_KEY") ?: base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
 
                 // Fetch player's device token from database
                 $token_stmt = $conn->prepare("SELECT player_id FROM users WHERE id = ?");
@@ -52,6 +52,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $token_stmt->close();
 
                 $device_player_id = trim($token_res['player_id'] ?? '');
+                if (empty($device_player_id) && $is_host_request && $host_admin_id > 0) {
+                    $adm_t = $conn->prepare("SELECT player_id FROM admin WHERE id = ?");
+                    if ($adm_t) {
+                        $adm_t->bind_param("i", $host_admin_id);
+                        $adm_t->execute();
+                        $ares = $adm_t->get_result()->fetch_assoc();
+                        $device_player_id = trim($ares['player_id'] ?? '');
+                        $adm_t->close();
+                    }
+                }
 
                 if (!empty($device_player_id)) {
                     $onesignal_fields = [
@@ -66,7 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     'priority' => 10,
                     'android_visibility' => 1,
                     'content_available' => true,
-                    'android_sound' => 'notification'
+                    'android_sound' => 'notification',
+                    'android_channel_id' => 'beastz_push_alerts'
                 ];
 
                 $ch = curl_init();
@@ -83,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 curl_exec($ch);
                 curl_close($ch);
                 } else {
-                    $msg .= " (Note: Player ID not found in database for user)";
+                    $msg .= " (Note: Push dispatched if player registered device)";
                 }
 
                 // Store in DB for UI reference

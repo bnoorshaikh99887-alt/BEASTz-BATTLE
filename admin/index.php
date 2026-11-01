@@ -3,8 +3,9 @@ require_once __DIR__ . '/common/header.php';
 
 // Maintain persistent active_panel = admin
 $_SESSION['active_panel'] = 'admin';
-if (!isset($_COOKIE['active_panel']) || $_COOKIE['active_panel'] !== 'admin') {
+if (!isset($_COOKIE['active_panel']) || $_COOKIE['active_panel'] !== 'admin' || !isset($_COOKIE['beastz_active_panel']) || $_COOKIE['beastz_active_panel'] !== 'admin') {
     setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+    setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
 }
 
 $req_admin_tab = sanitize($_GET['tab'] ?? 'overview');

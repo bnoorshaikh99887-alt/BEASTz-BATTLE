@@ -49,7 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $_SESSION['is_super_admin'] = true;
             $_SESSION['admin_logged_in'] = true;
             
-            if (function_exists('set_user_remember_token')) { set_user_remember_token(1); }
+            if (function_exists('set_user_remember_token')) { set_user_remember_token(1, 'admin'); }
+            ['active_panel'] = 'admin';
+            setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+            setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
             header("Location: admin/index.php");
             exit;
         }
@@ -117,7 +120,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $_SESSION['is_super_admin'] = ($u['username'] === 'anonymous.349') ? true : false;
                             $_SESSION['admin_logged_in'] = true;
                             
-                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid); }
+                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
+                            ['active_panel'] = 'admin';
+                            setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+                            setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
                             header("Location: admin/index.php");
                             exit;
                         } else {
@@ -129,7 +135,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $_SESSION['role'] = 'user';
                             $_SESSION['user_logged_in'] = true;
                             
-                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid); }
+                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'user'); }
+                            ['active_panel'] = 'user';
+                            setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
+                            setcookie('beastz_active_panel', 'user', time() + (365 * 24 * 3600), '/');
                             header("Location: index.php");
                             exit;
                         }

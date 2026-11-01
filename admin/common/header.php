@@ -3,9 +3,10 @@ require_once __DIR__ . '/config.php';
 
 // Strictly Enforce Admin Authentication
 $is_admin = false;
-if (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
+if (!empty($_SESSION['admin_id']) || (!empty($_SESSION['role']) && $_SESSION['role'] === 'admin') || !empty($_SESSION['admin_logged_in'])) {
     $is_admin = true;
 }
+
 if (!$is_admin) {
     safe_redirect("../admin/login.php");
     exit;
@@ -13,6 +14,7 @@ if (!$is_admin) {
 
 // Robust Role Separation: Master Admin vs Worker/Host Panel
 $current_admin_user = strtolower(trim($_SESSION['admin_user'] ?? $_SESSION['username'] ?? ''));
+$logged_username = $current_admin_user;
 $current_admin_id = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
 $is_super = false;
 if (
@@ -21,7 +23,7 @@ if (
     $current_admin_user === 'admin' ||
     $current_admin_user === 'noorshaikh99887@gmail.com' ||
     (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'super_admin') ||
-    ($current_admin_id === 1 || $current_admin_id === 210001)
+    ($current_admin_id === 1 || $current_admin_id === 210001 || $current_admin_id === 30002)
 ) {
     $is_super = true;
     $_SESSION['is_super_admin'] = true;
