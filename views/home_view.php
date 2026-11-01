@@ -285,6 +285,9 @@
         if (firstAvailable) {
             slotSelect.value = firstAvailable;
         }
+        if (window.initCustomSelects) {
+            window.initCustomSelects();
+        }
 
         document.getElementById('joinModal').classList.remove('hidden');
     }

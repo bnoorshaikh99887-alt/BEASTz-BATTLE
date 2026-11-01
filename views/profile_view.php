@@ -304,7 +304,7 @@
                     <span class="text-xs font-black text-slate-900 block">Upload from Phone Gallery / Camera</span>
                     <span class="text-[10px] text-slate-500 block mt-0.5">Auto-optimized for ultra fast loading</span>
                 </label>
-                <input type="file" id="avatarFileInput" accept="image/*" class="hidden">
+                <input type="file" id="avatarFileInput" accept="image/*" onclick="this.value = null;" class="hidden">
             </div>
 
             <!-- Preset Gaming Avatars Grid (Pure Character Vectors, Zero Letters/Text) -->
@@ -316,7 +316,7 @@
                     if (!empty($BEASTZ_GAMING_AVATARS)):
                         foreach ($BEASTZ_GAMING_AVATARS as $pr):
                     ?>
-                        <button type="button" onclick="selectPreset('<?= htmlspecialchars($pr['svg']); ?>')" class="preset-btn p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-yellow-400 bg-slate-50 dark:bg-slate-800 hover:bg-yellow-50 transition flex flex-col items-center">
+                        <button type="button" onclick="selectPreset('<?= htmlspecialchars($pr['svg']); ?>', this)" class="preset-btn p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-yellow-400 bg-slate-50 dark:bg-slate-800 hover:bg-yellow-50 transition flex flex-col items-center">
                             <img src="<?= htmlspecialchars($pr['svg']); ?>" alt="<?= $pr['label']; ?>" class="w-10 h-10 rounded-full pointer-events-none shadow-xs">
                             <span class="text-[9px] font-black text-slate-700 dark:text-slate-300 mt-1"><?= $pr['label']; ?></span>
                         </button>
@@ -359,9 +359,14 @@
     // High performance client-side canvas compressor (downscales to 256x256 max)
     const avatarInput = document.getElementById('avatarFileInput');
     if (avatarInput) {
+        avatarInput.onclick = function() { this.value = null; };
         avatarInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
+            const file = e.target.files && e.target.files[0];
             if (!file) return;
+            document.querySelectorAll('.preset-btn').forEach(function(b) {
+                b.classList.remove('border-yellow-400', 'ring-2', 'ring-yellow-400', 'bg-yellow-100', 'dark:bg-yellow-950/40');
+                b.classList.add('border-slate-200', 'dark:border-slate-700');
+            });
 
             const spinner = document.getElementById('uploadSpinner');
             if (spinner) spinner.classList.remove('hidden');
@@ -477,7 +482,7 @@
         fd.append('action', 'update_avatar');
         fd.append('avatar', avatar);
         var fileInput = document.getElementById('avatarFileInput');
-        if (fileInput && fileInput.files && fileInput.files[0]) {
+        if (fileInput && fileInput.files && fileInput.files[0] && !avatar.startsWith('data:image/svg+xml')) {
             fd.append('avatar_file', fileInput.files[0]);
         }
 

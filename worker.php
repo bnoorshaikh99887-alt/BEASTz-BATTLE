@@ -37,34 +37,39 @@ $feedback_type = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
     $act = $_POST["action"];
 
-    // 1. ADD NEW TOURNAMENT
-    if ($act === "create_tourney") {
+    // 1. ADD NEW TOURNAMENT (MIRRORING ADMIN PANEL)
+    if ($act === "create_tourney" || $act === "create_tournament") {
         $title = sanitize($_POST["title"] ?? "");
-        $game = sanitize($_POST["game"] ?? "BGMI");
-        $map = sanitize($_POST["map"] ?? "Erangel");
-        $match_type = sanitize($_POST["match_type"] ?? "Solo");
-        $entry_fee = (float)($_POST["entry_fee"] ?? 0.00);
+        $game = sanitize($_POST["game"] ?? $_POST["game_name"] ?? "Free Fire");
+        $map = sanitize($_POST["map"] ?? "BERMUDA");
+        $match_type = sanitize($_POST["match_type"] ?? "SOLO BR");
+        $entry_fee = (float)($_POST["entry_fee"] ?? 10.00);
         $per_kill = (float)($_POST["per_kill"] ?? 0.00);
-        $prize_pool = (float)($_POST["prize_pool"] ?? 0.00);
-        $match_time = sanitize($_POST["match_time"] ?? "");
-        $total_slots = (int)($_POST["total_slots"] ?? 100);
+        $prize_pool = (float)($_POST["prize_pool"] ?? 225.00);
+        $total_slots = (int)($_POST["total_slots"] ?? 48);
+        $commission = (int)($_POST["commission_percent"] ?? 15);
+        $match_time_raw = $_POST["match_time"] ?? "";
 
-        if (empty($title) || empty($match_time)) {
+        if (empty($title) || empty($match_time_raw)) {
             $feedback_msg = "Please provide match title and scheduled date & time.";
             $feedback_type = "error";
         } else {
-            $stmt = $conn->prepare("INSERT INTO tournaments (title, game, map, match_type, entry_fee, per_kill, prize_pool, match_time, total_slots, joined_slots, status, hosted_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'upcoming', ?)");
+            $match_time = date("Y-m-d H:i:s", strtotime($match_time_raw));
+            $stmt = $conn->prepare("INSERT INTO tournaments (title, game, game_name, map, match_type, entry_fee, per_kill, prize_pool, match_time, total_slots, joined_slots, status, commission_percent, hosted_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'upcoming', ?, ?)");
             if ($stmt) {
-                $stmt->bind_param("ssssdddsii", $title, $game, $map, $match_type, $entry_fee, $per_kill, $prize_pool, $match_time, $total_slots, $logged_worker_id);
+                $stmt->bind_param("sssssdddsiii", $title, $game, $game, $map, $match_type, $entry_fee, $per_kill, $prize_pool, $match_time, $total_slots, $commission, $logged_worker_id);
                 if ($stmt->execute()) {
                     $new_id = $stmt->insert_id;
                     $stmt->close();
-                    $feedback_msg = "✅ Tournament #" . $new_id . " ('" . htmlspecialchars($title) . "') created successfully!";
+                    $feedback_msg = "Tournament #" . $new_id . " ('" . htmlspecialchars($title) . "') created successfully!";
                     $feedback_type = "success";
                 } else {
-                    $feedback_msg = "Failed to add tournament: " . $conn->error;
+                    $feedback_msg = "Failed to add tournament: " . $stmt->error;
                     $feedback_type = "error";
                 }
+            } else {
+                $feedback_msg = "Database statement error: " . $conn->error;
+                $feedback_type = "error";
             }
         }
     }
@@ -110,12 +115,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                         }
                     }
 
-                    $n_title = "🔥 WAR ZONE TAYAR HAI!";
+                    $n_title = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI";
                     $n_body = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_pass;
                     send_onesignal_push($n_title, $n_body, "/?tab=matches", $player_ids, $user_ids);
                     
                     $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($n_title) . "', '" . $conn->real_escape_string($n_body) . "', '/?tab=matches', 'ROOM_IDP')");
-                    $feedback_msg = "🚀 Room IDP saved and instant push alert dispatched to joined players!";
+                    $feedback_msg = "Room IDP saved and instant push alert dispatched to joined players!";
                     $feedback_type = "success";
                 } else {
                     $feedback_msg = "Room ID & Password saved successfully for Match #" . $tid . "!";
@@ -137,7 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
         } else {
             send_onesignal_push($b_title, $b_message, $target_url);
             $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($b_title) . "', '" . $conn->real_escape_string($b_message) . "', '" . $conn->real_escape_string($target_url) . "', 'HOST_ANNOUNCEMENT')");
-            $feedback_msg = "✅ Push notification announcement broadcasted to all gamers!";
+            $feedback_msg = "Push notification announcement broadcasted to all gamers!";
             $feedback_type = "success";
         }
     }
@@ -146,6 +151,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
     if ($act === "revoke_tournament") {
         $rev_id = (int)($_POST["tournament_id"] ?? 0);
         $reason = sanitize($_POST["reason"] ?? "Tournament cancelled by host");
+
         if ($rev_id > 0) {
             $conn->begin_transaction();
             try {
@@ -161,7 +167,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                         while ($p = $part_q->fetch_assoc()) {
                             $uid = (int)$p["user_id"];
                             $conn->query("UPDATE users SET wallet_balance = wallet_balance + {$e_fee} WHERE id = {$uid}");
-                            $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$uid}, {$e_fee}, 'credit', 'Refund: Revoked Match '" . $conn->real_escape_string($t_name) . "'')");
+                            $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$uid}, {$e_fee}, 'credit', 'Refund: Revoked Match " . $conn->real_escape_string($t_name) . "')");
                             $refund_count++;
                         }
                     }
@@ -173,7 +179,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                 @$conn->query("DELETE FROM user_tournaments WHERE tournament_id = {$rev_id}");
                 @$conn->query("DELETE FROM tournaments WHERE id = {$rev_id}");
                 $conn->commit();
-
                 $feedback_msg = "Match #" . $rev_id . " revoked successfully! " . ($refund_count > 0 ? "Entry fee refunded to {$refund_count} players." : "");
                 $feedback_type = "success";
             } catch (Exception $e) {
@@ -184,110 +189,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
         }
     }
 
-    // 5. SUBMIT KILLS / RESULTS & DECLARE WINNERS (WITH PUSH NOTIFICATION)
-    if ($act === "submit_results_and_declare") {
-        $tid = (int)($_POST["tournament_id"] ?? 0);
-        $kills_arr = $_POST["kills"] ?? [];
-        $rank_arr = $_POST["rank_no"] ?? [];
-        $bonus_arr = $_POST["bonus"] ?? [];
-
-        if ($tid > 0) {
-            $conn->begin_transaction();
-            try {
-                $t_stmt = $conn->query("SELECT title, per_kill, prize_pool FROM tournaments WHERE id = {$tid}")->fetch_assoc();
-                $per_kill_rate = (float)($t_stmt["per_kill"] ?? 0.00);
-                $t_title = $t_stmt["title"] ?? "Match #$tid";
-                $total_distributed = 0.00;
-                $winner_u_id = null;
-                $participating_uids = [];
-                $participating_pids = [];
-
-                $pq = $conn->query("SELECT p.id, p.user_id, u.player_id FROM participants p JOIN users u ON p.user_id = u.id WHERE p.tournament_id = {$tid}");
-                if ($pq) {
-                    while ($p = $pq->fetch_assoc()) {
-                        $pid = (int)$p["id"];
-                        $p_uid = (int)$p["user_id"];
-                        $participating_uids[] = $p_uid;
-                        if (!empty($p["player_id"])) $participating_pids[] = $p["player_id"];
-
-                        $kills = isset($kills_arr[$pid]) ? max(0, (int)$kills_arr[$pid]) : 0;
-                        $rank_no = isset($rank_arr[$pid]) ? max(0, (int)$rank_arr[$pid]) : 0;
-                        $bonus = isset($bonus_arr[$pid]) ? max(0.0, (float)$bonus_arr[$pid]) : 0.00;
-
-                        if ($rank_no === 1) {
-                            $winner_u_id = $p_uid;
-                        }
-
-                        $earned = ($kills * $per_kill_rate) + $bonus;
-                        $conn->query("UPDATE participants SET kills = {$kills}, rank_no = {$rank_no}, prize_won = {$earned} WHERE id = {$pid}");
-
-                        if ($earned > 0) {
-                            $conn->query("UPDATE users SET wallet_balance = wallet_balance + {$earned}, winning_balance = winning_balance + {$earned} WHERE id = {$p_uid}");
-                            $desc = "Match Winnings: " . $t_title . " ({$kills} Kills @ " . format_inr($per_kill_rate) . ($rank_no > 0 ? " + Rank #{$rank_no}" : "") . ")";
-                            $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$p_uid}, {$earned}, 'credit', '" . $conn->real_escape_string($desc) . "')");
-                            $total_distributed += $earned;
-                        }
-                    }
-                }
-
-                if ($winner_u_id) {
-                    $conn->query("UPDATE tournaments SET status = 'completed', winner_user_id = {$winner_u_id} WHERE id = {$tid}");
-                } else {
-                    $conn->query("UPDATE tournaments SET status = 'completed' WHERE id = {$tid}");
-                }
-
-                $conn->commit();
-
-                // TRIGGER CRITICAL PUSH NOTIFICATION
-                $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
-                $results_msg = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
-                send_onesignal_push($results_title, $results_msg, "/?tab=matches", $participating_pids, $participating_uids);
-                $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($results_title) . "', '" . $conn->real_escape_string($results_msg) . "', '/?tab=matches', 'RESULTS_ANNOUNCED')");
-
-                $feedback_msg = "🏆 Results published! Total " . format_inr($total_distributed) . " credited to gamer wallets and push notification dispatched!";
-                $feedback_type = "success";
-            } catch (Exception $e) {
-                $conn->rollback();
-                $feedback_msg = "Result publication error: " . $e->getMessage();
-                $feedback_type = "error";
-            }
-        }
-    }
-
-    // 6. INSTANT MANUAL TOURNAMENT DELETION
+    // 5. INSTANT MANUAL TOURNAMENT DELETION
     if ($act === "delete_tournament") {
         $del_id = (int)($_POST["tournament_id"] ?? 0);
         if ($del_id > 0) {
             @$conn->query("DELETE FROM anti_cheat_logs WHERE tournament_id = {$del_id}");
             @$conn->query("DELETE FROM participants WHERE tournament_id = {$del_id}");
             @$conn->query("DELETE FROM user_tournaments WHERE tournament_id = {$del_id}");
-            @$conn->query("DELETE FROM tournaments WHERE id = {$del_id}");
-            $feedback_msg = "Tournament #" . $del_id . " deleted permanently from system!";
-            $feedback_type = "success";
-        }
-    }
-
-    // 7. ANTI-CHEAT REVOKE (CLAWBACK)
-    if ($act === "anti_cheat_revoke") {
-        $suspect_user = trim(sanitize($_POST["suspect_user"] ?? ""));
-        $match_id = (int)($_POST["match_id"] ?? 0);
-        $revoke_amount = (float)($_POST["revoke_amount"] ?? 0.00);
-        $reason = sanitize($_POST["reason"] ?? "Anti-Cheat Infraction / Illegal Gameplay");
-
-        if (!empty($suspect_user) && $revoke_amount > 0) {
-            $u_q = $conn->prepare("SELECT id, username FROM users WHERE username = ? OR id = ? LIMIT 1");
-            $u_q->bind_param("ss", $suspect_user, $suspect_user);
-            $u_q->execute();
-            $target_u = $u_q->get_result()->fetch_assoc();
-            $u_q->close();
-
-            if ($target_u) {
-                $t_uid = (int)$target_u["id"];
-                $conn->query("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - {$revoke_amount}), winning_balance = GREATEST(0, winning_balance - {$revoke_amount}) WHERE id = {$t_uid}");
-                $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$t_uid}, {$revoke_amount}, 'debit', 'Anti-Cheat Fund Clawback (Match #{$match_id}): " . $conn->real_escape_string($reason) . "')");
-                $conn->query("INSERT INTO anti_cheat_logs (tournament_id, user_id, amount, reason, admin_username) VALUES ({$match_id}, {$t_uid}, {$revoke_amount}, '" . $conn->real_escape_string($reason) . "', '" . $conn->real_escape_string($logged_worker_user) . "')");
-                $feedback_msg = "🛡️ Clawback executed: ₹" . number_format($revoke_amount, 2) . " revoked from @" . htmlspecialchars($target_u["username"]);
-                $feedback_type = "success";
+            $del = $conn->prepare("DELETE FROM tournaments WHERE id = ?");
+            if ($del) {
+                $del->bind_param("i", $del_id);
+                if ($del->execute()) {
+                    $feedback_msg = "Tournament #{$del_id} successfully deleted from system.";
+                    $feedback_type = "success";
+                } else {
+                    $feedback_msg = "Delete failed: " . $del->error;
+                    $feedback_type = "error";
+                }
+                $del->close();
             }
         }
     }
@@ -296,23 +215,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
 // Queries for View
 $active_tourneys = [];
 $at_q = $conn->query("
-    SELECT t.*, (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count 
+    SELECT t.*, 
+    COALESCE(t.game_name, t.game, 'Free Fire') as display_game,
+    (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count 
     FROM tournaments t 
     WHERE LOWER(status) != 'completed' 
     ORDER BY match_time ASC, id DESC
-");
+    LIMIT 60");
 if ($at_q) {
     while ($r = $at_q->fetch_assoc()) $active_tourneys[] = $r;
 }
 
 $completed_tourneys = [];
 $ct_q = $conn->query("
-    SELECT t.*, (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count,
+    SELECT t.*, 
+    COALESCE(t.game_name, t.game, 'Free Fire') as display_game,
+    (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count,
     (SELECT u.username FROM users u WHERE u.id = t.winner_user_id) as winner_name
     FROM tournaments t 
     WHERE LOWER(status) = 'completed' AND match_time >= NOW() - INTERVAL 24 HOUR
     ORDER BY match_time DESC
-");
+    LIMIT 60");
 if ($ct_q) {
     while ($r = $ct_q->fetch_assoc()) $completed_tourneys[] = $r;
 }
@@ -335,29 +258,31 @@ if ($nt_q) {
     <script>tailwind.config = { darkMode: "class" };</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
+    <script src="/theme.js"></script>
     <style>
         * { font-family: "Plus Jakarta Sans", sans-serif; }
         h1, h2, h3, h4, .font-display { font-family: "Outfit", sans-serif; }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-[#070b14] text-slate-900 dark:text-slate-100 min-h-screen flex flex-col items-center">
+
     <!-- Top Header -->
     <header class="w-full bg-white dark:bg-[#0d1424] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xl shadow-sm">
+                <div class="w-10 h-10 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center font-black text-xl shadow-sm">
                     <i class="fa-solid fa-gamepad"></i>
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="font-black text-sm tracking-tight font-display">BEASTz<span class="text-amber-500">WORKER</span></span>
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-400/20 text-amber-500 border border-amber-400/40">HOST STUDIO</span>
+                        <span class="font-black text-sm tracking-tight font-display">BEASTz<span class="text-yellow-500">WORKER</span></span>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 border border-yellow-400/40">HOST STUDIO</span>
                     </div>
                     <p class="text-[11px] text-slate-400 font-medium">Logged in as @<?= htmlspecialchars($logged_worker_user); ?></p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button type="button" onclick="toggleTheme()" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                <button type="button" onclick="toggleTheme()" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
                     <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
                 </button>
                 <?php if ($is_master): ?>
@@ -378,7 +303,7 @@ if ($nt_q) {
         <!-- TOP HEADING: EXACTLY 2 MAIN TABS -->
         <!-- ============================================================ -->
         <div class="max-w-5xl mx-auto px-4 pb-2 pt-1 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800/80">
-            <button type="button" onclick="switchWorkerMainTab('push')" id="wmain-tab-push" class="w-main-tab flex-1 py-2.5 px-4 rounded-xl font-black text-xs transition uppercase tracking-wider flex items-center justify-center gap-2 bg-amber-400 text-slate-950 shadow-sm cursor-pointer">
+            <button type="button" onclick="switchWorkerMainTab('push')" id="wmain-tab-push" class="w-main-tab flex-1 py-2.5 px-4 rounded-xl font-black text-xs transition uppercase tracking-wider flex items-center justify-center gap-2 bg-yellow-400 text-slate-950 shadow-sm cursor-pointer">
                 <i class="fa-solid fa-paper-plane text-sm"></i>
                 <span>Push Notification Studio</span>
             </button>
@@ -405,7 +330,7 @@ if ($nt_q) {
             <div class="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
                 <div>
                     <h2 class="text-base font-extrabold flex items-center gap-2">
-                        <i class="fa-solid fa-paper-plane text-amber-500"></i> Push Notification Studio
+                        <i class="fa-solid fa-paper-plane text-yellow-500"></i> Push Notification Studio
                     </h2>
                     <p class="text-xs text-slate-500">Send instant Room ID & Password alerts to match participants or broadcast announcements to all gamers</p>
                 </div>
@@ -416,15 +341,17 @@ if ($nt_q) {
                 <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                            <i class="fa-solid fa-key text-amber-500"></i> Match Room IDP Push Alert
+                            <i class="fa-solid fa-key text-yellow-500"></i> Match Room IDP Push Alert
                         </h3>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/20 text-amber-600 dark:text-amber-400">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-400/20 text-yellow-600 dark:text-yellow-400">
                             TARGETED PLAYERS
                         </span>
                     </div>
+
                     <form method="POST" action="worker.php" class="space-y-3.5 text-xs">
                         <input type="hidden" name="action" value="save_and_broadcast_idp">
                         <input type="hidden" name="send_push" value="1">
+
                         <div>
                             <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Select Active Tournament</label>
                             <select name="tournament_id" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white">
@@ -434,6 +361,7 @@ if ($nt_q) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
+
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Room ID</label>
@@ -444,9 +372,22 @@ if ($nt_q) {
                                 <input type="text" name="room_password" required placeholder="e.g. 1234" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold">
                             </div>
                         </div>
-                        <button type="submit" class="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+
+                        <!-- Push Alert Preview Box (Mirroring Admin Panel) -->
+                        <div class="p-3 bg-yellow-400/10 border border-yellow-400/40 rounded-xl space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-black text-yellow-500">Auto Push Notification (To Joined Players Only)</span>
+                                <span class="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[9px] uppercase shadow-xs">DEFAULT ACTIVE</span>
+                            </div>
+                            <div class="text-[11px] font-mono text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg border border-yellow-400/20">
+                                WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI
+                            </div>
+                            <p class="text-[10px] text-slate-400">&bull; Target: Only gamers who booked slot in this match</p>
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                             <i class="fa-solid fa-paper-plane"></i>
-                            <span>Save Room & Dispatch Instant IDP Push</span>
+                            <span>Save Room Credentials & Dispatch Instant IDP Push</span>
                         </button>
                     </form>
                 </div>
@@ -461,16 +402,20 @@ if ($nt_q) {
                             ALL GAMERS
                         </span>
                     </div>
+
                     <form method="POST" action="worker.php" class="space-y-3.5 text-xs">
                         <input type="hidden" name="action" value="send_worker_broadcast">
+
                         <div>
                             <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Push Alert Title</label>
-                            <input type="text" name="broadcast_title" required placeholder="e.g. 🔥 Mega BGMI Tournament Starting Soon!" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white">
+                            <input type="text" name="broadcast_title" required placeholder="e.g. 🔥 Mega Tournament Starting Soon!" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white">
                         </div>
+
                         <div>
                             <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Push Alert Message</label>
                             <textarea name="broadcast_message" rows="2" required placeholder="Enter announcement body..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"></textarea>
                         </div>
+
                         <div>
                             <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Target Tab</label>
                             <select name="target_url" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white">
@@ -480,6 +425,7 @@ if ($nt_q) {
                                 <option value="/?tab=leaderboard">Leaderboard / Rankings</option>
                             </select>
                         </div>
+
                         <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                             <i class="fa-solid fa-broadcast-tower"></i>
                             <span>Broadcast Push Alert to All Devices</span>
@@ -491,7 +437,7 @@ if ($nt_q) {
             <!-- RECENT PUSH NOTIFICATIONS TABLE -->
             <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-3">
                 <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                    <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> Recent Push Alerts & In-App Logs
+                    <i class="fa-solid fa-clock-rotate-left text-yellow-500"></i> Recent Push Alerts & In-App Logs
                 </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
@@ -509,7 +455,7 @@ if ($nt_q) {
                                     <tr>
                                         <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white whitespace-nowrap"><?= htmlspecialchars($rn["title"]); ?></td>
                                         <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 max-w-xs truncate"><?= htmlspecialchars($rn["message"]); ?></td>
-                                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[9px] font-black bg-amber-400/20 text-amber-500"><?= htmlspecialchars($rn["badge_type"]); ?></span></td>
+                                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[9px] font-black bg-yellow-400/20 text-yellow-500"><?= htmlspecialchars($rn["badge_type"]); ?></span></td>
                                         <td class="py-2.5 px-3 text-slate-400 text-[10px] whitespace-nowrap"><?= date("d M, h:i A", strtotime($rn["created_at"])); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -523,234 +469,255 @@ if ($nt_q) {
         </section>
 
         <!-- ============================================================ -->
-        <!-- TAB 2: TOURNAMENT MANAGEMENT -->
+        <!-- TAB 2: TOURNAMENT MANAGEMENT (MIRRORING ADMIN PANEL TOURNEYS UI 100%) -->
         <!-- ============================================================ -->
         <section id="worker-tab-view-tournaments" class="worker-top-view hidden space-y-5">
-            <div class="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
-                <div>
-                    <h2 class="text-base font-extrabold flex items-center gap-2">
-                        <i class="fa-solid fa-trophy text-amber-500"></i> Tournament Management
-                    </h2>
-                    <p class="text-xs text-slate-500">Create matches, update room IDP, declare kills/results, revoke matches with refunds, and delete instantly</p>
-                </div>
-                <button type="button" onclick="document.getElementById('createTourneyCard').classList.toggle('hidden')" class="px-3.5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Create New Match</span>
-                </button>
-            </div>
-
-            <!-- COLLAPSIBLE CREATE TOURNAMENT CARD -->
-            <div id="createTourneyCard" class="bg-white dark:bg-[#111827] border-2 border-amber-400/40 rounded-2xl p-5 shadow-md space-y-4 hidden">
-                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                        <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Create Tournament
+            
+            <!-- Create Tournament Form Card (Mirroring Admin Panel Screenshot 2) -->
+            <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs mb-6">
+                <div class="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <h3 class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-plus text-yellow-500 text-sm"></i> Create New Tournament
                     </h3>
-                    <button type="button" onclick="document.getElementById('createTourneyCard').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase">Free Fire & BGMI</span>
                 </div>
-                <form method="POST" action="worker.php" class="space-y-3.5 text-xs">
+                <form method="POST" action="worker.php" class="space-y-3">
                     <input type="hidden" name="action" value="create_tourney">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="sm:col-span-2">
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Match Title *</label>
-                            <input type="text" name="title" required placeholder="e.g. BGMI Squad War #101" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white">
-                        </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tournament Title *</label>
+                        <input type="text" name="title" required placeholder="e.g. FREE FIRE - SOLO HUNTER" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-bold focus:outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Game</label>
-                            <select name="game" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold">
-                                <option value="BGMI">BGMI (Battlegrounds Mobile India)</option>
-                                <option value="Free Fire">Free Fire Max</option>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Game *</label>
+                            <select name="game" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                                <option value="Free Fire">Free Fire</option>
+                                <option value="Free Fire Max">Free Fire Max</option>
+                                <option value="BGMI">BGMI</option>
+                                <option value="Call of Duty">Call of Duty Mobile</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Map</label>
-                            <select name="map" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold">
-                                <option value="Erangel">Erangel</option>
-                                <option value="Livik">Livik</option>
-                                <option value="Miramar">Miramar</option>
-                                <option value="Sanhok">Sanhok</option>
-                                <option value="Bermuda">Bermuda (Free Fire)</option>
-                                <option value="Purgatory">Purgatory</option>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Match Category</label>
+                            <select name="match_type" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                                <option value="SOLO BR">SOLO BR</option>
+                                <option value="DUO BR">DUO BR</option>
+                                <option value="DUO PR KILL">DUO PR KILL</option>
+                                <option value="SOLO PER KILL">SOLO PER KILL</option>
+                                <option value="LONE WOLF">LONE WOLF</option>
+                                <option value="CS CHALLENGERS">CS CHALLENGERS</option>
+                                <option value="CLASH SQUAD">CLASH SQUAD</option>
+                                <option value="CS HEADSHOT">CS HEADSHOT</option>
+                                <option value="LOSS TO WIN">LOSS TO WIN</option>
                             </select>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Match Type</label>
-                            <select name="match_type" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold">
-                                <option value="Solo">Solo</option>
-                                <option value="Duo">Duo</option>
-                                <option value="Squad" selected>Squad</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Entry Fee (₹)</label>
-                            <input type="number" step="1" name="entry_fee" value="20" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Per Kill Prize (₹)</label>
-                            <input type="number" step="1" name="per_kill" value="10" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Total Prize Pool (₹)</label>
-                            <input type="number" step="1" name="prize_pool" value="500" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Match Date & Time *</label>
-                            <input type="datetime-local" name="match_time" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Total Slots</label>
-                            <input type="number" name="total_slots" value="100" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold">
                         </div>
                     </div>
-                    <button type="submit" class="w-full py-3 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-plus"></i> Publish Tournament
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Map</label>
+                            <select name="map" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                                <option value="BERMUDA">BERMUDA</option>
+                                <option value="PURGATORY">PURGATORY</option>
+                                <option value="KALAHARI">KALAHARI</option>
+                                <option value="NEXTERRA">NEXTERRA</option>
+                                <option value="ERANGEL">ERANGEL (BGMI)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Total Slots</label>
+                            <input type="number" name="total_slots" value="48" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Entry Fee (₹)</label>
+                            <input type="number" step="0.5" name="entry_fee" value="10" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Per Kill (₹)</label>
+                            <input type="number" step="0.5" name="per_kill" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Prize Pool (₹)</label>
+                            <input type="number" step="1" name="prize_pool" value="225" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-amber-500 font-mono font-black focus:outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Match Schedule Time *</label>
+                        <input type="datetime-local" name="match_time" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-bolt text-xs"></i>
+                        <span>Publish Tournament Match</span>
                     </button>
                 </form>
             </div>
 
-            <!-- ACTIVE & LIVE TOURNAMENTS LIST -->
-            <div class="space-y-3">
-                <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                    <i class="fa-solid fa-fire text-amber-500"></i> Active & Live Tournaments (<?= count($active_tourneys); ?>)
-                </h3>
-
-                <?php if (!empty($active_tourneys)): ?>
-                    <?php foreach ($active_tourneys as $t): ?>
-                        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-400 text-slate-950">#<?= $t["id"]; ?> <?= htmlspecialchars($t["game"]); ?></span>
-                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"><?= htmlspecialchars($t["map"]); ?> • <?= htmlspecialchars($t["match_type"]); ?></span>
-                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold <?= $t["status"] === "ongoing" ? "bg-emerald-500/20 text-emerald-500" : "bg-sky-500/20 text-sky-500"; ?>"><?= strtoupper($t["status"]); ?></span>
-                                    </div>
-                                    <h4 class="text-sm font-black text-slate-900 dark:text-white"><?= htmlspecialchars($t["title"]); ?></h4>
-                                    <p class="text-[11px] text-slate-400 font-mono mt-0.5"><i class="fa-regular fa-clock mr-1"></i><?= date("d M Y, h:i A", strtotime($t["match_time"])); ?></p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-[10px] text-slate-400 block font-bold">Prize / Per Kill</span>
-                                    <span class="text-xs font-black text-amber-500 font-mono"><?= format_compact_inr($t["prize_pool"]); ?> / ₹<?= (int)$t["per_kill"]; ?></span>
-                                </div>
-                            </div>
-
-                            <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 text-xs flex justify-between items-center">
-                                <div>
-                                    <span class="text-slate-400 text-[10px] block">Joined Gamers</span>
-                                    <span class="font-bold text-slate-800 dark:text-slate-200"><?= $t["enrolled_count"]; ?> / <?= $t["total_slots"]; ?> Slots</span>
-                                </div>
-                                <div>
-                                    <span class="text-slate-400 text-[10px] block">Room ID & Pass</span>
-                                    <span class="font-mono font-bold text-slate-800 dark:text-slate-200">
-                                        <?= !empty($t["room_id"]) ? htmlspecialchars($t["room_id"]) . " / " . htmlspecialchars($t["room_password"]) : "Not Added"; ?>
-                                    </span>
-                                </div>
-                                <div>
-                                    <span class="text-slate-400 text-[10px] block">Entry Fee</span>
-                                    <span class="font-bold text-amber-500">₹<?= (int)$t["entry_fee"]; ?></span>
-                                </div>
-                            </div>
-
-                            <!-- ACTIONS ROW: QUICK IDP, RESULTS/KILLS, REVOKE (REFUND), DELETE -->
-                            <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                                <!-- Enter Kills & Declare Results -->
-                                <a href="admin/manage_tournament.php?id=<?= $t["id"]; ?>" class="flex-1 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-xl text-center shadow-xs transition active:scale-95">
-                                    <i class="fa-solid fa-list-check mr-1"></i> Enter Kills & Declare Results
-                                </a>
-
-                                <!-- Revoke / Cancel Match (with Refunds) -->
-                                <form method="POST" action="worker.php" onsubmit="return confirm('Revoke Match #<?= $t["id"]; ?>? This will cancel the match and automatically refund entry fees to all joined players.');" class="shrink-0">
-                                    <input type="hidden" name="action" value="revoke_tournament">
-                                    <input type="hidden" name="tournament_id" value="<?= $t["id"]; ?>">
-                                    <button type="submit" class="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold rounded-xl text-xs transition" title="Revoke Match with Refunds">
-                                        <i class="fa-solid fa-ban mr-1"></i> Revoke
-                                    </button>
-                                </form>
-
-                                <!-- Instant Manual Delete Button -->
-                                <form method="POST" action="worker.php" onsubmit="return confirm('Instant Delete Match #<?= $t["id"]; ?>? This permanently removes the match.');" class="shrink-0">
-                                    <input type="hidden" name="action" value="delete_tournament">
-                                    <input type="hidden" name="tournament_id" value="<?= $t["id"]; ?>">
-                                    <button type="submit" class="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 font-bold rounded-xl text-xs transition" title="Instant Manual Delete">
-                                        <i class="fa-solid fa-trash-can mr-1"></i> Delete
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-slate-400 text-xs">
-                        <i class="fa-solid fa-gamepad text-2xl mb-2 block"></i>
-                        No active tournaments right now. Click "Create New Match" to publish one!
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- 24-HOUR COMPLETED MATCHES HISTORY -->
-            <div class="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <!-- TOURNAMENTS SECTION WITH SEPARATE ACTIVE & COMPLETED TABS -->
+            <div class="space-y-3 mb-8">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 24-Hour Completed Matches History (<?= count($completed_tourneys); ?>)
-                    </h3>
-                    <span class="text-[10px] text-slate-400">Auto 24-hr log archive</span>
+                    <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tournament Management</h3>
                 </div>
 
-                <?php if (!empty($completed_tourneys)): ?>
-                    <?php foreach ($completed_tourneys as $ct): ?>
-                        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">COMPLETED</span>
-                                        <span class="text-xs font-black text-slate-900 dark:text-white"><?= htmlspecialchars($ct["title"]); ?></span>
+                <!-- Navigation Tabs (Active vs Completed Section) -->
+                <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 dark:bg-slate-800 rounded-2xl text-xs font-bold">
+                    <button type="button" onclick="switchWorkerSubTab('active', this)" id="workerBtnTourneyActive" class="worker-subtab-btn py-2 text-center rounded-xl transition bg-yellow-400 text-slate-950 font-black shadow-xs cursor-pointer">
+                        <i class="fa-solid fa-gamepad mr-1"></i> Active & Live (<?= count($active_tourneys); ?>)
+                    </button>
+                    <button type="button" onclick="switchWorkerSubTab('completed', this)" id="workerBtnTourneyCompleted" class="worker-subtab-btn py-2 text-center rounded-xl transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold cursor-pointer">
+                        <i class="fa-solid fa-clock-rotate-left mr-1"></i> Completed Matches (<?= count($completed_tourneys); ?>)
+                    </button>
+                </div>
+
+                <!-- CONTAINER 1: ACTIVE & LIVE TOURNAMENTS -->
+                <div id="workerTourneysActive" class="worker-tourney-pane space-y-3">
+                    <?php if (!empty($active_tourneys)): ?>
+                        <?php foreach ($active_tourneys as $t): ?>
+                            <?php
+                                $status_clean = strtolower($t["status"] ?? "upcoming");
+                                $is_live = ($status_clean === "live" || $status_clean === "ongoing");
+                                $slots = (int)($t["total_slots"] ?: 48);
+                                $enrolled = (int)$t["enrolled_count"];
+                            ?>
+                            <div class="bg-white dark:bg-[#111827] border <?= $is_live ? "border-emerald-400 ring-2 ring-emerald-400/20" : "border-slate-200 dark:border-slate-800" ?> rounded-2xl p-4 shadow-sm hover:shadow transition space-y-2.5">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-1.5 mb-1">
+                                            <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase <?= $is_live ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-black" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 font-bold" ?>">
+                                                <?= htmlspecialchars($t["status"]); ?>
+                                            </span>
+                                            <span class="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                <?= htmlspecialchars($t["match_type"]); ?>
+                                            </span>
+                                        </div>
+                                        <h4 class="text-xs font-black text-slate-900 dark:text-white leading-tight">
+                                            <?= htmlspecialchars($t["title"]); ?>
+                                        </h4>
+                                        <p class="text-[10px] text-slate-400 font-mono mt-0.5">
+                                            <?= date("d M Y, h:i A", strtotime($t["match_time"])); ?>
+                                        </p>
                                     </div>
-                                    <p class="text-[10px] text-slate-400 font-mono"><?= date("d M Y, h:i A", strtotime($ct["match_time"])); ?></p>
+                                    <div class="text-right">
+                                        <span class="text-[10px] text-slate-400 block font-bold">Prize Pool</span>
+                                        <span class="text-xs font-black text-amber-500 font-mono"><?= format_compact_inr($t["prize_pool"]); ?></span>
+                                    </div>
                                 </div>
-                                <div class="text-right">
-                                    <span class="text-[10px] text-slate-400 block font-bold">Prize Disbursed</span>
-                                    <span class="text-xs font-black text-emerald-500 font-mono"><?= format_compact_inr($ct["prize_pool"]); ?></span>
-                                </div>
-                            </div>
 
-                            <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 text-xs flex justify-between items-center">
-                                <div>
-                                    <span class="text-slate-400 text-[10px] block">Total Players</span>
-                                    <span class="font-bold text-slate-800 dark:text-slate-200"><?= $ct["enrolled_count"]; ?> Gamers</span>
+                                <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 text-xs flex justify-between">
+                                    <div>
+                                        <span class="text-slate-400 text-[10px] block">Entry Fee</span>
+                                        <span class="font-extrabold text-slate-900 dark:text-white"><?= format_inr($t["entry_fee"]); ?></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-400 text-[10px] block">Slots Joined</span>
+                                        <span class="font-bold text-slate-800 dark:text-slate-200"><?= $enrolled; ?> / <?= $slots; ?></span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-slate-400 text-[10px] block">Credentials</span>
+                                        <span class="font-mono text-[11px] <?= !empty($t["room_id"]) ? "text-emerald-600 font-bold" : "text-slate-400" ?>">
+                                            <?= !empty($t["room_id"]) ? "ID: " . htmlspecialchars($t["room_id"]) : "Not Added"; ?>
+                                        </span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span class="text-slate-400 text-[10px] block">Top Winner</span>
-                                    <span class="font-bold text-amber-500"><?= !empty($ct["winner_name"]) ? "@" . htmlspecialchars($ct["winner_name"]) : "Results Paid"; ?></span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-slate-400 text-[10px] block">Status</span>
-                                    <span class="text-emerald-500 font-bold">Prizes Distributed</span>
-                                </div>
-                            </div>
 
-                            <div class="flex items-center gap-2 pt-1 text-xs">
-                                <a href="admin/manage_tournament.php?id=<?= $ct["id"]; ?>" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-center transition">
-                                    <i class="fa-solid fa-eye mr-1"></i> View Result Rankings
-                                </a>
-                                <form method="POST" action="worker.php" onsubmit="return confirm('Delete this completed tournament archive?');" class="shrink-0">
-                                    <input type="hidden" name="action" value="delete_tournament">
-                                    <input type="hidden" name="tournament_id" value="<?= $ct["id"]; ?>">
-                                    <button type="submit" class="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 rounded-xl" title="Instant Delete Archive">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                </form>
+                                <!-- Action Buttons -->
+                                <div class="flex items-center gap-2 pt-1 text-xs">
+                                    <a href="admin/manage_tournament.php?id=<?= $t["id"]; ?>" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-center font-black rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-gear text-[10px]"></i> Manage & Results
+                                    </a>
+                                    <form method="POST" action="worker.php" onsubmit="return confirm('Revoke Match #<?= $t["id"]; ?> and refund entry fees to all joined players?');" class="shrink-0">
+                                        <input type="hidden" name="action" value="revoke_tournament">
+                                        <input type="hidden" name="tournament_id" value="<?= $t["id"]; ?>">
+                                        <button type="submit" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition" title="Revoke Match with Refunds">
+                                            <i class="fa-solid fa-ban mr-1"></i> Revoke
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="worker.php" onsubmit="return confirm('Instant Delete Match #<?= $t["id"]; ?>? This permanently removes the match.');" class="shrink-0">
+                                        <input type="hidden" name="action" value="delete_tournament">
+                                        <input type="hidden" name="tournament_id" value="<?= $t["id"]; ?>">
+                                        <button type="submit" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs border border-rose-200 transition" title="Delete Match">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-gamepad text-2xl text-slate-300 dark:text-slate-600 mb-2 block"></i>
+                            No active or live tournaments right now. Create one above!
                         </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-6 text-center text-slate-400 text-xs">
-                        No matches completed in the last 24 hours.
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+
+                <!-- CONTAINER 2: COMPLETED TOURNAMENTS (24-HR HISTORY) -->
+                <div id="workerTourneysCompleted" class="worker-tourney-pane hidden space-y-3">
+                    <?php if (!empty($completed_tourneys)): ?>
+                        <?php foreach ($completed_tourneys as $ct): ?>
+                            <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-2.5">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-1.5 mb-1">
+                                            <span class="text-[9px] font-black px-2 py-0.5 rounded uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                                COMPLETED
+                                            </span>
+                                            <span class="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                <?= htmlspecialchars($ct["match_type"]); ?>
+                                            </span>
+                                        </div>
+                                        <h4 class="text-xs font-black text-slate-900 dark:text-white leading-tight">
+                                            <?= htmlspecialchars($ct["title"]); ?>
+                                        </h4>
+                                        <p class="text-[10px] text-slate-400 font-mono mt-0.5">
+                                            <?= date("d M Y, h:i A", strtotime($ct["match_time"])); ?>
+                                        </p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-[10px] text-slate-400 block font-bold">Prize Disbursed</span>
+                                        <span class="text-xs font-black text-emerald-500 font-mono"><?= format_compact_inr($ct["prize_pool"]); ?></span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 text-xs flex justify-between items-center">
+                                    <div>
+                                        <span class="text-slate-400 text-[10px] block">Total Players</span>
+                                        <span class="font-bold text-slate-800 dark:text-slate-200"><?= $ct["enrolled_count"]; ?> Gamers</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-400 text-[10px] block">Top Winner</span>
+                                        <span class="font-bold text-yellow-500"><?= !empty($ct["winner_name"]) ? "@" . htmlspecialchars($ct["winner_name"]) : "Results Paid"; ?></span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-slate-400 text-[10px] block">Status</span>
+                                        <span class="text-emerald-500 font-bold">Prizes Distributed</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 pt-1 text-xs">
+                                    <a href="admin/manage_tournament.php?id=<?= $ct["id"]; ?>" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-center transition">
+                                        <i class="fa-solid fa-eye mr-1"></i> View Result Rankings
+                                    </a>
+                                    <form method="POST" action="worker.php" onsubmit="return confirm('Delete this completed tournament archive?');" class="shrink-0">
+                                        <input type="hidden" name="action" value="delete_tournament">
+                                        <input type="hidden" name="tournament_id" value="<?= $ct["id"]; ?>">
+                                        <button type="submit" class="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 rounded-xl" title="Instant Delete Archive">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-6 text-center text-slate-400 text-xs">
+                            No matches completed in the last 24 hours.
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </section>
     </main>
 
-    <!-- 0ms 2-Tab Switcher Script -->
+    <!-- 0ms 2-Tab Switcher Script & Sub-tab Switcher -->
     <script>
     function switchWorkerMainTab(tab) {
         var pushView = document.getElementById("worker-tab-view-push");
@@ -758,7 +725,7 @@ if ($nt_q) {
         var btnPush = document.getElementById("wmain-tab-push");
         var btnTourneys = document.getElementById("wmain-tab-tournaments");
 
-        var actCls = ["bg-amber-400", "text-slate-950", "shadow-sm", "font-black"];
+        var actCls = ["bg-yellow-400", "text-slate-950", "shadow-sm", "font-black"];
         var inactCls = ["bg-slate-100", "dark:bg-slate-800/60", "text-slate-600", "dark:text-slate-400", "font-bold"];
 
         if (tab === "push") {
@@ -767,7 +734,6 @@ if ($nt_q) {
             
             inactCls.forEach(function(c) { btnPush.classList.remove(c); });
             actCls.forEach(function(c) { btnPush.classList.add(c); });
-
             actCls.forEach(function(c) { btnTourneys.classList.remove(c); });
             inactCls.forEach(function(c) { btnTourneys.classList.add(c); });
         } else {
@@ -776,17 +742,34 @@ if ($nt_q) {
 
             actCls.forEach(function(c) { btnPush.classList.remove(c); });
             inactCls.forEach(function(c) { btnPush.classList.add(c); });
-
             inactCls.forEach(function(c) { btnTourneys.classList.remove(c); });
             actCls.forEach(function(c) { btnTourneys.classList.add(c); });
         }
         try { localStorage.setItem("beastz_worker_tab", tab); } catch(e) {}
+        if (window.initCustomSelects) window.initCustomSelects();
+    }
+
+    function switchWorkerSubTab(sub, btn) {
+        document.querySelectorAll(".worker-tourney-pane").forEach(function(el) { el.classList.add("hidden"); });
+        document.querySelectorAll(".worker-subtab-btn").forEach(function(b) {
+            b.classList.remove("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+            b.classList.add("text-slate-600", "dark:text-slate-400", "font-bold");
+        });
+        if (sub === "active") {
+            document.getElementById("workerTourneysActive").classList.remove("hidden");
+        } else {
+            document.getElementById("workerTourneysCompleted").classList.remove("hidden");
+        }
+        btn.classList.remove("text-slate-600", "dark:text-slate-400", "font-bold");
+        btn.classList.add("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+        if (window.initCustomSelects) window.initCustomSelects();
     }
 
     (function() {
         var savedTab = "push";
         try { savedTab = localStorage.getItem("beastz_worker_tab") || "push"; } catch(e) {}
         switchWorkerMainTab(savedTab);
+        if (window.initCustomSelects) window.initCustomSelects();
     })();
     </script>
 </body>

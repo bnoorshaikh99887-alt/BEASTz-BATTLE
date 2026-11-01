@@ -27,8 +27,15 @@ if ($action === 'update_avatar' || isset($_FILES['avatar_file'])) {
         @mkdir($upload_dir, 0777, true);
     }
 
-    // A. Check for direct file upload via $_FILES
-    if (isset($_FILES['avatar_file']) && $_FILES['avatar_file']['error'] === UPLOAD_ERR_OK) {
+    $avatar_input = trim($_POST['avatar'] ?? $json_data['avatar'] ?? '');
+    $is_preset_svg = (!empty($avatar_input) && (str_starts_with($avatar_input, 'data:image/svg+xml') || str_starts_with($avatar_input, '<svg')));
+
+    // A. If user picked preset gaming character vector, use immediately
+    if ($is_preset_svg) {
+        $final_avatar = $avatar_input;
+    }
+    // B. Check for direct file upload via $_FILES
+    else if (isset($_FILES['avatar_file']) && $_FILES['avatar_file']['error'] === UPLOAD_ERR_OK) {
         $tmp_name = $_FILES['avatar_file']['tmp_name'];
         $orig_name = $_FILES['avatar_file']['name'];
         $ext = strtolower(pathinfo($orig_name, PATHINFO_EXTENSION)) ?: 'jpg';

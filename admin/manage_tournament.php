@@ -328,7 +328,8 @@ $participants = $conn->query("
 
 <!-- Breadcrumb & Back -->
 <div class="mb-4 flex items-center justify-between">
-    <a href="tournament.php" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition">
+    <?php $back_url = (!empty($_SESSION['active_panel']) && $_SESSION['active_panel'] === 'worker' && empty($_SESSION['is_super_admin'])) ? '../worker.php' : 'tournament.php'; ?>
+    <a href="<?= $back_url; ?>" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition">
         <i class="fa-solid fa-arrow-left text-[10px]"></i>
         <span>Back to Tournaments</span>
     </a>

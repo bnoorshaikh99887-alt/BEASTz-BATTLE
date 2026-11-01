@@ -161,6 +161,17 @@
             <input type="hidden" name="action" value="request_withdrawal">
             
             <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Payout Method <span class="text-slate-400 font-normal">(Instant Settlement)</span>
+                </label>
+                <select name="payout_method" class="w-full">
+                    <option value="UPI" selected>UPI (GPay / PhonePe / Paytm / BHIM)</option>
+                    <option value="IMPS">Instant Bank IMPS</option>
+                    <option value="PAYTM_WALLET">Paytm Wallet Transfer</option>
+                </select>
+            </div>
+
+            <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">
                     Withdrawal Amount (₹) <span class="text-slate-400 font-normal">(Min ₹50)</span>
                 </label>

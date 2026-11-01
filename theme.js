@@ -539,14 +539,138 @@ var LiveSyncEngine = (function() {
 })();
 
 // Start Engines on Page Load
+
+// ============================================================
+// CUSTOM DARK-THEMED SELECT DROPDOWN COMPONENT (NO WHITE NATIVE POPUP)
+// ============================================================
+function initCustomSelects() {
+    var selects = document.querySelectorAll("select:not([data-no-custom])");
+    selects.forEach(function(sel) {
+        if (sel.dataset.customEnhanced === "true") {
+            if (typeof sel._refreshCustomSelect === "function") {
+                sel._refreshCustomSelect();
+            }
+            return;
+        }
+
+        sel.dataset.customEnhanced = "true";
+        // CRITICAL: Hide native select so Android/Chrome NEVER shows the OS white alert dialog!
+        sel.style.display = "none";
+        sel.setAttribute("aria-hidden", "true");
+        sel.tabIndex = -1;
+
+        var wrapper = document.createElement("div");
+        wrapper.className = "custom-select-wrapper";
+
+        var trigger = document.createElement("button");
+        trigger.type = "button";
+        trigger.className = "custom-select-trigger";
+
+        var label = document.createElement("span");
+        label.className = "custom-select-label truncate";
+
+        var chevron = document.createElement("span");
+        chevron.className = "custom-select-chevron text-[10px]";
+        chevron.innerHTML = "<i class='fa-solid fa-chevron-down'></i>";
+
+        trigger.appendChild(label);
+        trigger.appendChild(chevron);
+
+        var menu = document.createElement("div");
+        menu.className = "custom-select-menu hidden";
+
+        wrapper.appendChild(trigger);
+        wrapper.appendChild(menu);
+        sel.parentNode.insertBefore(wrapper, sel.nextSibling);
+
+        function updateMenu() {
+            menu.innerHTML = "";
+            var options = sel.querySelectorAll("option");
+            var selectedOption = sel.options[sel.selectedIndex] || options[0];
+            label.textContent = selectedOption ? selectedOption.textContent.trim() : "Select option";
+
+            options.forEach(function(opt) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "custom-select-option" + (opt.selected ? " is-selected" : "");
+                
+                var spanText = document.createElement("span");
+                spanText.textContent = opt.textContent.trim();
+                btn.appendChild(spanText);
+
+                if (opt.selected) {
+                    var chk = document.createElement("span");
+                    chk.className = "text-[10px] font-black shrink-0";
+                    chk.innerHTML = "<i class='fa-solid fa-check'></i>";
+                    btn.appendChild(chk);
+                }
+
+                btn.addEventListener("click", function(ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    sel.value = opt.value;
+                    sel.dispatchEvent(new Event("change", { bubbles: true }));
+                    sel.dispatchEvent(new Event("input", { bubbles: true }));
+                    wrapper.classList.remove("is-open");
+                    menu.classList.add("hidden");
+                    updateMenu();
+                });
+
+                menu.appendChild(btn);
+            });
+        }
+
+        sel._refreshCustomSelect = updateMenu;
+        updateMenu();
+
+        trigger.addEventListener("click", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var isOpen = wrapper.classList.contains("is-open");
+            document.querySelectorAll(".custom-select-wrapper.is-open").forEach(function(w) {
+                if (w !== wrapper) {
+                    w.classList.remove("is-open");
+                    var m = w.querySelector(".custom-select-menu");
+                    if (m) m.classList.add("hidden");
+                }
+            });
+
+            if (isOpen) {
+                wrapper.classList.remove("is-open");
+                menu.classList.add("hidden");
+            } else {
+                updateMenu();
+                wrapper.classList.add("is-open");
+                menu.classList.remove("hidden");
+            }
+        });
+
+        sel.addEventListener("change", function() {
+            updateMenu();
+        });
+    });
+}
+
+document.addEventListener("click", function(e) {
+    if (!e.target.closest(".custom-select-wrapper")) {
+        document.querySelectorAll(".custom-select-wrapper.is-open").forEach(function(w) {
+            w.classList.remove("is-open");
+            var m = w.querySelector(".custom-select-menu");
+            if (m) m.classList.add("hidden");
+        });
+    }
+});
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         initPageTabs();
         LiveSyncEngine.start();
+        initCustomSelects();
     });
 } else {
     initPageTabs();
     LiveSyncEngine.start();
+    initCustomSelects();
 }
 
 // Global Exports
@@ -558,3 +682,4 @@ window.switchAdminTab = switchAdminTab;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.LiveSyncEngine = LiveSyncEngine;
+window.initCustomSelects = initCustomSelects;
