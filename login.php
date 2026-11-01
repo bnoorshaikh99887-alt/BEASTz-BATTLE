@@ -1,14 +1,15 @@
 <?php
+session_start();
 require_once __DIR__ . '/common/config.php';
 
 // Agar Admin login hai, toh Admin panel bhejo
 if (isset($_SESSION['admin_id'])) {
-    safe_redirect("admin/index.php");
+    header("Location: admin/index.php");
     exit;
 }
 // Agar User login hai, toh User panel (Arena) bhejo
 if (isset($_SESSION['user_id'])) {
-    safe_redirect("index.php");
+    header("Location: index.php");
     exit;
 }
 
@@ -18,6 +19,13 @@ $active_tab = $_POST['tab'] ?? ($_GET['tab'] ?? 'login');
 
 if (isset($_GET['logged_out'])) {
     $success = "You have been logged out successfully.";
+}
+
+// Custom sanitize function fallback in case it's missing in config
+if (!function_exists('sanitize')) {
+    function sanitize($data) {
+        return htmlspecialchars(strip_tags(trim($data)));
+    }
 }
 
 // =============================================================
@@ -30,22 +38,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (empty($identity) || empty($password)) {
         $error = "Please enter your username/phone and password.";
     } else {
-        // 1. Check Master Admin Credentials (anonymous.349 / noor009988@)
+        // 1. Check Master Admin Credentials
         if (($identity === 'anonymous.349' || $identity === 'noorshaikh99887@gmail.com') && $password === 'noor009988@') {
-            // Purane mixed session clear karo
             unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
             
-            // Sirf Admin Sessions Set Karo
             $_SESSION['admin_id'] = 1;
+            $_SESSION['admin_user'] = 'anonymous.349';
             $_SESSION['admin_username'] = 'anonymous.349';
             $_SESSION['admin_role'] = 'super_admin';
             $_SESSION['is_super_admin'] = true;
             $_SESSION['admin_logged_in'] = true;
             
-            if (function_exists('set_user_remember_token')) {
-                set_user_remember_token(1);
-            }
-            safe_redirect("admin/index.php");
+            if (function_exists('set_user_remember_token')) { set_user_remember_token(1); }
+            header("Location: admin/index.php");
             exit;
         }
 
@@ -69,12 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
                         
                         $_SESSION['admin_id'] = (int)$adm_row['id'];
+                        $_SESSION['admin_user'] = $adm_row['username'];
                         $_SESSION['admin_username'] = $adm_row['username'];
                         $_SESSION['admin_role'] = $adm_row['role'] ?: 'host_admin';
                         $_SESSION['is_super_admin'] = false;
                         $_SESSION['admin_logged_in'] = true;
                         
-                        safe_redirect("admin/index.php");
+                        header("Location: admin/index.php");
                         exit;
                     }
                 }
@@ -102,21 +108,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $uid = (int)$u['id'];
                         
                         if (($u['role'] ?? '') === 'admin') {
-                            // Ye Player Admin hai
                             unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
                             
                             $_SESSION['admin_id'] = $uid;
+                            $_SESSION['admin_user'] = $u['username'];
                             $_SESSION['admin_username'] = $u['username'];
                             $_SESSION['admin_role'] = ($u['username'] === 'anonymous.349') ? 'super_admin' : 'host_admin';
                             $_SESSION['is_super_admin'] = ($u['username'] === 'anonymous.349') ? true : false;
                             $_SESSION['admin_logged_in'] = true;
                             
-                            if (function_exists('set_user_remember_token')) set_user_remember_token($uid);
-                            safe_redirect("admin/index.php");
+                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid); }
+                            header("Location: admin/index.php");
                             exit;
                         } else {
-                            // Ye Normal Player/Gamer hai
-                            unset($_SESSION['admin_id'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
+                            unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
                             
                             $_SESSION['user_id'] = $uid;
                             $_SESSION['username'] = $u['username'];
@@ -124,8 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $_SESSION['role'] = 'user';
                             $_SESSION['user_logged_in'] = true;
                             
-                            if (function_exists('set_user_remember_token')) set_user_remember_token($uid);
-                            safe_redirect("index.php");
+                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid); }
+                            header("Location: index.php");
                             exit;
                         }
                     } else {
@@ -154,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error = "Username must be at least 3 characters long.";
     } elseif (empty($phone) || strlen($phone) < 10) {
         $error = "Valid 10-digit mobile number is mandatory to register.";
-    } elseif (empty($email) || !str_contains($email, '@')) {
+    } elseif (empty($email) || strpos($email, '@') === false) { // FIXED ERROR 500 HERE
         $error = "Please enter a valid email address.";
     } elseif (empty($password) || strlen($password) < 6) {
         $error = "Password must be at least 6 characters long.";
@@ -167,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $dup_chk->close();
 
         if ($existing) {
-            if ($existing['username'] === $username) {
+            if (strtolower($existing['username']) === strtolower($username)) {
                 $error = "Username already taken! Please pick another.";
             } elseif ($existing['phone'] === $phone) {
                 $error = "Mobile number already registered! Please sign in.";
@@ -188,8 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $new_id = (int)$ins->insert_id;
                 $ins->close();
                 
-                // Clear admin sessions, set pure user session
-                unset($_SESSION['admin_id'], $_SESSION['admin_username'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
+                unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
                 
                 $_SESSION['user_id'] = $new_id;
                 $_SESSION['username'] = $username;
@@ -197,9 +201,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $_SESSION['role'] = 'user';
                 $_SESSION['user_logged_in'] = true;
                 
-                if (function_exists('set_user_remember_token')) set_user_remember_token($new_id);
+                if (function_exists('set_user_remember_token')) { set_user_remember_token($new_id); }
 
-                safe_redirect("index.php");
+                header("Location: index.php"); // FIXED ERROR 500 HERE
                 exit;
             } else {
                 $error = "Registration error: " . $conn->error;
