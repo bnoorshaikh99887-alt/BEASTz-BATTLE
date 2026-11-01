@@ -1,7 +1,6 @@
 // ============================================================
 // BEASTz BATTLE - Real-Time Dark / Light Mode & SPA Tab Switcher Engine
 // ============================================================
-
 (function() {
     try {
         var savedTheme = localStorage.getItem('beastz_theme');
@@ -74,10 +73,10 @@ function setTheme(themeName) {
 function switchAppTab(tabName, skipState) {
     var views = document.querySelectorAll('.spa-tab-view');
     if (views.length === 0) {
-        // Fallback if not inside unified SPA container
         var fallbackUrls = {
             'home': 'index.php',
             'matches': 'my_tournaments.php',
+            'store': 'store.php',
             'wallet': 'wallet.php',
             'leaderboard': 'leaderboard.php',
             'profile': 'profile.php'
@@ -100,7 +99,7 @@ function switchAppTab(tabName, skipState) {
         window.scrollTo({ top: 0, behavior: 'instant' });
     }
 
-    // 3. Highlight active bottom tab with transparent dark fog / shadow glow
+    // 3. Highlight active bottom tab
     document.querySelectorAll('.nav-app-tab').forEach(function(btn) {
         btn.classList.remove('active-tab', 'text-yellow-500');
         btn.classList.add('text-slate-400');
@@ -117,6 +116,7 @@ function switchAppTab(tabName, skipState) {
         var urlMap = {
             'home': 'index.php',
             'matches': 'my_tournaments.php',
+            'store': 'store.php',
             'wallet': 'wallet.php',
             'leaderboard': 'leaderboard.php',
             'profile': 'profile.php'
@@ -133,13 +133,18 @@ window.addEventListener('popstate', function(e) {
     }
 });
 
-// ============================================================
-// ADMIN PANEL TAB SWITCHER & MODALS (Missing in your code)
-// ============================================================
-
+// Admin Tab Switcher & Modal Handlers
 function switchAdminTab(tabId) {
-    $('.admin-spa-view').addClass('hidden');
-    $('#admin-tab-' + tabId).removeClass('hidden');
+    if (typeof $ !== 'undefined') {
+        $('.admin-spa-view').addClass('hidden');
+        $('#admin-tab-' + tabId).removeClass('hidden');
+    } else {
+        document.querySelectorAll('.admin-spa-view').forEach(function(el) {
+            el.classList.add('hidden');
+        });
+        var target = document.getElementById('admin-tab-' + tabId);
+        if (target) target.classList.remove('hidden');
+    }
 }
 
 function openModal(modalId) {
@@ -158,76 +163,6 @@ function closeModal(modalId) {
     }
 }
 
-// ============================================================
-// AUTO-BINDERS & FIXES (Runs on page load)
-// ============================================================
-if (typeof $ !== 'undefined') {
-    $(document).ready(function() {
-
-        // 1. Tournament Publish Freeze Fix
-        $('#publishTournamentForm').on('submit', function(e) {
-            e.preventDefault(); 
-            let submitBtn = $(this).find('button[type="submit"]');
-            let originalText = submitBtn.text();
-            submitBtn.prop('disabled', true).text('Publishing...');
-
-            $.ajax({
-                url: $(this).attr('action') ? $(this).attr('action') : 'manage_tournament.php',
-                type: 'POST',
-                data: $(this).serialize(),
-                success: function(response) {
-                    alert('Tournament Published Successfully!');
-                    window.location.reload(); 
-                },
-                error: function() {
-                    submitBtn.prop('disabled', false).text(originalText);
-                    alert('Connection glitch! Please try again.');
-                }
-            });
-        });
-
-        // 2. Profile Photo Upload Trigger
-        $('a:contains("Change Photo"), button:contains("Change Photo")').on('click', function(e) {
-            e.preventDefault();
-            $('input[type="file"]').first().click();
-        });
-
-        $('input[type="file"]').on('change', function() {
-            if ($(this).val()) {
-                $(this).closest('form').submit();
-            }
-        });
-
-        // 3. Add Money & Withdraw Modal Triggers (Wallet Page)
-        $('button:contains("Add Money")').on('click', function(e) {
-            e.preventDefault();
-            openModal('depositModal');
-        });
-
-        $('button:contains("Withdraw")').on('click', function(e) {
-            e.preventDefault();
-            openModal('withdrawModal');
-        });
-
-        // 4. Logout Button Fallback
-        $('a:contains("Sign Out"), a:contains("Logout")').on('click', function(e) {
-            if(!$(this).attr('href') || $(this).attr('href') === '#') {
-                e.preventDefault();
-                window.location.href = 'logout.php';
-            }
-        });
-
-        // Auto-hide alerts
-        setTimeout(function() {
-            $('.alert, .bg-emerald-50, .bg-rose-50').fadeOut('slow');
-        }, 3000);
-
-    });
-}
-
-// ============================================================
-// INITIALIZATION
-// ============================================================
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', updateThemeUI);
 } else {
@@ -238,3 +173,6 @@ window.toggleTheme = toggleTheme;
 window.setTheme = setTheme;
 window.updateThemeUI = updateThemeUI;
 window.switchAppTab = switchAppTab;
+window.switchAdminTab = switchAdminTab;
+window.openModal = openModal;
+window.closeModal = closeModal;
