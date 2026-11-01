@@ -29,10 +29,10 @@
         function syncPlayerIdToServer(playerId) {
             if (!playerId || playerId === "null" || playerId === "undefined") return;
             try {
-                fetch(save_player_id.php, {
-                    method: POST,
-                    headers: { Content-Type: application/x-www-form-urlencoded },
-                    body: player_id= + encodeURIComponent(playerId)
+                fetch("save_player_id.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: "player_id=" + encodeURIComponent(playerId)
                 }).then(function(res) { return res.json(); })
                   .then(function(data) {
                       console.log("OneSignal player_id synced:", data);
@@ -45,7 +45,7 @@
         }
 
         // 1. Native Android JavascriptInterface Bridge
-        if (window.BEASTzNative && typeof window.BEASTzNative.getPlayerId === function) {
+        if (window.BEASTzNative && typeof window.BEASTzNative.getPlayerId === "function") {
             var nativeId = window.BEASTzNative.getPlayerId();
             if (nativeId) {
                 window.BEASTzPlayerId = nativeId;
@@ -62,7 +62,7 @@
         // 3. OneSignal Web SDK Fallback
         window.OneSignal = window.OneSignal || [];
         OneSignal.push(function() {
-            if (typeof OneSignal.getUserId === function) {
+            if (typeof OneSignal.getUserId === "function") {
                 OneSignal.getUserId(function(userId) {
                     if (userId) {
                         syncPlayerIdToServer(userId);
@@ -70,4 +70,6 @@
                 });
             }
         });
-    </script></body></html>
+    </script>
+</body>
+</html>
