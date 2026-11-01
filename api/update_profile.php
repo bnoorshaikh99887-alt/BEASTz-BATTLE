@@ -1,7 +1,11 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../common/config.php';
+
 global $conn;
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'error' => 'Please login to update your profile.']);
@@ -9,10 +13,13 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $curr_uid = (int)$_SESSION['user_id'];
-$action = $_POST['action'] ?? 'update_account_settings';
+$raw_input = file_get_contents('php://input');
+$json_data = json_decode($raw_input, true) ?? [];
+
+$action = $_POST['action'] ?? $json_data['action'] ?? 'update_account_settings';
 
 if ($action === 'update_avatar') {
-    $avatar = trim($_POST['avatar'] ?? '');
+    $avatar = trim($_POST['avatar'] ?? $json_data['avatar'] ?? '');
     if (empty($avatar)) {
         echo json_encode(['success' => false, 'error' => 'Invalid avatar data provided.']);
         exit;
@@ -32,15 +39,15 @@ if ($action === 'update_avatar') {
         }
         $stmt->close();
     }
-    echo json_encode(['success' => false, 'error' => 'Database error updating avatar.']);
+    echo json_encode(['success' => false, 'error' => 'Database error updating avatar: ' . $conn->error]);
     exit;
 }
 
 // Standard profile settings update
-$game_name = sanitize($_POST['game_name'] ?? '');
-$game_id = sanitize($_POST['game_id'] ?? '');
-$phone = sanitize($_POST['phone'] ?? '');
-$upi_id = sanitize($_POST['upi_id'] ?? '');
+$game_name = sanitize($_POST['game_name'] ?? $json_data['game_name'] ?? '');
+$game_id = sanitize($_POST['game_id'] ?? $json_data['game_id'] ?? '');
+$phone = sanitize($_POST['phone'] ?? $json_data['phone'] ?? '');
+$upi_id = sanitize($_POST['upi_id'] ?? $json_data['upi_id'] ?? '');
 
 $upd = $conn->prepare("UPDATE users SET game_name = ?, game_id = ?, phone = IF(? != '', ?, phone), upi_id = IF(? != '', ?, upi_id) WHERE id = ?");
 if ($upd) {
@@ -61,3 +68,4 @@ if ($upd) {
 }
 
 echo json_encode(['success' => false, 'error' => 'Failed to save account settings.']);
+?>
