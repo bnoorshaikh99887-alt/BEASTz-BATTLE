@@ -2,7 +2,7 @@
 
         <!-- Admin Fixed Bottom Navigation -->
         <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 py-2 px-1.5 z-50 shadow-lg">
-            <div class="grid <?= $is_super ? 'grid-cols-6' : 'grid-cols-3' ?> text-center gap-1">
+            <div class="grid <?= $is_super ? 'grid-cols-6' : 'grid-cols-2' ?> text-center gap-1">
                 <button type="button" onclick="switchAdminTab('overview')" id="admin-bottom-overview" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl text-yellow-500 font-black cursor-pointer">
                     <i class="fa-solid fa-gauge text-base mb-0.5"></i>
                     <span class="text-[9px] font-bold">Overview</span>
@@ -32,11 +32,6 @@
                     <button type="button" onclick="switchAdminTab('admins')" id="admin-bottom-admins" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl text-slate-400 hover:text-slate-200 cursor-pointer">
                         <i class="fa-solid fa-user-shield text-base mb-0.5"></i>
                         <span class="text-[9px] font-bold">Admins</span>
-                    </button>
-                <?php else: ?>
-                    <button type="button" onclick="switchAdminTab('admins')" id="admin-bottom-admins" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl text-slate-400 hover:text-slate-200 cursor-pointer">
-                        <i class="fa-solid fa-coins text-base mb-0.5"></i>
-                        <span class="text-[9px] font-bold">₹3 Revenue</span>
                     </button>
                 <?php endif; ?>
             </div>
@@ -96,5 +91,19 @@
         }
     })();
     </script>
+
+    <!-- ONESIGNAL TARGETED PUSH LINKING -->
+    <?php 
+    // Player ID link for Push Notifications
+    $os_user_id = $_SESSION['user_id'] ?? ''; 
+    if (!empty($os_user_id)): 
+    ?>
+    <script>
+        window.OneSignal = window.OneSignal || [];
+        OneSignal.push(function() {
+            OneSignal.setExternalUserId("<?= $os_user_id ?>");
+        });
+    </script>
+    <?php endif; ?>
 </body>
 </html>
