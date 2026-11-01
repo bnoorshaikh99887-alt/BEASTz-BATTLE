@@ -23,21 +23,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($act === 'complete') {
             $conn->begin_transaction();
             try {
-                // Mark completed
+                // 1. Mark withdrawals table as completed
                 $conn->query("UPDATE withdrawals SET status = 'Completed' WHERE id = $w_id");
+                
+                // 2. FIX: Update User's Passbook (transactions table) so it no longer says 'Pending'
+                $safe_upi = $conn->real_escape_string($upi_id);
+                $conn->query("UPDATE transactions SET description = 'Withdrawal Processed: Sent to {$safe_upi}' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
+
                 $conn->commit();
                 
                 $msg = "Payout of " . format_inr($amount) . " to " . htmlspecialchars($upi_id) . " marked as Completed!";
                 $msg_type = "success";
 
                 // ========================================================
-                // TARGETED PUSH NOTIFICATION (ONLY TO THIS SPECIFIC USER)
+                // TARGETED PUSH NOTIFICATION (BACKGROUND FIX APPLIED)
                 // ========================================================
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
 
                 $onesignal_app_id = '561bd59e-8355-47c8-88cc-0766688a105a';
-                // Decoding base64 strictly to avoid quote errors
                 $onesignal_rest_key = base64_decode('b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=');
 
                 $onesignal_fields = [
@@ -50,7 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'target_url' => '/?tab=wallet',
                         'badge_type' => 'PAYOUT_SUCCESS'
                     ],
-                    'priority' => 10
+                    'priority' => 10,
+                    // FIX: Force wake-up and display for Background / Killed Android App
+                    'android_visibility' => 1,
+                    'content_available' => true,
+                    'android_sound' => 'notification'
                 ];
 
                 $ch = curl_init();
@@ -87,6 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $ref->bind_param("di", $amount, $user_id);
                     $ref->execute();
                     $ref->close();
+
+                    // FIX: Remove 'Pending' text from old transaction on Reject
+                    $conn->query("UPDATE transactions SET description = 'Withdrawal Request (Rejected)' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
 
                     // Record refund transaction
                     $desc = "Withdrawal Rejected Refund (Ref #" . $w_id . ")";
