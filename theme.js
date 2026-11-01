@@ -1,4 +1,6 @@
+// ============================================================
 // BEASTz BATTLE - Real-Time Dark / Light Mode & SPA Tab Switcher Engine
+// ============================================================
 
 (function() {
     try {
@@ -131,6 +133,101 @@ window.addEventListener('popstate', function(e) {
     }
 });
 
+// ============================================================
+// ADMIN PANEL TAB SWITCHER & MODALS (Missing in your code)
+// ============================================================
+
+function switchAdminTab(tabId) {
+    $('.admin-spa-view').addClass('hidden');
+    $('#admin-tab-' + tabId).removeClass('hidden');
+}
+
+function openModal(modalId) {
+    var modal = document.getElementById(modalId);
+    if(modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeModal(modalId) {
+    var modal = document.getElementById(modalId);
+    if(modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// ============================================================
+// AUTO-BINDERS & FIXES (Runs on page load)
+// ============================================================
+if (typeof $ !== 'undefined') {
+    $(document).ready(function() {
+
+        // 1. Tournament Publish Freeze Fix
+        $('#publishTournamentForm').on('submit', function(e) {
+            e.preventDefault(); 
+            let submitBtn = $(this).find('button[type="submit"]');
+            let originalText = submitBtn.text();
+            submitBtn.prop('disabled', true).text('Publishing...');
+
+            $.ajax({
+                url: $(this).attr('action') ? $(this).attr('action') : 'manage_tournament.php',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function(response) {
+                    alert('Tournament Published Successfully!');
+                    window.location.reload(); 
+                },
+                error: function() {
+                    submitBtn.prop('disabled', false).text(originalText);
+                    alert('Connection glitch! Please try again.');
+                }
+            });
+        });
+
+        // 2. Profile Photo Upload Trigger
+        $('a:contains("Change Photo"), button:contains("Change Photo")').on('click', function(e) {
+            e.preventDefault();
+            $('input[type="file"]').first().click();
+        });
+
+        $('input[type="file"]').on('change', function() {
+            if ($(this).val()) {
+                $(this).closest('form').submit();
+            }
+        });
+
+        // 3. Add Money & Withdraw Modal Triggers (Wallet Page)
+        $('button:contains("Add Money")').on('click', function(e) {
+            e.preventDefault();
+            openModal('depositModal');
+        });
+
+        $('button:contains("Withdraw")').on('click', function(e) {
+            e.preventDefault();
+            openModal('withdrawModal');
+        });
+
+        // 4. Logout Button Fallback
+        $('a:contains("Sign Out"), a:contains("Logout")').on('click', function(e) {
+            if(!$(this).attr('href') || $(this).attr('href') === '#') {
+                e.preventDefault();
+                window.location.href = 'logout.php';
+            }
+        });
+
+        // Auto-hide alerts
+        setTimeout(function() {
+            $('.alert, .bg-emerald-50, .bg-rose-50').fadeOut('slow');
+        }, 3000);
+
+    });
+}
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', updateThemeUI);
 } else {
@@ -141,8 +238,3 @@ window.toggleTheme = toggleTheme;
 window.setTheme = setTheme;
 window.updateThemeUI = updateThemeUI;
 window.switchAppTab = switchAppTab;
-
-
-// ============================================================
-// PUSH NOTIFICATIONS HANDLED DIRECTLY & NATIVELY BY ONESIGNAL
-// (Zero in-app duplication, zero old spam on fresh devices)
