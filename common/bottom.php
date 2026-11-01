@@ -50,5 +50,23 @@
             }
         })();
     </script>
+
+    <!-- ONESIGNAL EXTERNAL ID LINKER (CRITICAL FOR PUSH ALERTS) -->
+    <?php if(isset($_SESSION['user_id'])): ?>
+    <script>
+        window.OneSignal = window.OneSignal || [];
+        OneSignal.push(function() {
+            let osUserId = "<?= $_SESSION['user_id'] ?>";
+            // New OneSignal API (v15+)
+            if (typeof OneSignal.login === "function") {
+                OneSignal.login(osUserId);
+            } 
+            // Fallback for older API versions
+            else if (typeof OneSignal.setExternalUserId === "function") {
+                OneSignal.setExternalUserId(osUserId);
+            }
+        });
+    </script>
+    <?php endif; ?>
 </body>
 </html>
