@@ -409,32 +409,32 @@
     }
 
     function showFastToast(msg, type) {
-        var el = document.getElementById("fastToastAlert");
+        var el = document.getElementById('fastToastAlert');
         if (!el) {
-            el = document.createElement("div");
-            el.id = "fastToastAlert";
-            el.className = "fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 transform -translate-y-5 opacity-0 flex items-center gap-2";
+            el = document.createElement('div');
+            el.id = 'fastToastAlert';
+            el.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 transform -translate-y-5 opacity-0 flex items-center gap-2';
             document.body.appendChild(el);
         }
-        el.className = "fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 " + 
-            (type === "success" ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-rose-500 text-white shadow-rose-500/20");
-        el.innerHTML = (type === "success" ? "<i class="fa-solid fa-circle-check"></i> " : "<i class="fa-solid fa-circle-exclamation"></i> ") + msg;
-        setTimeout(function() { el.style.opacity = "1"; el.style.transform = "translate(-50%, 0)"; }, 20);
-        setTimeout(function() { el.style.opacity = "0"; el.style.transform = "translate(-50%, -10px)"; }, 2800);
+        el.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 ' + 
+            (type === 'success' ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-rose-500/20');
+        el.innerHTML = (type === 'success' ? '<i class="fa-solid fa-circle-check"></i> ' : '<i class="fa-solid fa-circle-exclamation"></i> ') + msg;
+        setTimeout(function() { el.style.opacity = '1'; el.style.transform = 'translate(-50%, 0)'; }, 20);
+        setTimeout(function() { el.style.opacity = '0'; el.style.transform = 'translate(-50%, -10px)'; }, 2800);
     }
 
     function submitFastAccount(e) {
         e.preventDefault();
         var form = e.target;
-        var btn = form.querySelector("button[type="submit"]");
+        var btn = form.querySelector('button[type="submit"]');
         var fd = new FormData(form);
 
         btn.disabled = true;
         var origText = btn.innerHTML;
-        btn.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>";
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> <span>Saving...</span>';
 
-        fetch("/api/update_profile.php", { credentials: "include",
-            method: "POST",
+        fetch('api/update_profile.php', {
+            method: 'POST',
             body: fd
         })
         .then(function(r) { return r.json(); })
@@ -443,37 +443,42 @@
             btn.innerHTML = origText;
             if (data.success) {
                 closeAccountModal();
-                if (document.getElementById("viewGameName")) document.getElementById("viewGameName").innerText = data.game_name || "Not configured";
-                if (document.getElementById("viewGameUid")) document.getElementById("viewGameUid").innerText = data.game_id || "Not configured";
-                if (document.getElementById("viewPhone")) document.getElementById("viewPhone").innerText = data.phone ? ("+91 " + data.phone) : "None";
-                if (document.getElementById("viewUpi")) document.getElementById("viewUpi").innerText = data.upi_id || "Not set";
-                showFastToast(data.message, "success");
+                if (document.getElementById('viewGameName')) document.getElementById('viewGameName').innerText = data.game_name || 'Not configured';
+                if (document.getElementById('viewGameUid')) document.getElementById('viewGameUid').innerText = data.game_id || 'Not configured';
+                if (document.getElementById('viewPhone')) document.getElementById('viewPhone').innerText = data.phone ? ('+91 ' + data.phone) : 'None';
+                if (document.getElementById('viewUpi')) document.getElementById('viewUpi').innerText = data.upi_id || 'Not set';
+                showFastToast(data.message || 'Account details saved!', 'success');
             } else {
-                showFastToast(data.error || "Failed to save settings", "error");
+                showFastToast(data.error || 'Failed to save settings', 'error');
             }
         })
-        .catch(function() {
+        .catch(function(err) {
             btn.disabled = false;
             btn.innerHTML = origText;
-            showFastToast("Network error saving settings", "error");
+            showFastToast('Network error saving settings', 'error');
         });
     }
 
     function submitFastAvatar(e) {
         e.preventDefault();
-        var btn = document.getElementById("saveAvatarBtn");
-        var avatar = document.getElementById("selectedAvatarInput").value;
+        var btn = document.getElementById('saveAvatarBtn');
+        var avatar = document.getElementById('selectedAvatarInput').value;
+
+        if (!avatar) {
+            showFastToast('Please choose or upload a photo first', 'error');
+            return;
+        }
 
         btn.disabled = true;
         var origText = btn.innerHTML;
-        btn.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving Photo...</span>";
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> <span>Saving Photo...</span>';
 
         var fd = new FormData();
-        fd.append("action", "update_avatar");
-        fd.append("avatar", avatar);
+        fd.append('action', 'update_avatar');
+        fd.append('avatar', avatar);
 
-        fetch("/api/update_profile.php", {
-            method: "POST",
+        fetch('api/update_profile.php', {
+            method: 'POST',
             body: fd
         })
         .then(function(r) { return r.json(); })
@@ -482,18 +487,19 @@
             btn.innerHTML = origText;
             if (data.success) {
                 closeAvatarModal();
-                var headerImg = document.getElementById("profileHeaderAvatar");
+                var headerImg = document.getElementById('profileHeaderAvatar');
                 if (headerImg) headerImg.src = data.avatar;
-                showFastToast(data.message, "success");
+                var previewImg = document.getElementById('avatarPreviewImg');
+                if (previewImg) previewImg.src = data.avatar;
+                showFastToast(data.message || 'Photo updated!', 'success');
             } else {
-                showFastToast(data.error || "Failed to update photo", "error");
+                showFastToast(data.error || 'Failed to update photo', 'error');
             }
         })
-        .catch(function() {
+        .catch(function(err) {
             btn.disabled = false;
             btn.innerHTML = origText;
-            showFastToast("Network error updating avatar", "error");
+            showFastToast('Network error updating photo', 'error');
         });
     }
-
 </script>
