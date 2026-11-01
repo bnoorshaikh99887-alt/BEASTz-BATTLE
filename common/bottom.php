@@ -11,9 +11,10 @@
                     <i class="fa-solid fa-trophy text-base mb-0.5"></i>
                     <span class="text-[10px] font-bold tracking-tight">My Matches</span>
                 </button>
-                <button type="button" onclick="switchAppTab('wallet')" id="nav-tab-wallet" class="nav-app-tab flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer text-slate-400 hover:text-slate-600">
-                    <i class="fa-solid fa-wallet text-base mb-0.5"></i>
-                    <span class="text-[10px] font-bold tracking-tight">Wallet</span>
+                <button type="button" onclick="switchAppTab('store')" id="nav-tab-store" class="nav-app-tab flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer text-slate-400 hover:text-yellow-500 relative">
+                    <i class="fa-solid fa-gift text-base mb-0.5"></i>
+                    <span class="text-[10px] font-bold tracking-tight">Beastz Store</span>
+                    <span class="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
                 </button>
                 <button type="button" onclick="switchAppTab('leaderboard')" id="nav-tab-leaderboard" class="nav-app-tab flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer text-slate-400 hover:text-slate-600">
                     <i class="fa-solid fa-chart-simple text-base mb-0.5"></i>
