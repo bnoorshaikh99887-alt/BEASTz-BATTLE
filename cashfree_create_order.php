@@ -14,8 +14,8 @@ if ($amount_inr < 10) {
 // Cashfree credentials (read from settings table, fallback to constants)
 $app_id = get_setting('cashfree_app_id', '');
 $secret_key = get_setting('cashfree_secret_key', '');
-if (empty($app_id)) $app_id = CASHFREE_APP_ID;
-if (empty($secret_key)) $secret_key = CASHFREE_SECRET_KEY;
+if (empty($app_id) && defined('CASHFREE_APP_ID')) $app_id = CASHFREE_APP_ID;
+if (empty($secret_key) && defined('CASHFREE_SECRET_KEY')) $secret_key = CASHFREE_SECRET_KEY;
 
 // Fetch user data
 $u_stmt = $conn->prepare("SELECT username, email, phone FROM users WHERE id = ?");
@@ -48,7 +48,6 @@ $post_fields = [
 ];
 
 $endpoint = "https://api.cashfree.com/pg/orders";
-
 $ch = curl_init($endpoint);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
@@ -62,7 +61,6 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
 curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-
 $response = curl_exec($ch);
 $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curl_err = curl_error($ch);
@@ -74,9 +72,8 @@ if ($curl_err) {
 }
 
 $res_data = json_decode($response, true);
-
 if ($http_status !== 200 || !isset($res_data['payment_session_id'])) {
-    $err_message = $res_data['message'] ?? 'Unable to create payment session. Please check your network connection and try again.';
+    $err_message = $res_data['message'] ?? 'Unable to create payment session. Please verify payment settings or use UPI QR deposit.';
     safe_redirect("wallet.php?error=" . urlencode("Gateway Notice ($http_status): " . $err_message));
     exit;
 }
@@ -91,37 +88,48 @@ $payment_session_id = $res_data['payment_session_id'];
     <title>Connecting to Gateway - BEASTzBATTLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Official Cashfree Web JS SDK v3 -->
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-6 text-center shadow-xl">
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-3xl p-6 text-center shadow-2xl">
         <div class="w-12 h-12 mx-auto rounded-full border-4 border-yellow-400 border-t-transparent animate-spin mb-4"></div>
-        <h3 class="text-base font-extrabold text-slate-900 mb-1">Connecting to Cashfree Gateway...</h3>
-        <p class="text-xs text-slate-500 mb-2">Amount: <span class="text-slate-900 font-mono font-black"><?= format_inr($amount_inr); ?></span></p>
-        <p class="text-[11px] text-slate-400 mb-5">Opening secure payment page (UPI, GPay, PhonePe, Paytm, Cards)...</p>
+        <h3 class="text-base font-extrabold text-white mb-1">Connecting to Gateway...</h3>
+        <p class="text-xs text-slate-400 mb-2">Amount: <span class="text-yellow-400 font-mono font-black"><?= format_inr($amount_inr); ?></span></p>
+        <p class="text-[11px] text-slate-400 mb-5">Opening secure checkout (GPay, PhonePe, Paytm, Cards, NetBanking)...</p>
         
-        <!-- Direct POST Form to Cashfree Checkout Endpoint -->
-        <form id="cashfreeCheckoutForm" method="POST" action="https://api.cashfree.com/pg/view/sessions/checkout">
-            <input type="hidden" name="payment_session_id" value="<?= htmlspecialchars($payment_session_id); ?>">
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-black rounded-xl text-xs font-extrabold transition shadow-xs flex items-center justify-center gap-2 active:scale-95">
-                <i class="fa-solid fa-lock text-xs"></i>
-                <span>Continue to Cashfree Payment</span>
-            </button>
-        </form>
+        <button id="manualPayBtn" type="button" onclick="launchCashfree()" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl text-xs font-black transition shadow-xs flex items-center justify-center gap-2 active:scale-95">
+            <i class="fa-solid fa-lock text-xs"></i>
+            <span>Pay <?= format_inr($amount_inr); ?> Now</span>
+        </button>
 
-        <a href="wallet.php" class="inline-block text-xs font-bold text-slate-400 hover:text-slate-600 mt-4 transition">
+        <a href="wallet.php" class="inline-block text-xs font-bold text-slate-400 hover:text-slate-300 mt-4 transition">
             &larr; Cancel and return to Wallet
         </a>
     </div>
 
     <script>
-        // Auto-redirect by submitting the form immediately
-        document.addEventListener("DOMContentLoaded", function() {
-            const form = document.getElementById('cashfreeCheckoutForm');
-            if (form) {
-                setTimeout(function() {
-                    form.submit();
-                }, 150);
+        var cashfree;
+        try {
+            cashfree = Cashfree({ mode: "production" });
+        } catch(e) {
+            console.error("Cashfree SDK init error:", e);
+        }
+
+        function launchCashfree() {
+            if (cashfree) {
+                var checkoutOptions = {
+                    paymentSessionId: "<?= $payment_session_id; ?>",
+                    redirectTarget: "_self"
+                };
+                cashfree.checkout(checkoutOptions);
+            } else {
+                window.location.href = "https://payments.cashfree.com/order/#" + "<?= $payment_session_id; ?>";
             }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(launchCashfree, 300);
         });
     </script>
 </body>
