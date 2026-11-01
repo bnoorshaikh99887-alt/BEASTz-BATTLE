@@ -6,38 +6,38 @@ $msg = "";
 $msg_type = "";
 
 // Helper Function to Trigger OneSignal Push Notification via REST API
-function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $include_uids = []) {
-    $content = array("en" => $message);
-    $headings = array("en" => $title);
+function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $player_ids = []) {
+    $os_app_id = "561bd59e-8355-47c8-88cc-0766688a105a";
+    $os_key = base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
     
     $fields = array(
-        'app_id' => "561bd59e-8355-47c8-88cc-0766688a105a",
-        'contents' => $content,
-        'headings' => $headings,
-        'data' => array('url' => $targetUrl)
+        'app_id' => $os_app_id,
+        'contents' => array("en" => $message),
+        'headings' => array("en" => $title),
+        'data' => array('target_url' => $targetUrl),
+        'priority' => 10,
+        'android_visibility' => 1,
+        'content_available' => true,
+        'android_sound' => 'notification'
     );
     
-    // Agar specific users ki array bheji hai toh sirf unko bhejo, nahi toh sabko bhejo
-    if (!empty($include_uids)) {
-        $fields['include_external_user_ids'] = array_map('strval', $include_uids);
-        $fields['channel_for_external_user_ids'] = "push";
+    if (!empty($player_ids) && is_array($player_ids)) {
+        $fields['include_player_ids'] = array_values(array_unique(array_filter($player_ids)));
     } else {
-        $fields['included_segments'] = array('All');
+        $fields['included_segments'] = array('Total Subscriptions');
     }
-    
-    $fields = json_encode($fields);
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         'Content-Type: application/json; charset=utf-8',
-        'Authorization: Basic Os_v2_app_kyn5lhudkvd4rcgma5tgrcqqlk3p4m4t5ybe45fzfmbcgueakfolptqrqiewnrmp67mi4pxk5whye36b55sm47l7qmqtdbv2uffjsay'
+        'Authorization: Key ' . $os_key // Fixed v2 Key Auth
     ));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($ch, CURLOPT_HEADER, FALSE);
     curl_setopt($ch, CURLOPT_POST, TRUE);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
     $response = curl_exec($ch);
     curl_close($ch);
@@ -106,6 +106,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $msg_type = "error";
         }
         $u_stmt->close();
+    }
+}
+
+
+// -------------------------------------------------------------
+// 1.5 Handle Anti-Cheat Fund Revocation (Keep Kills & Logs 24h)
+// -------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'revoke_participant_fund') {
+    $participant_id = (int)$_POST['participant_id'];
+    $p_stmt = $conn->prepare("SELECT p.*, t.title FROM participants p JOIN tournaments t ON p.tournament_id = t.id WHERE p.id = ?");
+    $p_stmt->bind_param("i", $participant_id);
+    $p_stmt->execute();
+    $p_data = $p_stmt->get_result()->fetch_assoc();
+    $p_stmt->close();
+
+    if ($p_data && (float)$p_data['prize_won'] > 0) {
+        $revoke_amount = (float)$p_data['prize_won'];
+        $p_uid = (int)$p_data['user_id'];
+        $conn->begin_transaction();
+        try {
+            // Deduct prize money from gamer wallet back to platform
+            $conn->query("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - {$revoke_amount}), winning_balance = GREATEST(0, winning_balance - {$revoke_amount}) WHERE id = {$p_uid}");
+            // Mark participant as revoked without deleting kills or rankings
+            $conn->query("UPDATE participants SET prize_won = 0, is_revoked = 1, revoke_note = 'Anti-Cheat Violation: Fund Revoked by Admin' WHERE id = {$participant_id}");
+            // Record debit transaction
+            $t_title = $conn->real_escape_string($p_data['title']);
+            $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$p_uid}, {$revoke_amount}, 'debit', 'Anti-Cheat Fund Clawback: {$t_title}')");
+            $conn->commit();
+            $msg = "Anti-Cheat Alert: ₹" . number_format($revoke_amount, 2) . " successfully revoked from player wallet! Match kills & log preserved.";
+            $msg_type = "success";
+        } catch (Exception $e) {
+            $conn->rollback();
+            $msg = "Revoke failed: " . $e->getMessage();
+            $msg_type = "error";
+        }
     }
 }
 
