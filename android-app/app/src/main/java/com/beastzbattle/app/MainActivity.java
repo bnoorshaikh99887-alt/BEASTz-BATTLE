@@ -2,14 +2,14 @@ package com.beastzbattle.app;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
@@ -46,8 +46,7 @@ public class MainActivity extends Activity {
     private final static int FILECHOOSER_RESULTCODE = 101;
     private final static int PERMISSION_REQUEST_NOTIFICATIONS = 102;
     private static final String APP_URL = "https://beastz-battle.vercel.app";
-    private static final String CHANNEL_ID = "beastz_push_alerts";
-    private static final String ONESIGNAL_APP_ID = "561bd59e-8355-47c8-88cc-0766688a105a";
+    public static final String CHANNEL_ID = "beastz_push_alerts";
     private boolean isPageLoaded = false;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -55,13 +54,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1. OneSignal SDK Initialization (Full background & closed-app push capability)
+        // 1. OneSignal Notification Opened Deep Link Handler
         try {
-            OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-            OneSignal.initWithContext(this);
-            OneSignal.setAppId(ONESIGNAL_APP_ID);
-
-            // Handle notification taps: Open target URL directly in webview
             OneSignal.setNotificationOpenedHandler(new OneSignal.OSNotificationOpenedHandler() {
                 @Override
                 public void notificationOpened(OSNotificationOpenedResult result) {
@@ -89,14 +83,6 @@ public class MainActivity extends Activity {
                     }
                 }
             });
-
-            // Display in system status bar even when app is open
-            OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
-                notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
-            });
-
-            // Prompt permission on launch
-            OneSignal.promptForPushNotifications();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -106,7 +92,7 @@ public class MainActivity extends Activity {
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.setStatusBarColor(0xFF080A0F); // Deep Cyber Black
+            window.setStatusBarColor(0xFF080A0F);
             window.setNavigationBarColor(0xFF080A0F);
         }
 
@@ -127,7 +113,7 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // 5. Build Fast Native Branded Splash Screen (Zero Black Screen Delay!)
+        // 5. Fast Native Branded Splash Screen (Zero Black Screen Delay)
         splashLayout = new FrameLayout(this);
         splashLayout.setBackgroundColor(0xFF080A0F);
 
@@ -143,7 +129,7 @@ public class MainActivity extends Activity {
 
         TextView titleView = new TextView(this);
         titleView.setText("BEASTz BATTLE");
-        titleView.setTextColor(0xFFFACC15); // Neon Esports Amber/Gold
+        titleView.setTextColor(0xFFFACC15);
         titleView.setTextSize(22);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setGravity(Gravity.CENTER);
@@ -180,17 +166,14 @@ public class MainActivity extends Activity {
 
         setContentView(rootLayout);
 
-        // 6. Create High-Priority Notification Channel
-        createNotificationChannel();
-
-        // 7. Request Notification Permission for Android 13+ (API 33+)
+        // 6. Request Notification Permission for Android 13+ (API 33+)
         if (Build.VERSION.SDK_INT >= 33) {
             if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, PERMISSION_REQUEST_NOTIFICATIONS);
             }
         }
 
-        // 8. Configure WebView Settings for Max Speed
+        // 7. Configure WebView Settings
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -205,15 +188,20 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setUserAgentString(settings.getUserAgentString() + " BEASTzNativeApp/1.3.0 Android");
 
-        // Native JS Bridge
+        // Native JS Bridge for Direct Web-to-Native Notification Call
         webView.addJavascriptInterface(new Object() {
             @JavascriptInterface
             public void postNativeNotification(String title, String message, String actionUrl) {
-                // Bridge call if web calls native directly
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        showSystemNotification(title, message, actionUrl);
+                    }
+                });
             }
         }, "BEASTzNative");
 
-        // 9. WebView Client with Instant Splash Dismissal & Seamless Navigation
+        // 8. WebView Client
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -230,7 +218,7 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url == null) return false;
 
-                // Support UPI apps (PhonePe, GooglePay, Paytm, BHIM, WhatsApp)
+                // Support UPI apps
                 if (url.startsWith("upi://") || url.startsWith("intent://") || 
                     url.startsWith("whatsapp://") || url.startsWith("phonepe://") || 
                     url.startsWith("paytmmp://") || url.startsWith("tez://")) {
@@ -252,12 +240,10 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // Internal app routing
                 if (url.contains("beastz-battle.vercel.app") || url.startsWith("/")) {
                     return false;
                 }
 
-                // External browser links
                 try {
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                     startActivity(intent);
@@ -289,7 +275,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 10. File Chooser for Screenshot & Avatar Uploads
+        // 9. File Chooser for Screenshot & Avatar Uploads
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
@@ -309,8 +295,53 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 11. Load App
+        // 10. Load App
         webView.loadUrl(APP_URL);
+    }
+
+    public void showSystemNotification(String title, String message, String actionUrl) {
+        try {
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            Intent intent = new Intent(this, MainActivity.class);
+            if (actionUrl != null && !actionUrl.isEmpty()) {
+                if (actionUrl.startsWith("http")) {
+                    intent.setData(Uri.parse(actionUrl));
+                } else {
+                    intent.setData(Uri.parse(APP_URL + (actionUrl.startsWith("/") ? "" : "/") + actionUrl));
+                }
+            }
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    this, 
+                    (int) System.currentTimeMillis(), 
+                    intent, 
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            Notification.Builder builder;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                builder = new Notification.Builder(this, CHANNEL_ID);
+            } else {
+                builder = new Notification.Builder(this);
+            }
+
+            builder.setContentTitle(title)
+                    .setContentText(message)
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent)
+                    .setPriority(Notification.PRIORITY_HIGH)
+                    .setDefaults(Notification.DEFAULT_ALL);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                builder.setStyle(new Notification.BigTextStyle().bigText(message).setSummaryText("BEASTz BATTLE"));
+            }
+
+            if (manager != null) {
+                manager.notify((int) System.currentTimeMillis(), builder.build());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void hideSplashScreen() {
@@ -325,23 +356,6 @@ public class MainActivity extends Activity {
                             splashLayout.setVisibility(View.GONE);
                         }
                     });
-        }
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "BEASTz BATTLE Announcements",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Live tournament alerts, room passwords & updates");
-            channel.enableVibration(true);
-            channel.enableLights(true);
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
         }
     }
 
