@@ -105,28 +105,42 @@
 <!-- SECTION 2: QUICK ACTION BUTTONS -->
 <!-- ============================================================= -->
 <div class="space-y-2 mb-4">
-        <!-- New Update Available / App Version System -->
-    <a href="/BEASTz-BATTLE.apk" download="BEASTz-BATTLE.apk" class="w-full bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-500 hover:to-amber-500 text-slate-950 rounded-2xl p-3.5 flex items-center justify-between shadow-md transition active:scale-95 group font-black mb-2">
-        <div class="flex items-center gap-3">
-            <div class="relative">
-                <div class="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center text-base shadow-xs">
-                    <i class="fa-solid fa-arrows-rotate animate-spin" style="animation-duration: 6s;"></i>
-                </div>
-                <span class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full animate-ping"></span>
-            </div>
-            <div class="text-left">
-                <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-black text-slate-950 block">New Update Available!</span>
-                    <span class="px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[8px] font-black uppercase">v1.2.0</span>
-                </div>
-                <span class="text-[10px] text-slate-900/90 font-bold block mt-0.5">Tap to Install Latest APK Build &bull; High Performance</span>
-            </div>
+        <!-- FAQ SECTION (FREQUENTLY ASKED QUESTIONS) -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs mb-3">
+        <h3 class="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+            <i class="fa-solid fa-circle-question text-yellow-500"></i>
+            <span>Frequently Asked Questions (FAQ)</span>
+        </h3>
+        <div class="space-y-2 text-xs">
+            <details class="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60 cursor-pointer">
+                <summary class="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                    <span>How do I join a custom room?</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                </summary>
+                <p class="text-slate-500 dark:text-slate-400 text-[11px] mt-1.5 leading-relaxed">
+                    Once you join a tournament, Room ID and Password will be published 10-15 minutes prior to match time in your "My Matches" tab and via push notification.
+                </p>
+            </details>
+            <details class="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60 cursor-pointer">
+                <summary class="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                    <span>When do I receive my winnings?</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                </summary>
+                <p class="text-slate-500 dark:text-slate-400 text-[11px] mt-1.5 leading-relaxed">
+                    Winnings are credited to your in-app wallet within 15 minutes of match completion. You can request direct UPI withdrawal anytime (min ₹50).
+                </p>
+            </details>
+            <details class="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60 cursor-pointer">
+                <summary class="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                    <span>What is the Anti-Cheat policy?</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                </summary>
+                <p class="text-slate-500 dark:text-slate-400 text-[11px] mt-1.5 leading-relaxed">
+                    Strict zero-tolerance policy against hackers and mod users. Matches are monitored for 24 hours, and winnings of caught cheaters are immediately revoked.
+                </p>
+            </details>
         </div>
-        <div class="px-2.5 py-1.5 bg-slate-950 text-yellow-400 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-xs group-hover:scale-105 transition">
-            <i class="fa-solid fa-cloud-arrow-down text-[10px]"></i>
-            <span>UPDATE</span>
-        </div>
-    </a>
+    </div>
 
     <!-- Change Avatar Button -->
     <button type="button" onclick="openAvatarModal()" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs transition group">
@@ -419,7 +433,7 @@
         var origText = btn.innerHTML;
         btn.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>";
 
-        fetch("/api/update_profile.php", {
+        fetch("/api/update_profile.php", { credentials: "include",
             method: "POST",
             body: fd
         })
