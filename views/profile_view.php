@@ -476,6 +476,10 @@
         var fd = new FormData();
         fd.append('action', 'update_avatar');
         fd.append('avatar', avatar);
+        var fileInput = document.getElementById('avatarFileInput');
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            fd.append('avatar_file', fileInput.files[0]);
+        }
 
         fetch('api/update_profile.php', {
             method: 'POST',

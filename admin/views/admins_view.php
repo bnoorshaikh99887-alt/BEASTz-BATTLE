@@ -165,6 +165,23 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
 ?>
 
 <div class="space-y-4">
+        <!-- Direct Worker Panel Launcher -->
+    <div class="bg-gradient-to-r from-amber-500/10 via-yellow-400/15 to-amber-500/10 border border-amber-400/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-lg shadow-sm">
+                <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <div>
+                <h3 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wide">Dedicated Worker / Host Panel</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">All tournaments, Room IDP notifications, and 24h history are segregated here.</p>
+            </div>
+        </div>
+        <a href="/worker.php" target="_blank" class="px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition whitespace-nowrap">
+            <span>Open Worker Panel</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+        </a>
+    </div>
+
     <!-- Header -->
     <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
@@ -173,7 +190,7 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
                 <span><?= $is_super ? "Administrator & Host Control" : "Host Revenue & Earnings Studio"; ?></span>
             </h2>
             <p class="text-[11px] text-slate-500">
-                <?= $is_super ? "Manage sub-admins, permissions, and match room hosts" : "Track ₹3/room hosted earnings and request withdrawals"; ?>
+                <?= $is_super ? "Create and manage dedicated worker accounts for match hosting, IDP delivery & anti-cheat" : "Track ₹3/room hosted earnings and request withdrawals"; ?>
             </p>
         </div>
         <span class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black rounded-full text-[10px] uppercase">
@@ -263,7 +280,7 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
 
             <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fa-solid fa-plus"></i>
-                <span>Create & Authorize Sub-Admin</span>
+                <span>Create Worker / Host Account</span>
             </button>
         </form>
     </div>

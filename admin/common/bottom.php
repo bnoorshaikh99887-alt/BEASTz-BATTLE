@@ -15,40 +15,33 @@ if (
 ?>
 </main>
 
-        <!-- Admin Fixed Bottom Navigation -->
-        <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 py-2 px-1.5 z-50 shadow-lg">
-            <div class="grid <?= $is_super ? 'grid-cols-6' : 'grid-cols-2' ?> text-center gap-1">
+                <!-- Admin Fixed Bottom Navigation -->
+        <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 py-2 px-1 z-50 shadow-lg">
+            <div class="grid grid-cols-6 text-center gap-0.5">
                 <button type="button" onclick="switchAdminTab('overview')" id="admin-bottom-overview" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'overview' ? $act_bot : $inact_bot); ?>">
                     <i class="fa-solid fa-gauge text-base mb-0.5"></i>
-                    <span class="text-[9px] font-bold">Overview</span>
+                    <span class="text-[8px] font-bold">Home</span>
                 </button>
-
                 <button type="button" onclick="switchAdminTab('tournaments')" id="admin-bottom-tournaments" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'tournaments' ? $act_bot : $inact_bot); ?>">
                     <i class="fa-solid fa-trophy text-base mb-0.5"></i>
-                    <span class="text-[9px] font-bold">Tourneys</span>
+                    <span class="text-[8px] font-bold">Tourneys</span>
                 </button>
-
-                <?php if ($is_super): ?>
-                    <button type="button" onclick="switchAdminTab('deposits')" id="admin-bottom-deposits" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'deposits' ? $act_bot : $inact_bot); ?>">
-                        <i class="fa-solid fa-hand-holding-dollar text-base mb-0.5"></i>
-                        <span class="text-[9px] font-bold">Deposits</span>
-                    </button>
-
-                    <button type="button" onclick="switchAdminTab('payouts')" id="admin-bottom-payouts" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'payouts' ? $act_bot : $inact_bot); ?>">
-                        <i class="fa-solid fa-money-bill-transfer text-base mb-0.5"></i>
-                        <span class="text-[9px] font-bold">Payouts</span>
-                    </button>
-
-                    <button type="button" onclick="switchAdminTab('users')" id="admin-bottom-users" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'users' ? $act_bot : $inact_bot); ?>">
-                        <i class="fa-solid fa-users text-base mb-0.5"></i>
-                        <span class="text-[9px] font-bold">Gamers</span>
-                    </button>
-
-                    <button type="button" onclick="switchAdminTab('admins')" id="admin-bottom-admins" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'admins' ? $act_bot : $inact_bot); ?>">
-                        <i class="fa-solid fa-user-shield text-base mb-0.5"></i>
-                        <span class="text-[9px] font-bold">Admins</span>
-                    </button>
-                <?php endif; ?>
+                <button type="button" onclick="switchAdminTab('deposits')" id="admin-bottom-deposits" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'deposits' ? $act_bot : $inact_bot); ?>">
+                    <i class="fa-solid fa-hand-holding-dollar text-base mb-0.5"></i>
+                    <span class="text-[8px] font-bold">Deposits</span>
+                </button>
+                <button type="button" onclick="switchAdminTab('payouts')" id="admin-bottom-payouts" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'payouts' ? $act_bot : $inact_bot); ?>">
+                    <i class="fa-solid fa-money-bill-transfer text-base mb-0.5"></i>
+                    <span class="text-[8px] font-bold">Payouts</span>
+                </button>
+                <button type="button" onclick="switchAdminTab('notifications')" id="admin-bottom-notifications" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'notifications' ? $act_bot : $inact_bot); ?>">
+                    <i class="fa-solid fa-paper-plane text-base mb-0.5"></i>
+                    <span class="text-[8px] font-bold text-yellow-500 font-black">Push Alerts</span>
+                </button>
+                <button type="button" onclick="switchAdminTab('admins')" id="admin-bottom-admins" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'admins' ? $act_bot : $inact_bot); ?>">
+                    <i class="fa-solid fa-user-shield text-base mb-0.5"></i>
+                    <span class="text-[8px] font-bold">Workers</span>
+                </button>
             </div>
         </nav>
     </div>

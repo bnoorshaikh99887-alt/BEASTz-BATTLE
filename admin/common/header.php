@@ -118,7 +118,6 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
             <button type="button" onclick="switchAdminTab('tournaments')" id="admin-nav-tournaments" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'tournaments' ? $act_btn : $inact_btn); ?>">
                 <i class="fa-solid fa-trophy mr-1"></i> Tourneys
             </button>
-            <?php if ($is_super): ?>
             <button type="button" onclick="switchAdminTab('deposits')" id="admin-nav-deposits" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'deposits' ? $act_btn : $inact_btn); ?>">
                 <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Deposits
             </button>
@@ -126,15 +125,17 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
                 <i class="fa-solid fa-money-bill-transfer mr-1"></i> Payouts
             </button>
             <button type="button" onclick="switchAdminTab('notifications')" id="admin-nav-notifications" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'notifications' ? $act_btn : $inact_btn); ?>">
-                <i class="fa-solid fa-bell mr-1"></i> Broadcast
+                <i class="fa-solid fa-paper-plane mr-1"></i> Push Alerts
+            </button>
+            <button type="button" onclick="switchAdminTab('admins')" id="admin-nav-admins" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'admins' ? $act_btn : $inact_btn); ?>">
+                <i class="fa-solid fa-user-shield mr-1"></i> Worker Accounts
             </button>
             <button type="button" onclick="switchAdminTab('users')" id="admin-nav-users" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'users' ? $act_btn : $inact_btn); ?>">
-                <i class="fa-solid fa-users mr-1"></i> Login Users
+                <i class="fa-solid fa-users mr-1"></i> Gamers
             </button>
-            <?php endif; ?>
-            <button type="button" onclick="switchAdminTab('admins')" id="admin-nav-admins" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'admins' ? $act_btn : $inact_btn); ?>">
-                <i class="fa-solid fa-users-gear mr-1"></i> <?= $is_super ? "Manage Admins" : "Tourney Center"; ?>
-            </button>
+            <a href="/worker.php" target="_blank" class="px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer text-amber-300 hover:text-amber-200 font-bold bg-amber-500/20 border border-amber-500/40 flex items-center gap-1">
+                <i class="fa-solid fa-gamepad text-xs"></i> Worker Panel <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
             <?php if ($is_super): ?>
             <button type="button" onclick="switchAdminTab('settings')" id="admin-nav-settings" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'settings' ? $act_btn : $inact_btn); ?>">
                 <i class="fa-solid fa-sliders mr-1"></i> Settings

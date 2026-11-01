@@ -2,9 +2,22 @@
 session_start();
 require_once __DIR__ . '/common/config.php';
 
+// Agar Worker login hai, toh Worker panel bhejo
+if (isset($_SESSION['is_worker']) && $_SESSION['is_worker']) {
+    header("Location: worker.php");
+    exit;
+}
+if (isset($_SESSION['active_panel']) && $_SESSION['active_panel'] === 'worker') {
+    header("Location: worker.php");
+    exit;
+}
 // Agar Admin login hai, toh Admin panel bhejo
 if (isset($_SESSION['admin_id'])) {
-    header("Location: admin/index.php");
+    if (!empty($_SESSION['is_super_admin'])) {
+        header("Location: admin/index.php");
+    } else {
+        header("Location: worker.php");
+    }
     exit;
 }
 // Agar User login hai, toh User panel (Arena) bhejo
@@ -76,14 +89,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     if ($match) {
                         unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
                         
+                        $is_super = ($adm_row['username'] === 'anonymous.349' || $adm_row['username'] === 'admin' || $adm_row['role'] === 'super_admin');
                         $_SESSION['admin_id'] = (int)$adm_row['id'];
                         $_SESSION['admin_user'] = $adm_row['username'];
                         $_SESSION['admin_username'] = $adm_row['username'];
-                        $_SESSION['admin_role'] = $adm_row['role'] ?: 'host_admin';
-                        $_SESSION['is_super_admin'] = false;
+                        $_SESSION['admin_role'] = $adm_row['role'] ?: ($is_super ? 'super_admin' : 'worker');
+                        $_SESSION['is_super_admin'] = $is_super;
                         $_SESSION['admin_logged_in'] = true;
                         
-                        header("Location: admin/index.php");
+                        if ($is_super) {
+                            $_SESSION['active_panel'] = 'admin';
+                            setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+                            setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+                            if (function_exists('set_user_remember_token')) { set_user_remember_token((int)$adm_row['id'], 'admin'); }
+                            header("Location: admin/index.php");
+                        } else {
+                            $_SESSION['worker_id'] = (int)$adm_row['id'];
+                            $_SESSION['is_worker'] = true;
+                            $_SESSION['active_panel'] = 'worker';
+                            setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
+                            setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
+                            if (function_exists('set_user_remember_token')) { set_user_remember_token((int)$adm_row['id'], 'admin'); }
+                            header("Location: worker.php");
+                        }
                         exit;
                     }
                 }
@@ -113,18 +141,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         if (($u['role'] ?? '') === 'admin') {
                             unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
                             
+                            $is_super = ($u['username'] === 'anonymous.349' || $u['username'] === 'admin');
                             $_SESSION['admin_id'] = $uid;
                             $_SESSION['admin_user'] = $u['username'];
                             $_SESSION['admin_username'] = $u['username'];
-                            $_SESSION['admin_role'] = ($u['username'] === 'anonymous.349') ? 'super_admin' : 'host_admin';
-                            $_SESSION['is_super_admin'] = ($u['username'] === 'anonymous.349') ? true : false;
+                            $_SESSION['admin_role'] = $is_super ? 'super_admin' : 'worker';
+                            $_SESSION['is_super_admin'] = $is_super;
                             $_SESSION['admin_logged_in'] = true;
                             
                             if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
-                            $_SESSION['active_panel'] = 'admin';
-                            setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-                            setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-                            header("Location: admin/index.php");
+                            if ($is_super) {
+                                $_SESSION['active_panel'] = 'admin';
+                                setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+                                setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+                                header("Location: admin/index.php");
+                            } else {
+                                $_SESSION['worker_id'] = $uid;
+                                $_SESSION['is_worker'] = true;
+                                $_SESSION['active_panel'] = 'worker';
+                                setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
+                                setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
+                                header("Location: worker.php");
+                            }
                             exit;
                         } else {
                             unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);

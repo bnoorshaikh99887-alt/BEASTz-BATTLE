@@ -166,19 +166,26 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
         </a>
 
         <!-- ============================================== -->
-        <!-- NEW SUPER ADMIN BUTTON: PUSH NOTIFICATIONS -->
+        <!-- ALWAYS VISIBLE: PUSH NOTIFICATIONS & WORKER PANEL -->
         <!-- ============================================== -->
-        <?php if (isset($_SESSION['is_super_admin']) && $_SESSION['is_super_admin'] === true): ?>
-        <a onclick="switchAdminTab('notifications')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group col-span-2">
-            <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+        <a onclick="switchAdminTab('notifications')" role="button" class="bg-white dark:bg-slate-900 hover:bg-yellow-50/60 border border-slate-200 dark:border-slate-800 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-paper-plane"></i>
             </div>
             <div>
-                <span class="text-xs font-bold text-slate-900 block">Push Alerts Studio</span>
-                <span class="text-[10px] text-slate-400">Send Custom Announcements</span>
+                <span class="text-xs font-bold text-slate-900 dark:text-white block">Push Alerts Studio</span>
+                <span class="text-[10px] text-slate-400">Send Announcements</span>
             </div>
         </a>
-        <?php endif; ?>
+        <a href="/worker.php" target="_blank" class="bg-white dark:bg-slate-900 hover:bg-yellow-50/60 border border-slate-200 dark:border-slate-800 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+                <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <div>
+                <span class="text-xs font-bold text-slate-900 dark:text-white block">Worker Panel <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></span>
+                <span class="text-[10px] text-slate-400">Manage Tourneys & IDP</span>
+            </div>
+        </a>
 
     </div>
 </div>

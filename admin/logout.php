@@ -17,7 +17,8 @@ if (function_exists('clear_user_remember_token')) {
 $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
 setcookie('adept_remember', '', time() - 86400, '/', '', $is_https, true);
 setcookie('active_panel', '', time() - 86400, '/', '', $is_https, false);
-unset($_COOKIE['adept_remember'], $_COOKIE['active_panel']);
+setcookie('beastz_active_panel', '', time() - 86400, '/', '', $is_https, false);
+unset($_COOKIE['adept_remember'], $_COOKIE['active_panel'], $_COOKIE['beastz_active_panel']);
 
 // 3. Clear session
 $_SESSION = [];

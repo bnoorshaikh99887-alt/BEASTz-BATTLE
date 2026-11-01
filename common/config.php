@@ -13,6 +13,21 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     }
 
     // Helper functions (defined early so they are always available)
+    if (!function_exists("str_contains")) {
+        function str_contains($haystack, $needle) {
+            return $needle !== "" && mb_strpos($haystack, $needle) !== false;
+        }
+    }
+    if (!function_exists("str_starts_with")) {
+        function str_starts_with($haystack, $needle) {
+            return (string)$needle !== "" && strncmp($haystack, $needle, strlen($needle)) === 0;
+        }
+    }
+    if (!function_exists("str_ends_with")) {
+        function str_ends_with($haystack, $needle) {
+            return $needle === "" || $needle === substr($haystack, -strlen($needle));
+        }
+    }
     if (!function_exists('safe_redirect')) {
         function safe_redirect($url) {
             if (session_status() === PHP_SESSION_ACTIVE) {
@@ -224,14 +239,20 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
                     if ($adm = $a_res->fetch_assoc()) {
                         if (($adm['status'] ?? 'active') === 'active') {
                             $aid = (int)$adm['id'];
+                            $is_super = ($adm['username'] === 'anonymous.349' || $adm['username'] === 'admin' || ($adm['role'] ?? '') === 'super_admin');
                             $_SESSION['admin_id'] = $aid;
                             $_SESSION['admin_user'] = $adm['username'];
                             $_SESSION['admin_username'] = $adm['username'];
-                            $_SESSION['role'] = 'admin';
-                            $_SESSION['admin_role'] = $adm['role'] ?? 'super_admin';
-                            $_SESSION['is_super_admin'] = ($adm['role'] === 'super_admin' || $adm['username'] === 'anonymous.349' || $adm['username'] === 'admin');
+                            $_SESSION['admin_role'] = $adm['role'] ?? ($is_super ? 'super_admin' : 'worker');
+                            $_SESSION['is_super_admin'] = $is_super;
                             $_SESSION['admin_logged_in'] = true;
-                            $_SESSION['active_panel'] = 'admin';
+                            if (!$is_super || $pref_panel === 'worker') {
+                                $_SESSION['worker_id'] = $aid;
+                                $_SESSION['is_worker'] = true;
+                                $_SESSION['active_panel'] = 'worker';
+                            } else {
+                                $_SESSION['active_panel'] = 'admin';
+                            }
                             $is_restored = true;
                         }
                     }
