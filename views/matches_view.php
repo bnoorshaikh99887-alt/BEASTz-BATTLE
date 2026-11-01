@@ -282,21 +282,35 @@
 
 <script>
     function switchMatchTab(tab, btn) {
-        document.querySelectorAll('.match-tab').forEach(b => {
-            b.classList.remove('border-yellow-400', 'text-slate-950', 'font-black');
-            b.classList.add('border-transparent', 'text-slate-500');
-        });
-        btn.classList.remove('border-transparent', 'text-slate-500');
-        btn.classList.add('border-yellow-400', 'text-slate-950', 'font-black');
+        if (!btn) {
+            if (tab === 'upcoming') btn = document.getElementById('tabBtnUpcoming');
+            else if (tab === 'live') btn = document.getElementById('tabBtnLive');
+            else if (tab === 'played') btn = document.getElementById('tabBtnPlayed');
+        }
 
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.match-tab').forEach(function(b) {
+            b.classList.remove('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
+            b.classList.add('text-slate-400', 'font-bold');
+        });
+
+        if (btn) {
+            btn.classList.remove('text-slate-400', 'font-bold');
+            btn.classList.add('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
+        }
+
+        document.querySelectorAll('.tab-pane').forEach(function(p) {
+            p.classList.add('hidden');
+        });
 
         if (tab === 'upcoming') {
-            document.getElementById('tabContentUpcoming').classList.remove('hidden');
+            var el = document.getElementById('tabContentUpcoming');
+            if (el) el.classList.remove('hidden');
         } else if (tab === 'live') {
-            document.getElementById('tabContentLive').classList.remove('hidden');
+            var el = document.getElementById('tabContentLive');
+            if (el) el.classList.remove('hidden');
         } else if (tab === 'played') {
-            document.getElementById('tabContentPlayed').classList.remove('hidden');
+            var el = document.getElementById('tabContentPlayed');
+            if (el) el.classList.remove('hidden');
         }
     }
 
