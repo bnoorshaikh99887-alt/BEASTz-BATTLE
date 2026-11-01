@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error = "Username must be at least 3 characters long.";
     } elseif (empty($phone) || strlen($phone) < 10) {
         $error = "Valid 10-digit mobile number is mandatory to register.";
-    } elseif (empty($email) || strpos($email, '@') === false) { // FIXED ERROR 500 HERE
+    } elseif (empty($email) || strpos($email, '@') === false) { 
         $error = "Please enter a valid email address.";
     } elseif (empty($password) || strlen($password) < 6) {
         $error = "Password must be at least 6 characters long.";
@@ -187,7 +187,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             $ins = $conn->prepare("INSERT INTO users (username, name, email, phone, password, role, status, wallet_balance, avatar, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, 'user', 'active', ?, ?, ?, ?)");
             $my_ref_code = 'BEAST' . strtoupper(substr(md5($username . time()), 0, 5));
-            $ins->bind_param("sssssdssss", $username, $username, $email, $phone, $hashed, $initial_wallet, $default_avatar, $my_ref_code, $referral);
+            
+            // YAHAN PAR FIX KIYA HAI: "sssssdssss" ki jagah "sssssdsss" (Total 9 parameters)
+            $ins->bind_param("sssssdsss", $username, $username, $email, $phone, $hashed, $initial_wallet, $default_avatar, $my_ref_code, $referral);
 
             if ($ins->execute()) {
                 $new_id = (int)$ins->insert_id;
@@ -203,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
                 if (function_exists('set_user_remember_token')) { set_user_remember_token($new_id); }
 
-                header("Location: index.php"); // FIXED ERROR 500 HERE
+                header("Location: index.php"); 
                 exit;
             } else {
                 $error = "Registration error: " . $conn->error;
