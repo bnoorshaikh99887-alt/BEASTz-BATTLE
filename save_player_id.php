@@ -1,7 +1,7 @@
 <?php
 /**
  * BEASTz BATTLE - Secure OneSignal Device Token (player_id) Sync Handler
- * Updates player_id in TiDB Cloud database users table
+ * Updates player_id in TiDB Cloud database users and admin tables
  */
 header("Content-Type: application/json; charset=utf-8");
 
@@ -20,8 +20,8 @@ if (session_status() === PHP_SESSION_NONE) {
 $raw_input = file_get_contents("php://input");
 $json_data = json_decode($raw_input, true) ?? [];
 
-$user_id = $_SESSION["user_id"] ?? $_POST["user_id"] ?? $json_data["user_id"] ?? null;
 $player_id = trim($_POST["player_id"] ?? $json_data["player_id"] ?? $_GET["player_id"] ?? "");
+$user_id = $_SESSION["user_id"] ?? $_SESSION["admin_id"] ?? $_POST["user_id"] ?? $json_data["user_id"] ?? null;
 
 if (empty($player_id)) {
     echo json_encode([
@@ -31,16 +31,8 @@ if (empty($player_id)) {
     exit;
 }
 
-$user_id = (int)$user_id;
-
-if ($user_id <= 0) {
-    echo json_encode([
-        "success" => false,
-        "error" => "User not authenticated or user_id missing",
-        "received_player_id" => $player_id
-    ]);
-    exit;
-}
+// Save player_id into cookie so it persists across sessions
+setcookie("beastz_player_id", $player_id, time() + (365 * 24 * 3600), "/");
 
 if (!$conn || $conn->connect_error) {
     echo json_encode([
@@ -50,16 +42,39 @@ if (!$conn || $conn->connect_error) {
     exit;
 }
 
-// 1. Update users table with new player_id
-$stmt = $conn->prepare("UPDATE users SET player_id = ? WHERE id = ?");
-if ($stmt) {
-    $stmt->bind_param("si", $player_id, $user_id);
-    $ok = $stmt->execute();
-    $stmt->close();
+$user_id = (int)$user_id;
+$updated_user = false;
+$updated_admin = false;
 
-    // 2. Map external_user_id in OneSignal via REST API (v2 Key with Key Auth)
+// 1. If user ID is known, update users table
+if ($user_id > 0) {
+    $stmt = $conn->prepare("UPDATE users SET player_id = ? WHERE id = ?");
+    if ($stmt) {
+        $stmt->bind_param("si", $player_id, $user_id);
+        $stmt->execute();
+        $stmt->close();
+        $updated_user = true;
+    }
+}
+
+// 2. If admin / worker is logged in, update admin table
+$admin_id = (int)($_SESSION["admin_id"] ?? $_SESSION["worker_id"] ?? 0);
+if ($admin_id > 0) {
+    @$conn->query("ALTER TABLE admin ADD COLUMN IF NOT EXISTS player_id VARCHAR(191) DEFAULT NULL");
+    $astmt = $conn->prepare("UPDATE admin SET player_id = ? WHERE id = ?");
+    if ($astmt) {
+        $astmt->bind_param("si", $player_id, $admin_id);
+        $astmt->execute();
+        $astmt->close();
+        $updated_admin = true;
+    }
+}
+
+// 3. Map external_user_id in OneSignal via REST API
+$target_ext_id = $user_id > 0 ? (string)$user_id : ($admin_id > 0 ? "admin_" . $admin_id : "");
+if (!empty($target_ext_id)) {
     $os_app_id = "561bd59e-8355-47c8-88cc-0766688a105a";
-    $os_key = getenv("ONESIGNAL_API_KEY") ?: base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
+    $os_key = base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
     
     $ch = curl_init("https://onesignal.com/api/v1/players/{$player_id}");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -70,23 +85,21 @@ if ($stmt) {
     ]);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
         "app_id" => $os_app_id,
-        "external_user_id" => (string)$user_id
+        "external_user_id" => $target_ext_id
     ]));
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_TIMEOUT, 6);
     @curl_exec($ch);
     @curl_close($ch);
-
-    echo json_encode([
-        "success" => true,
-        "message" => "OneSignal player_id successfully linked to user in database",
-        "user_id" => $user_id,
-        "player_id" => $player_id
-    ]);
-} else {
-    echo json_encode([
-        "success" => false,
-        "error" => "Database query prepare error: " . $conn->error
-    ]);
 }
+
+echo json_encode([
+    "success" => true,
+    "message" => "OneSignal device player_id successfully registered and linked",
+    "player_id" => $player_id,
+    "user_id" => $user_id,
+    "admin_id" => $admin_id,
+    "updated_user" => $updated_user,
+    "updated_admin" => $updated_admin
+]);
 ?>

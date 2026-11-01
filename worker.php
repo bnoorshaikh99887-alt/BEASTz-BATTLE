@@ -61,7 +61,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                 if ($stmt->execute()) {
                     $new_id = $stmt->insert_id;
                     $stmt->close();
-                    $feedback_msg = "Tournament #" . $new_id . " ('" . htmlspecialchars($title) . "') created successfully!";
+                    
+                    // Dispatch Instant Listing Push Alert to all Gamers
+                    $list_title = "⚔️ New Tournament Listed: " . $title;
+                    $list_body = "New " . $game . " (" . $match_type . ") match is live! Entry: " . format_inr($entry_fee) . " | Prize: " . format_inr($prize_pool) . ". Join now!";
+                    send_onesignal_push($list_title, $list_body, "/?tab=home", [], [], ["badge_type" => "NEW_TOURNAMENT", "tournament_id" => $new_id]);
+                    @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($list_title) . "', '" . $conn->real_escape_string($list_body) . "', '/?tab=home', 'NEW_TOURNAMENT')");
+                    
+                    $feedback_msg = "Tournament #" . $new_id . " ('" . htmlspecialchars($title) . "') created & listing push alert broadcasted to gamers!";
                     $feedback_type = "success";
                 } else {
                     $feedback_msg = "Failed to add tournament: " . $stmt->error;
@@ -117,7 +124,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
 
                     $n_title = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI";
                     $n_body = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_pass;
-                    send_onesignal_push($n_title, $n_body, "/?tab=matches", $player_ids, $user_ids);
+                    send_onesignal_push($n_title, $n_body, "/?tab=matches", $player_ids, $user_ids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tid]);
                     
                     $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($n_title) . "', '" . $conn->real_escape_string($n_body) . "', '/?tab=matches', 'ROOM_IDP')");
                     $feedback_msg = "Room IDP saved and instant push alert dispatched to joined players!";
@@ -140,7 +147,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
             $feedback_msg = "Title and message are required for push notification.";
             $feedback_type = "error";
         } else {
-            send_onesignal_push($b_title, $b_message, $target_url);
+            send_onesignal_push($b_title, $b_message, $target_url, [], [], ["badge_type" => "HOST_ANNOUNCEMENT"]);
             $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($b_title) . "', '" . $conn->real_escape_string($b_message) . "', '" . $conn->real_escape_string($target_url) . "', 'HOST_ANNOUNCEMENT')");
             $feedback_msg = "Push notification announcement broadcasted to all gamers!";
             $feedback_type = "success";
@@ -179,6 +186,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                 @$conn->query("DELETE FROM user_tournaments WHERE tournament_id = {$rev_id}");
                 @$conn->query("DELETE FROM tournaments WHERE id = {$rev_id}");
                 $conn->commit();
+                $_SESSION["active_panel"] = "worker";
+                setcookie("beastz_active_panel", "worker", time() + (365 * 24 * 3600), "/");
+                setcookie("active_panel", "worker", time() + (365 * 24 * 3600), "/");
                 $feedback_msg = "Match #" . $rev_id . " revoked successfully! " . ($refund_count > 0 ? "Entry fee refunded to {$refund_count} players." : "");
                 $feedback_type = "success";
             } catch (Exception $e) {
@@ -622,7 +632,7 @@ if ($nt_q) {
 
                                 <!-- Action Buttons -->
                                 <div class="flex items-center gap-2 pt-1 text-xs">
-                                    <a href="admin/manage_tournament.php?id=<?= $t["id"]; ?>" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-center font-black rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <a href="worker_manage.php?id=<?= $t["id"]; ?>" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-center font-black rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
                                         <i class="fa-solid fa-gear text-[10px]"></i> Manage & Results
                                     </a>
                                     <form method="POST" action="worker.php" onsubmit="return confirm('Revoke Match #<?= $t["id"]; ?> and refund entry fees to all joined players?');" class="shrink-0">
@@ -694,7 +704,7 @@ if ($nt_q) {
                                 </div>
 
                                 <div class="flex items-center gap-2 pt-1 text-xs">
-                                    <a href="admin/manage_tournament.php?id=<?= $ct["id"]; ?>" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-center transition">
+                                    <a href="worker_manage.php?id=<?= $ct["id"]; ?>" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-center transition">
                                         <i class="fa-solid fa-eye mr-1"></i> View Result Rankings
                                     </a>
                                     <form method="POST" action="worker.php" onsubmit="return confirm('Delete this completed tournament archive?');" class="shrink-0">

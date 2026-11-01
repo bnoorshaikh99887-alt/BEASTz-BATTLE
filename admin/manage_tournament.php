@@ -1,12 +1,16 @@
 <?php
 require_once __DIR__ . '/common/header.php';
+require_once __DIR__ . '/../common/onesignal_helper.php';
 
 $tournament_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $msg = "";
 $msg_type = "";
 
 // Helper Function to Trigger OneSignal Push Notification via REST API
-function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $player_ids = []) {
+function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $player_ids = [], $user_ids = []) {
+    return send_onesignal_push($title, $message, $targetUrl, $player_ids, $user_ids);
+}
+function _old_sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $player_ids = []) {
     $os_app_id = "561bd59e-8355-47c8-88cc-0766688a105a";
     $os_key = base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
     

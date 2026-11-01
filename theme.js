@@ -439,9 +439,15 @@ var LiveSyncEngine = (function() {
             var pWdrEl = document.getElementById('admin-pending-payouts-cnt');
             if (pWdrEl) pWdrEl.textContent = adm.pending_withdrawals;
 
-            // Live Update Admin Payouts List if on Payouts Tab
+            // Live Update Admin Payouts List if on Payouts Tab (Smart Diffing to avoid wiping user clicks)
             var pCardCont = document.getElementById('admin-payouts-cards-container');
             if (pCardCont && adm.pending_payouts_list) {
+                var pendingSig = adm.pending_payouts_list.map(function(w) { return w.id + "-" + w.status; }).join("|");
+                if (pCardCont.dataset.lastPendingSig === pendingSig) {
+                    // Skip redundant re-render so touch / click events are not aborted
+                    return;
+                }
+                pCardCont.dataset.lastPendingSig = pendingSig;
                 if (adm.pending_payouts_list.length === 0) {
                     pCardCont.innerHTML = '<div class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 text-xs font-bold">' +
                         '<i class="fa-solid fa-circle-check text-2xl text-emerald-500 mb-2 block"></i>' +
@@ -554,8 +560,16 @@ function initCustomSelects() {
         }
 
         sel.dataset.customEnhanced = "true";
-        // CRITICAL: Hide native select so Android/Chrome NEVER shows the OS white alert dialog!
-        sel.style.display = "none";
+        // Safely hide native select without triggering HTML5 "not focusable" form submission cancel
+        if (sel.hasAttribute("required")) {
+            sel.removeAttribute("required");
+            sel.dataset.hadRequired = "true";
+        }
+        sel.style.position = "absolute";
+        sel.style.opacity = "0";
+        sel.style.width = "1px";
+        sel.style.height = "1px";
+        sel.style.pointerEvents = "none";
         sel.setAttribute("aria-hidden", "true");
         sel.tabIndex = -1;
 

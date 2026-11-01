@@ -185,5 +185,26 @@ if (
         });
     </script>
     <?php endif; ?>
+
+    <!-- ONESIGNAL DEVICE TOKEN SYNC FOR ADMIN -->
+    <script>
+    function syncAdminPlayerId(pId) {
+        if (!pId) return;
+        try {
+            localStorage.setItem("beastz_onesignal_player_id", pId);
+            document.cookie = "beastz_player_id=" + encodeURIComponent(pId) + "; path=/; max-age=31536000";
+            fetch("/save_player_id.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "player_id=" + encodeURIComponent(pId)
+            }).then(function(r) { return r.json(); }).catch(function() {});
+        } catch(e) {}
+    }
+    if (window.BEASTzNative && typeof window.BEASTzNative.getPlayerId === "function") {
+        var nid = window.BEASTzNative.getPlayerId();
+        if (nid) syncAdminPlayerId(nid);
+    }
+    window.onNativePlayerIdReady = function(id) { syncAdminPlayerId(id); };
+    </script>
 </body>
 </html>

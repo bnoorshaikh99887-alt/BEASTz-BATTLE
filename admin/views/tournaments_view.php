@@ -27,7 +27,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($stmt) {
             $stmt->bind_param("sssssdddsiii", $title, $game_name, $game_name, $map, $match_type, $entry_fee, $per_kill, $prize_pool, $match_time, $total_slots, $commission, $host_admin_id);
             if ($stmt->execute()) {
-                $msg = "Tournament '" . htmlspecialchars($title) . "' created successfully!";
+                $new_tid = (int)$stmt->insert_id;
+                if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) {
+                    require_once __DIR__ . "/../../common/onesignal_helper.php";
+                } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) {
+                    require_once __DIR__ . "/../common/onesignal_helper.php";
+                }
+                $list_title = "⚔️ New Tournament Listed: " . $title;
+                $list_msg = "New " . $game_name . " (" . $match_type . ") match is live for registration! Entry: " . format_inr($entry_fee) . " | Prize: " . format_inr($prize_pool) . ". Join now!";
+                if (function_exists("send_onesignal_push")) {
+                    send_onesignal_push($list_title, $list_msg, "/?tab=home", [], [], ["badge_type" => "NEW_TOURNAMENT", "tournament_id" => $new_tid]);
+                }
+                @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($list_title) . "', '" . $conn->real_escape_string($list_msg) . "', '/?tab=home', 'NEW_TOURNAMENT')");
+                $msg = "Tournament '" . htmlspecialchars($title) . "' created & listing push alert broadcasted to all gamers!";
                 $msg_type = "success";
             } else {
                 $msg = "Failed to create tournament: " . $stmt->error;

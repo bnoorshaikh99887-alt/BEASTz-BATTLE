@@ -31,7 +31,7 @@
             try {
                 localStorage.setItem("beastz_onesignal_player_id", playerId);
                 document.cookie = "beastz_player_id=" + encodeURIComponent(playerId) + "; path=/; max-age=31536000";
-                fetch("save_player_id.php", {
+                fetch("/save_player_id.php", {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     body: "player_id=" + encodeURIComponent(playerId)

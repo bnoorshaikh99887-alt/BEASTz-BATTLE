@@ -2,6 +2,8 @@ package com.beastzbattle.app;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.webkit.JsResult;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -344,8 +346,45 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 9. File Chooser for Screenshot & Avatar Uploads
+        // 9. File Chooser & Dialog Engine
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, final JsResult result) {
+                try {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("BEASTz BATTLE")
+                            .setMessage(message)
+                            .setPositiveButton("OK", (dialog, which) -> result.confirm())
+                            .setNegativeButton("Cancel", (dialog, which) -> result.cancel())
+                            .setOnCancelListener(dialog -> result.cancel())
+                            .setCancelable(true)
+                            .create()
+                            .show();
+                    return true;
+                } catch(Exception e) {
+                    result.confirm();
+                    return true;
+                }
+            }
+
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, final JsResult result) {
+                try {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("BEASTz BATTLE")
+                            .setMessage(message)
+                            .setPositiveButton("OK", (dialog, which) -> result.confirm())
+                            .setOnCancelListener(dialog -> result.confirm())
+                            .setCancelable(true)
+                            .create()
+                            .show();
+                    return true;
+                } catch(Exception e) {
+                    result.confirm();
+                    return true;
+                }
+            }
+
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
                 if (uploadMessage != null) {

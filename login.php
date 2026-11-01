@@ -41,6 +41,31 @@ if (!function_exists('sanitize')) {
     }
 }
 
+
+// Auto-sync OneSignal player_id on successful authentication
+function sync_login_player_id($target_id, $role = "user") {
+    global $conn;
+    $target_id = (int)$target_id;
+    $incoming_pid = trim($_POST["player_id"] ?? $_COOKIE["beastz_player_id"] ?? "");
+    if (!empty($incoming_pid) && strlen($incoming_pid) > 10 && $conn && !$conn->connect_error) {
+        $st = $conn->prepare("UPDATE users SET player_id = ? WHERE id = ?");
+        if ($st) {
+            $st->bind_param("si", $incoming_pid, $target_id);
+            $st->execute();
+            $st->close();
+        }
+        if ($role === "admin" || $role === "worker") {
+            @$conn->query("ALTER TABLE admin ADD COLUMN IF NOT EXISTS player_id VARCHAR(191) DEFAULT NULL");
+            $sta = $conn->prepare("UPDATE admin SET player_id = ? WHERE id = ?");
+            if ($sta) {
+                $sta->bind_param("si", $incoming_pid, $target_id);
+                $sta->execute();
+                $sta->close();
+            }
+        }
+    }
+}
+
 // =============================================================
 // 1. SIGN IN HANDLER (UNIFIED: MASTER ADMIN, HOSTS & GAMERS)
 // =============================================================
@@ -63,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $_SESSION['admin_logged_in'] = true;
             
             if (function_exists('set_user_remember_token')) { set_user_remember_token(1, 'admin'); }
+            sync_login_player_id(1, 'admin');
             $_SESSION['active_panel'] = 'admin';
             setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
             setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
@@ -102,6 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
                             setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
                             if (function_exists('set_user_remember_token')) { set_user_remember_token((int)$adm_row['id'], 'admin'); }
+                            sync_login_player_id((int)$adm_row['id'], 'admin');
                             header("Location: admin/index.php");
                         } else {
                             $_SESSION['worker_id'] = (int)$adm_row['id'];
@@ -150,6 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $_SESSION['admin_logged_in'] = true;
                             
                             if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
+                            sync_login_player_id($uid, 'admin');
                             if ($is_super) {
                                 $_SESSION['active_panel'] = 'admin';
                                 setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
@@ -174,6 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $_SESSION['user_logged_in'] = true;
                             
                             if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'user'); }
+                            sync_login_player_id($uid, 'user');
                             $_SESSION['active_panel'] = 'user';
                             setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
                             setcookie('beastz_active_panel', 'user', time() + (365 * 24 * 3600), '/');
@@ -251,6 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $_SESSION['user_logged_in'] = true;
                 
                 if (function_exists('set_user_remember_token')) { set_user_remember_token($new_id); }
+                sync_login_player_id($new_id, 'user');
 
                 header("Location: index.php"); 
                 exit;
@@ -431,6 +461,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 bReg.className = 'py-2 rounded-lg transition bg-yellow-400 text-slate-950 shadow-sm';
             }
         }
+    </script>
+
+    <!-- AUTO-DETECT ONESIGNAL PLAYER ID FOR INSTANT LOGIN SYNC -->
+    <script>
+    (function() {
+        function setPidInputs(pId) {
+            if (!pId) return;
+            document.querySelectorAll("form").forEach(function(f) {
+                var existing = f.querySelector("input[name=player_id]");
+                if (!existing) {
+                    var inp = document.createElement("input");
+                    inp.type = "hidden";
+                    inp.name = "player_id";
+                    inp.value = pId;
+                    f.appendChild(inp);
+                } else {
+                    existing.value = pId;
+                }
+            });
+        }
+        var pid = localStorage.getItem("beastz_onesignal_player_id");
+        if (window.BEASTzNative && typeof window.BEASTzNative.getPlayerId === "function") {
+            var nId = window.BEASTzNative.getPlayerId();
+            if (nId) pid = nId;
+        }
+        if (pid) setPidInputs(pid);
+        window.onNativePlayerIdReady = function(id) { setPidInputs(id); };
+    })();
     </script>
 </body>
 </html>

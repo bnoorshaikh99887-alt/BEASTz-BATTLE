@@ -41,7 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // ========================================================
                 // TARGETED PUSH NOTIFICATION (USING DATABASE PLAYER_ID & USER_ID)
                 // ========================================================
-                if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) {
+                if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) { require_once __DIR__ . "/../../common/onesignal_helper.php"; } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) { require_once __DIR__ . "/../common/onesignal_helper.php"; }
+if (false) {
                     require_once __DIR__ . "/../../common/onesignal_helper.php";
                 }
                 $notif_title = "✅ Withdrawal Successfully Completed!";
@@ -214,7 +215,7 @@ $withdrawals = $conn->query("
                 <!-- Approval / Rejection Actions -->
                 <?php if ($is_pending): ?>
                     <div class="flex items-center gap-2 pt-1">
-                        <form method="POST" action="index.php?tab=payouts" class="flex-1" onsubmit="return confirm('Confirm payout sent to <?= htmlspecialchars($w['upi_id']); ?>? Targeted push notification will be delivered immediately.');">
+                        <form method="POST" action="index.php?tab=payouts" class="flex-1" >
                             <input type="hidden" name="action" value="complete">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
@@ -223,7 +224,7 @@ $withdrawals = $conn->query("
                             </button>
                         </form>
 
-                        <form method="POST" action="index.php?tab=payouts" onsubmit="return confirm('Reject and refund ₹<?= $w['amount']; ?> back?');">
+                        <form method="POST" action="index.php?tab=payouts" >
                             <input type="hidden" name="action" value="reject">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 font-bold rounded-xl text-xs transition active:scale-95 border border-slate-200 dark:border-slate-700 cursor-pointer">
