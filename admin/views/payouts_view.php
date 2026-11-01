@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg_type = "success";
 
                 // ========================================================
-                // TARGETED PUSH NOTIFICATION (V1 + V2 API FIX APPLIED)
+                // TARGETED PUSH NOTIFICATION (USING DATABASE PLAYER_ID)
                 // ========================================================
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
@@ -44,12 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $onesignal_app_id = '561bd59e-8355-47c8-88cc-0766688a105a';
                 $onesignal_rest_key = base64_decode('b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=');
 
+                // Fetch player's device token from database
+                $token_stmt = $conn->prepare("SELECT player_id FROM users WHERE id = ?");
+                $token_stmt->bind_param("i", $user_id);
+                $token_stmt->execute();
+                $token_res = $token_stmt->get_result()->fetch_assoc();
+                $token_stmt->close();
+
+                $device_player_id = trim($token_res['player_id'] ?? '');
+
                 $onesignal_fields = [
                     'app_id' => $onesignal_app_id,
-                    'include_external_user_ids' => [strval($user_id)], // V1 Support
-                    'include_aliases' => ['external_id' => [strval($user_id)]], // V2 API Support
-                    'target_channel' => 'push',
-                    'channel_for_external_user_ids' => 'push',
+                    'include_player_ids' => !empty($device_player_id) ? [$device_player_id] : [], // Direct Device Token Target
                     'headings' => ['en' => $notif_title],
                     'contents' => ['en' => $notif_body],
                     'data' => [
