@@ -34,6 +34,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.onesignal.OneSignal;
+import com.onesignal.OSDeviceState;
+import com.onesignal.OSSubscriptionObserver;
+import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OSNotificationOpenedResult;
 
 import org.json.JSONObject;
@@ -199,6 +202,46 @@ public class MainActivity extends Activity {
                     }
                 });
             }
+
+            @JavascriptInterface
+            public String getPlayerId() {
+                try {
+                    OSDeviceState deviceState = OneSignal.getDeviceState();
+                    if (deviceState != null && deviceState.getUserId() != null) {
+                        return deviceState.getUserId();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return "";
+            }
+
+            @JavascriptInterface
+            public void setExternalUserId(String userId) {
+                try {
+                    if (userId != null && !userId.isEmpty()) {
+                        OneSignal.setExternalUserId(userId);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @JavascriptInterface
+            public void syncDeviceToken(String userId) {
+                try {
+                    OSDeviceState deviceState = OneSignal.getDeviceState();
+                    if (deviceState != null && deviceState.getUserId() != null) {
+                        String pId = deviceState.getUserId();
+                        if (userId != null && !userId.isEmpty()) {
+                            OneSignal.setExternalUserId(userId);
+                        }
+                        injectPlayerIdIntoWebView(pId);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }, "BEASTzNative");
 
         // 8. WebView Client
@@ -212,6 +255,14 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 hideSplashScreen();
+                try {
+                    OSDeviceState deviceState = OneSignal.getDeviceState();
+                    if (deviceState != null && deviceState.getUserId() != null) {
+                        injectPlayerIdIntoWebView(deviceState.getUserId());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             @Override
@@ -380,6 +431,33 @@ public class MainActivity extends Activity {
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    public void injectPlayerIdIntoWebView(final String playerId) {
+        if (playerId == null || playerId.isEmpty() || webView == null) return;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String script = "(function() { "
+                            + "window.BEASTzPlayerId = '" + playerId + "'; "
+                            + "if (typeof window.onNativePlayerIdReady === 'function') { "
+                            + "    window.onNativePlayerIdReady('" + playerId + "'); "
+                            + "} "
+                            + "if (typeof fetch === 'function') { "
+                            + "    fetch('/save_player_id.php', { "
+                            + "        method: 'POST', "
+                            + "        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, "
+                            + "        body: 'player_id=' + encodeURIComponent('" + playerId + "') "
+                            + "    }).then(function(r) { return r.json(); }).catch(function(e) {}); "
+                            + "} "
+                            + "})();";
+                    webView.evaluateJavascript(script, null);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     @Override
