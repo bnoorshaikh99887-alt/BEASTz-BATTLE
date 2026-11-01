@@ -24,22 +24,49 @@
     </div>
 
     <!-- ONESIGNAL DEVICE ID COLLECTOR FOR NATIVE/WEB -->
-    <?php if(isset($_SESSION['user_id'])): ?>
     <script>
+        function syncPlayerIdToServer(playerId) {
+            if (!playerId || playerId === "null" || playerId === "undefined") return;
+            try {
+                fetch(save_player_id.php, {
+                    method: POST,
+                    headers: { Content-Type: application/x-www-form-urlencoded },
+                    body: player_id= + encodeURIComponent(playerId)
+                }).then(function(res) { return res.json(); })
+                  .then(function(data) {
+                      console.log("OneSignal player_id synced:", data);
+                  }).catch(function(err) {
+                      console.error("Token sync error:", err);
+                  });
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        // 1. Native Android JavascriptInterface Bridge
+        if (window.BEASTzNative && typeof window.BEASTzNative.getPlayerId === function) {
+            var nativeId = window.BEASTzNative.getPlayerId();
+            if (nativeId) {
+                window.BEASTzPlayerId = nativeId;
+                syncPlayerIdToServer(nativeId);
+            }
+        }
+
+        // 2. Global callback for Native Android WebView evaluation
+        window.onNativePlayerIdReady = function(id) {
+            window.BEASTzPlayerId = id;
+            syncPlayerIdToServer(id);
+        };
+
+        // 3. OneSignal Web SDK Fallback
         window.OneSignal = window.OneSignal || [];
         OneSignal.push(function() {
-            OneSignal.getUserId(function(userId) {
-                if (userId) {
-                    // Send Player ID to backend to save in database
-                    fetch('save_player_id.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'player_id=' + encodeURIComponent(userId)
-                    });
-                }
-            });
+            if (typeof OneSignal.getUserId === function) {
+                OneSignal.getUserId(function(userId) {
+                    if (userId) {
+                        syncPlayerIdToServer(userId);
+                    }
+                });
+            }
         });
-    </script>
-    <?php endif; ?>
-</body>
-</html>
+    </script></body></html>
