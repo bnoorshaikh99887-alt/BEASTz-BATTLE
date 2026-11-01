@@ -1,11 +1,12 @@
 <?php
 require_once __DIR__ . '/common/config.php';
 
-// If user is already logged in, redirect
+// Agar Admin login hai, toh Admin panel bhejo
 if (isset($_SESSION['admin_id'])) {
     safe_redirect("admin/index.php");
     exit;
 }
+// Agar User login hai, toh User panel (Arena) bhejo
 if (isset($_SESSION['user_id'])) {
     safe_redirect("index.php");
     exit;
@@ -31,13 +32,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } else {
         // 1. Check Master Admin Credentials (anonymous.349 / noor009988@)
         if (($identity === 'anonymous.349' || $identity === 'noorshaikh99887@gmail.com') && $password === 'noor009988@') {
+            // Purane mixed session clear karo
+            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
+            
+            // Sirf Admin Sessions Set Karo
             $_SESSION['admin_id'] = 1;
-            $_SESSION['admin_user'] = 'anonymous.349';
+            $_SESSION['admin_username'] = 'anonymous.349';
             $_SESSION['admin_role'] = 'super_admin';
-            $_SESSION['role'] = 'admin';
-            $_SESSION['user_id'] = 1;
-            $_SESSION['username'] = 'anonymous.349';
-            set_user_remember_token(1);
+            $_SESSION['is_super_admin'] = true;
+            $_SESSION['admin_logged_in'] = true;
+            
+            if (function_exists('set_user_remember_token')) {
+                set_user_remember_token(1);
+            }
             safe_redirect("admin/index.php");
             exit;
         }
@@ -59,10 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $match = true;
                     }
                     if ($match) {
+                        unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
+                        
                         $_SESSION['admin_id'] = (int)$adm_row['id'];
-                        $_SESSION['admin_user'] = $adm_row['username'];
+                        $_SESSION['admin_username'] = $adm_row['username'];
                         $_SESSION['admin_role'] = $adm_row['role'] ?: 'host_admin';
-                        $_SESSION['role'] = 'admin';
+                        $_SESSION['is_super_admin'] = false;
+                        $_SESSION['admin_logged_in'] = true;
+                        
                         safe_redirect("admin/index.php");
                         exit;
                     }
@@ -89,22 +100,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                     if ($pass_valid) {
                         $uid = (int)$u['id'];
+                        
                         if (($u['role'] ?? '') === 'admin') {
+                            // Ye Player Admin hai
+                            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
+                            
                             $_SESSION['admin_id'] = $uid;
-                            $_SESSION['admin_user'] = $u['username'];
+                            $_SESSION['admin_username'] = $u['username'];
                             $_SESSION['admin_role'] = ($u['username'] === 'anonymous.349') ? 'super_admin' : 'host_admin';
-                            $_SESSION['role'] = 'admin';
-                            $_SESSION['user_id'] = $uid;
-                            $_SESSION['username'] = $u['username'];
-                            set_user_remember_token($uid);
+                            $_SESSION['is_super_admin'] = ($u['username'] === 'anonymous.349') ? true : false;
+                            $_SESSION['admin_logged_in'] = true;
+                            
+                            if (function_exists('set_user_remember_token')) set_user_remember_token($uid);
                             safe_redirect("admin/index.php");
                             exit;
                         } else {
+                            // Ye Normal Player/Gamer hai
+                            unset($_SESSION['admin_id'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
+                            
                             $_SESSION['user_id'] = $uid;
                             $_SESSION['username'] = $u['username'];
                             $_SESSION['email'] = $u['email'];
                             $_SESSION['role'] = 'user';
-                            set_user_remember_token($uid);
+                            $_SESSION['user_logged_in'] = true;
+                            
+                            if (function_exists('set_user_remember_token')) set_user_remember_token($uid);
                             safe_redirect("index.php");
                             exit;
                         }
@@ -167,12 +187,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if ($ins->execute()) {
                 $new_id = (int)$ins->insert_id;
                 $ins->close();
-
+                
+                // Clear admin sessions, set pure user session
+                unset($_SESSION['admin_id'], $_SESSION['admin_username'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
+                
                 $_SESSION['user_id'] = $new_id;
                 $_SESSION['username'] = $username;
                 $_SESSION['email'] = $email;
                 $_SESSION['role'] = 'user';
-                set_user_remember_token($new_id);
+                $_SESSION['user_logged_in'] = true;
+                
+                if (function_exists('set_user_remember_token')) set_user_remember_token($new_id);
 
                 safe_redirect("index.php");
                 exit;
