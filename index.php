@@ -418,6 +418,9 @@ foreach ($players as $idx => $p) {
 
 // Active Tab determination
 $current_active_tab = $requested_tab ?? ($_GET['tab'] ?? 'home');
+if ($current_active_tab === 'my_tournaments' || $current_active_tab === 'my-matches' || $current_active_tab === 'tourneys') {
+    $current_active_tab = 'matches';
+}
 require_once __DIR__ . '/common/header.php';
 ?>
 

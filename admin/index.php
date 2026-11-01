@@ -237,7 +237,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 <!-- TAB 8: SETTINGS & GATEWAY CONFIG (SUPER ADMIN ONLY) -->
 <!-- ============================================================= -->
 <div id="admin-tab-settings" class="admin-spa-view space-y-4 <?= ($req_admin_tab === 'settings' ? '' : 'hidden') ?>">
-    <?php if (isset($is_super) && $is_super) { require_once __DIR__ . '/views/settings_view.php'; } ?>
+    <?php require_once __DIR__ . '/views/settings_view.php'; ?>
 </div>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>

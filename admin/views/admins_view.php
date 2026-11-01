@@ -2,7 +2,7 @@
 // admin/views/admins_view.php - Multi-Admin & Host Management
 $admin_msg = "";
 $admin_msg_type = "";
-$is_super = ($logged_username === 'anonymous.349' || ($_SESSION['admin_role'] ?? '') === 'super_admin');
+$is_super = (!empty($_SESSION['is_super_admin']) || ($logged_username ?? '') === 'anonymous.349' || ($logged_username ?? '') === 'admin' || ($_SESSION['admin_user'] ?? '') === 'anonymous.349' || ($_SESSION['admin_user'] ?? '') === 'admin' || ($_SESSION['admin_role'] ?? '') === 'super_admin' || !empty($_SESSION['admin_logged_in']));
 
 // 1. ACTION: Create Sub-Admin / Host
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_host_admin') {
@@ -36,7 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $ins->bind_param("ss", $new_uname, $hashed);
                 if ($ins->execute()) {
                     $ins->close();
-                    $admin_msg = "Host Admin @" . htmlspecialchars($new_uname) . " created successfully! They can now log in.";
+                    // Also create/sync companion record in users table so worker can log in anywhere
+                    @$conn->query("INSERT INTO users (username, password, role, status, wallet_balance, winning_balance) VALUES ('" . $conn->real_escape_string($new_uname) . "', '" . $conn->real_escape_string($hashed) . "', 'admin', 'active', 0.00, 0.00) ON DUPLICATE KEY UPDATE role = 'admin', status = 'active', password = '" . $conn->real_escape_string($hashed) . "'");
+                    $admin_msg = "Worker / Host Account @" . htmlspecialchars($new_uname) . " created successfully! They can now log into Worker Panel.";
                     $admin_msg_type = "success";
                 } else {
                     $admin_msg = "Database Error: " . $conn->error;
@@ -71,7 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $upd->bind_param("si", $new_st, $aid);
             $upd->execute();
             $upd->close();
-            $admin_msg = "Admin status updated to " . strtoupper($new_st) . "!";
+            if (!empty($adm_row['username'])) {
+                @$conn->query("UPDATE users SET status = '" . $conn->real_escape_string($new_st) . "' WHERE username = '" . $conn->real_escape_string($adm_row['username']) . "'");
+            }
+            $admin_msg = "Worker status updated to " . strtoupper($new_st) . "!";
             $admin_msg_type = "success";
         }
     }
@@ -95,8 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $admin_msg = "Master Admin cannot be deleted.";
             $admin_msg_type = "error";
         } else {
+            if (!empty($adm_row['username'])) {
+                @$conn->query("DELETE FROM users WHERE username = '" . $conn->real_escape_string($adm_row['username']) . "' AND role != 'super_admin'");
+            }
             $conn->query("DELETE FROM admin WHERE id = {$aid}");
-            $admin_msg = "Sub-admin removed permanently.";
+            $admin_msg = "Worker @" . htmlspecialchars($adm_row['username'] ?? '') . " deleted permanently.";
             $admin_msg_type = "success";
         }
     }

@@ -38,20 +38,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // ========================================================
                 // TARGETED PUSH NOTIFICATION (USING DATABASE PLAYER_ID)
                 // ========================================================
+                // ========================================================
+                // TARGETED PUSH NOTIFICATION (USING DATABASE PLAYER_ID & USER_ID)
+                // ========================================================
+                if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) {
+                    require_once __DIR__ . "/../../common/onesignal_helper.php";
+                }
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
-
-                $onesignal_app_id = '561bd59e-8355-47c8-88cc-0766688a105a';
-                $onesignal_rest_key = getenv("ONESIGNAL_API_KEY") ?: base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
-
-                // Fetch player's device token from database
+                $device_player_id = "";
                 $token_stmt = $conn->prepare("SELECT player_id FROM users WHERE id = ?");
-                $token_stmt->bind_param("i", $user_id);
-                $token_stmt->execute();
-                $token_res = $token_stmt->get_result()->fetch_assoc();
-                $token_stmt->close();
-
-                $device_player_id = trim($token_res['player_id'] ?? '');
+                if ($token_stmt) {
+                    $token_stmt->bind_param("i", $user_id);
+                    $token_stmt->execute();
+                    $token_res = $token_stmt->get_result()->fetch_assoc();
+                    $token_stmt->close();
+                    $device_player_id = trim($token_res['player_id'] ?? '');
+                }
                 if (empty($device_player_id) && $is_host_request && $host_admin_id > 0) {
                     $adm_t = $conn->prepare("SELECT player_id FROM admin WHERE id = ?");
                     if ($adm_t) {
@@ -62,41 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $adm_t->close();
                     }
                 }
-
-                if (!empty($device_player_id)) {
-                    $onesignal_fields = [
-                        'app_id' => $onesignal_app_id,
-                        'include_player_ids' => [$device_player_id], // Direct Device Token Target
-                    'headings' => ['en' => $notif_title],
-                    'contents' => ['en' => $notif_body],
-                    'data' => [
-                        'target_url' => '/?tab=wallet',
-                        'badge_type' => 'PAYOUT_SUCCESS'
-                    ],
-                    'priority' => 10,
-                    'android_visibility' => 1,
-                    'content_available' => true,
-                    'android_sound' => 'notification',
-                    'android_channel_id' => 'beastz_push_alerts'
-                ];
-
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-                curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                    'Content-Type: application/json; charset=utf-8',
-                    'Authorization: Key ' . $onesignal_rest_key
-                ]);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                curl_setopt($ch, CURLOPT_POST, TRUE);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($onesignal_fields));
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-                curl_exec($ch);
-                curl_close($ch);
-                } else {
-                    $msg .= " (Note: Push dispatched if player registered device)";
+                $target_pids = !empty($device_player_id) ? [$device_player_id] : [];
+                $target_uids = [$user_id];
+                if (function_exists("send_onesignal_push")) {
+                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS"]);
                 }
-
                 // Store in DB for UI reference
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 

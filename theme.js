@@ -73,51 +73,60 @@ function escapeHtml(str) {
 // USER PANEL SPA TAB SWITCHER
 // ============================================================
 function switchAppTab(tabName, skipState) {
-    if (!tabName) tabName = 'home';
-    tabName = String(tabName).toLowerCase().replace('spa-tab-', '').trim();
+    if (!tabName) tabName = "home";
+    tabName = String(tabName).toLowerCase().replace("spa-tab-", "").trim();
 
     var aliasMap = {
-        'matches': 'home',
-        'tournaments': 'home',
-        'tourneys': 'home',
-        'leaderboards': 'leaderboard',
-        'ranks': 'leaderboard',
-        'points': 'leaderboard',
-        'point_table': 'leaderboard',
-        'wallets': 'wallet',
-        'passbook': 'wallet',
-        'profiles': 'profile',
-        'account': 'profile',
-        'shops': 'store',
-        'shop': 'store'
+        "my_tournaments": "matches",
+        "my-matches": "matches",
+        "mymatches": "matches",
+        "tournaments": "home",
+        "tourneys": "home",
+        "leaderboards": "leaderboard",
+        "ranks": "leaderboard",
+        "points": "leaderboard",
+        "point_table": "leaderboard",
+        "wallets": "wallet",
+        "passbook": "wallet",
+        "profiles": "profile",
+        "account": "profile",
+        "shops": "store",
+        "shop": "store"
     };
+
     if (aliasMap[tabName]) tabName = aliasMap[tabName];
 
-    var views = document.querySelectorAll('.spa-tab-view');
-    var target = document.getElementById('spa-tab-' + tabName);
+    var views = document.querySelectorAll(".spa-tab-view");
+    var target = document.getElementById("spa-tab-" + tabName);
+
     if (!target) {
-        tabName = 'home';
-        target = document.getElementById('spa-tab-home');
+        // If not found in DOM, only fallback if not matches or wallet
+        target = document.getElementById("spa-tab-home");
+        if (target && !document.getElementById("spa-tab-" + tabName)) {
+            tabName = "home";
+        }
     }
+
     if (!target) return;
 
-    views.forEach(function(el) { el.classList.add('hidden'); });
-    target.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    views.forEach(function(el) { el.classList.add("hidden"); });
+    target.classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: "instant" });
 
-    // Update bottom nav bar
-    document.querySelectorAll('.bottom-nav-item').forEach(function(btn) {
-        btn.classList.remove('text-yellow-500', 'font-black');
-        btn.classList.add('text-slate-400');
+    // Update bottom nav bar and shift active yellow glow dynamically across tabs
+    document.querySelectorAll(".nav-app-tab, .bottom-nav-item, [id^='nav-tab-']").forEach(function(btn) {
+        btn.classList.remove("active-tab", "text-yellow-500", "font-black");
+        btn.classList.add("text-slate-400");
     });
-    var activeBottom = document.getElementById('nav-' + tabName);
+
+    var activeBottom = document.getElementById("nav-tab-" + tabName) || document.getElementById("nav-" + tabName);
     if (activeBottom) {
-        activeBottom.classList.remove('text-slate-400');
-        activeBottom.classList.add('text-yellow-500', 'font-black');
+        activeBottom.classList.remove("text-slate-400");
+        activeBottom.classList.add("active-tab", "text-yellow-500", "font-black");
     }
 
     if (!skipState && window.history && window.history.replaceState) {
-        window.history.replaceState({ tab: tabName }, '', 'index.php?tab=' + encodeURIComponent(tabName));
+        window.history.replaceState({ tab: tabName }, "", "index.php?tab=" + encodeURIComponent(tabName));
     }
     try {
         localStorage.setItem('beastz_active_user_tab', tabName);

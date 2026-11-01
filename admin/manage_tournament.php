@@ -221,15 +221,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $msg_type = "success";
         $t['status'] = 'completed';
 
-        // Trigger Push Notification for Results Declared (TARGETED USERS ONLY)
-        if (!empty($participating_uids)) {
-            sendOneSignalNotification(
-                "🏆 Results Declared!", 
-                "Match results for '" . $t['title'] . "' have been published. Check your wallet & rankings!", 
-                "/?tab=leaderboard",
-                $participating_uids
-            );
+        // Trigger Push Notification for Results Declared: "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆"
+        $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
+        $results_msg = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
+        $participating_pids = [];
+        $q_pids = $conn->query("SELECT u.player_id FROM participants p JOIN users u ON p.user_id = u.id WHERE p.tournament_id = {$tournament_id}");
+        if ($q_pids) {
+            while ($pr = $q_pids->fetch_assoc()) {
+                if (!empty($pr['player_id'])) $participating_pids[] = $pr['player_id'];
+            }
         }
+        sendOneSignalNotification(
+            $results_title, 
+            $results_msg, 
+            "/?tab=matches",
+            $participating_pids,
+            $participating_uids
+        );
+        $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($results_title) . "', '" . $conn->real_escape_string($results_msg) . "', '/?tab=matches', 'RESULTS_ANNOUNCED')");
 
     } catch (Exception $e) {
         $conn->rollback();

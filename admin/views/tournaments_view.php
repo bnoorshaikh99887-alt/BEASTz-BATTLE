@@ -41,16 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// 2. Handle Tournament Deletion
+// 2. Handle Instant Tournament Deletion (Active or Completed)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_tournament') {
     $tid = (int)($_POST['tournament_id'] ?? 0);
     if ($tid > 0) {
+        @$conn->query("DELETE FROM anti_cheat_logs WHERE tournament_id = $tid");
         @$conn->query("DELETE FROM participants WHERE tournament_id = $tid");
+        @$conn->query("DELETE FROM user_tournaments WHERE tournament_id = $tid");
         $del = $conn->prepare("DELETE FROM tournaments WHERE id = ?");
         if ($del) {
             $del->bind_param("i", $tid);
             if ($del->execute()) {
-                $msg = "Tournament #$tid deleted successfully.";
+                $msg = "Tournament #$tid successfully deleted from system.";
                 $msg_type = "success";
             } else {
                 $msg = "Delete failed: " . $del->error;
@@ -109,7 +111,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
         <span class="text-[10px] text-slate-400 font-bold uppercase">Free Fire & BGMI</span>
     </div>
 
-    <form method="POST" action="tournament.php" class="space-y-3">
+    <form method="POST" action="index.php?tab=tournaments" class="space-y-3">
         <input type="hidden" name="action" value="create_tournament">
 
         <div>
@@ -262,7 +264,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                         <a href="manage_tournament.php?id=<?= $t['id']; ?>" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-center font-black rounded-xl text-xs shadow-xs transition">
                             <i class="fa-solid fa-gear text-[10px] mr-1"></i> Manage & Results
                         </a>
-                        <form method="POST" action="tournament.php" onsubmit="return confirm('Are you sure you want to delete this tournament and remove its participants?');" class="shrink-0">
+                        <form method="POST" action="index.php?tab=tournaments" onsubmit="return confirm('Are you sure you want to delete this tournament and remove its participants?');" class="shrink-0">
                             <input type="hidden" name="action" value="delete_tournament">
                             <input type="hidden" name="tournament_id" value="<?= $t['id']; ?>">
                             <button type="submit" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs border border-rose-200 transition" title="Delete Match">
@@ -330,7 +332,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                         <a href="manage_tournament.php?id=<?= $ct['id']; ?>&anti_cheat=1" class="flex-1 py-2 bg-slate-100 hover:bg-yellow-50 text-slate-800 hover:text-slate-950 text-center font-bold border border-slate-200 rounded-xl text-xs transition">
                             <i class="fa-solid fa-shield-halved text-rose-500 mr-1"></i> View Results & Anti-Cheat
                         </a>
-                        <form method="POST" action="tournament.php?tab=completed" onsubmit="return confirm('Delete completed tournament archive?');" class="shrink-0">
+                        <form method="POST" action="index.php?tab=tournaments" onsubmit="return confirm('Delete completed tournament archive?');" class="shrink-0">
                             <input type="hidden" name="action" value="delete_tournament">
                             <input type="hidden" name="tournament_id" value="<?= $ct['id']; ?>">
                             <button type="submit" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs border border-rose-200 transition" title="Delete Archive">
