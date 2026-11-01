@@ -160,7 +160,7 @@ $withdrawals = $conn->query("
     </div>
 <?php endif; ?>
 
-<div class="space-y-3">
+<div id="admin-payouts-cards-container" class="space-y-3">
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
         <?php while ($w = $withdrawals->fetch_assoc()): ?>
             <?php 

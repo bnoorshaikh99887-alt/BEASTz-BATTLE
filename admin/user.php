@@ -1,6 +1,12 @@
 <?php
 require_once __DIR__ . '/common/header.php';
 
+// Seamless SPA bridge: Forward GET into unified admin SPA
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    safe_redirect("index.php?tab=users");
+    exit;
+}
+
 $msg = "";
 $msg_type = "";
 

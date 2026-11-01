@@ -8,19 +8,22 @@ if (!defined("ONESIGNAL_APP_ID")) {
     define("ONESIGNAL_APP_ID", "561bd59e-8355-47c8-88cc-0766688a105a");
 }
 
+if (!defined("ONESIGNAL_API_KEY")) {
+    define("ONESIGNAL_API_KEY", base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk="));
+}
+
 function get_onesignal_key() {
-    return getenv("ONESIGNAL_API_KEY") ?: base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
+    return getenv("ONESIGNAL_API_KEY") ?: ONESIGNAL_API_KEY;
 }
 
 function send_player_push_notification($player_ids, $title, $message, $target_url = "/?tab=wallet", $extra_data = []) {
     if (empty($player_ids)) {
         return ["success" => false, "error" => "No player IDs provided"];
     }
-
     if (!is_array($player_ids)) {
         $player_ids = [$player_ids];
     }
-    $player_ids = array_values(array_filter($player_ids));
+    $player_ids = array_values(array_unique(array_filter($player_ids)));
     if (empty($player_ids)) {
         return ["success" => false, "error" => "Empty player IDs after filtering"];
     }

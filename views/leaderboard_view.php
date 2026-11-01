@@ -4,7 +4,7 @@
 </div>
 
 <!-- Top 3 Podium (White + Gray + Yellow Theme) -->
-<div class="bg-white border border-slate-200 rounded-3xl p-5 mb-4 shadow-sm relative overflow-hidden">
+<div id="live-leaderboard-podium" class="bg-white border border-slate-200 rounded-3xl p-5 mb-4 shadow-sm relative overflow-hidden">
     <div class="flex items-end justify-center gap-4 pt-2 pb-3">
         
         <!-- #2 Second Place (Left) -->
@@ -74,7 +74,7 @@
         <span>Wallet Balance</span>
     </div>
     
-    <div class="divide-y divide-slate-100">
+    <div id="live-leaderboard-list" class="divide-y divide-slate-100">
         <?php foreach ($players as $idx => $p): ?>
             <?php 
                 $rank = $idx + 1;
@@ -109,7 +109,7 @@
 </div>
 
 <!-- Sticky Bottom Bar for Current User Ranking -->
-<div class="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 z-40 shadow-lg flex items-center justify-between">
+<div id="live-leaderboard-my-rank" class="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 z-40 shadow-lg flex items-center justify-between">
     <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-full bg-yellow-400 text-slate-950 font-black flex items-center justify-center text-xs shadow-xs">
             <?= strtoupper(substr($my_name, 0, 1)); ?>

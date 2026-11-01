@@ -154,18 +154,20 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     $one_year = 365 * 24 * 3600;
     ini_set('session.cookie_lifetime', $one_year);
     ini_set('session.gc_maxlifetime', $one_year);
-
     if (session_status() === PHP_SESSION_NONE) {
-        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+                    (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
+                    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        
         session_set_cookie_params([
             'lifetime' => $one_year,
             'path' => '/',
-            'domain' => $_SERVER['HTTP_HOST'] ?? '',
+            'domain' => '',
             'secure' => $is_https,
             'httponly' => true,
             'samesite' => 'Lax'
         ]);
-        session_start();
+        @session_start();
     }
 
     // =========================================================================
@@ -204,29 +206,71 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     }
 
     // =========================================================================
-    // ✅ PERSISTENT LOGIN AUTO-RESTORE (UNTIL LOGOUT)
+    // ✅ 1-YEAR PERSISTENT LOGIN AUTO-RESTORE FOR BOTH ADMIN & USER ROLES
     // =========================================================================
-    if (!isset($_SESSION['user_id']) && !empty($_COOKIE['adept_remember']) && $conn && !$conn->connect_error) {
+    if ((empty($_SESSION['user_id']) && empty($_SESSION['admin_id'])) && !empty($_COOKIE['adept_remember']) && $conn && !$conn->connect_error) {
         $rem_token = trim($_COOKIE['adept_remember']);
         if (preg_match('/^[a-f0-9]{32,128}$/i', $rem_token)) {
-            $stmt = $conn->prepare("SELECT id, username, email, phone, role, status FROM users WHERE remember_token = ? LIMIT 1");
-            if ($stmt) {
-                $stmt->bind_param("s", $rem_token);
-                $stmt->execute();
-                $res = $stmt->get_result();
-                if ($u = $res->fetch_assoc()) {
-                    if (($u['role'] ?? '') === 'admin' || ($u['status'] ?? 'active') !== 'blocked') {
-                        $_SESSION['user_id'] = (int)$u['id'];
-                        $_SESSION['username'] = $u['username'];
-                        $_SESSION['email'] = $u['email'];
-                        $_SESSION['role'] = $u['role'] ?? 'user';
-                        if ($u['role'] === 'admin') {
-                            $_SESSION['admin_id'] = (int)$u['id'];
-                            $_SESSION['admin_user'] = $u['username'];
+            $pref_panel = $_COOKIE['beastz_active_panel'] ?? '';
+            $is_restored = false;
+
+            // 1. If active panel was admin, check admin table first
+            if ($pref_panel === 'admin' || empty($pref_panel)) {
+                $a_stmt = $conn->prepare("SELECT id, username, role, status FROM admin WHERE remember_token = ? LIMIT 1");
+                if ($a_stmt) {
+                    $a_stmt->bind_param("s", $rem_token);
+                    $a_stmt->execute();
+                    $a_res = $a_stmt->get_result();
+                    if ($adm = $a_res->fetch_assoc()) {
+                        if (($adm['status'] ?? 'active') === 'active') {
+                            $aid = (int)$adm['id'];
+                            $_SESSION['admin_id'] = $aid;
+                            $_SESSION['admin_user'] = $adm['username'];
+                            $_SESSION['admin_username'] = $adm['username'];
+                            $_SESSION['role'] = 'admin';
+                            $_SESSION['admin_role'] = $adm['role'] ?? 'super_admin';
+                            $_SESSION['is_super_admin'] = ($adm['role'] === 'super_admin' || $adm['username'] === 'anonymous.349' || $adm['username'] === 'admin');
+                            $_SESSION['admin_logged_in'] = true;
+                            $_SESSION['active_panel'] = 'admin';
+                            $is_restored = true;
                         }
                     }
+                    $a_stmt->close();
                 }
-                $stmt->close();
+            }
+
+            // 2. Check users table
+            if (!$is_restored) {
+                $stmt = $conn->prepare("SELECT id, username, email, phone, role, status FROM users WHERE remember_token = ? LIMIT 1");
+                if ($stmt) {
+                    $stmt->bind_param("s", $rem_token);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    if ($u = $res->fetch_assoc()) {
+                        if (($u['role'] ?? '') === 'admin') {
+                            $aid = (int)$u['id'];
+                            $_SESSION['admin_id'] = $aid;
+                            $_SESSION['admin_user'] = $u['username'];
+                            $_SESSION['admin_username'] = $u['username'];
+                            $_SESSION['user_id'] = $aid;
+                            $_SESSION['username'] = $u['username'];
+                            $_SESSION['role'] = 'admin';
+                            $_SESSION['admin_role'] = 'super_admin';
+                            $_SESSION['is_super_admin'] = true;
+                            $_SESSION['admin_logged_in'] = true;
+                            $_SESSION['active_panel'] = 'admin';
+                            $is_restored = true;
+                        } elseif (($u['status'] ?? 'active') !== 'blocked') {
+                            $_SESSION['user_id'] = (int)$u['id'];
+                            $_SESSION['username'] = $u['username'];
+                            $_SESSION['email'] = $u['email'];
+                            $_SESSION['role'] = $u['role'] ?? 'user';
+                            $_SESSION['active_panel'] = 'user';
+                            $is_restored = true;
+                        }
+                    }
+                    $stmt->close();
+                }
             }
         }
     }
@@ -237,23 +281,37 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     if (!defined('CASHFREE_APP_ID')) define('CASHFREE_APP_ID', '1494190b594e98ed762a2a943320914941');
     if (!defined('CASHFREE_SECRET_KEY')) define('CASHFREE_SECRET_KEY', 'cfsk_ma_prod_979295dd86c34ea7eef3d56c1e07d25e_27097462');
     if (!defined('CASHFREE_ENVIRONMENT')) define('CASHFREE_ENVIRONMENT', 'PROD');
-
     if (!function_exists('get_cashfree_app_id')) { function get_cashfree_app_id() { return CASHFREE_APP_ID; } }
     if (!function_exists('get_cashfree_secret_key')) { function get_cashfree_secret_key() { return CASHFREE_SECRET_KEY; } }
     if (!function_exists('get_cashfree_env')) { function get_cashfree_env() { return 'PROD'; } }
 
-    // Issue 1-Year Persistent Remember Token
+    // Issue 1-Year Persistent Remember Token for User or Admin
     if (!function_exists('set_user_remember_token')) {
-        function set_user_remember_token($user_id) {
+        function set_user_remember_token($user_id, $role = 'user') {
             global $conn;
             $user_id = (int)$user_id;
             $token = bin2hex(random_bytes(32));
             if ($conn && !$conn->connect_error) {
-                $stmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
-                if ($stmt) {
-                    $stmt->bind_param("si", $token, $user_id);
-                    $stmt->execute();
-                    $stmt->close();
+                if ($role === 'admin') {
+                    $s1 = $conn->prepare("UPDATE admin SET remember_token = ? WHERE id = ?");
+                    if ($s1) {
+                        $s1->bind_param("si", $token, $user_id);
+                        $s1->execute();
+                        $s1->close();
+                    }
+                    $s2 = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ? OR (role = 'admin' AND id = ?)");
+                    if ($s2) {
+                        $s2->bind_param("sii", $token, $user_id, $user_id);
+                        $s2->execute();
+                        $s2->close();
+                    }
+                } else {
+                    $stmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
+                    if ($stmt) {
+                        $stmt->bind_param("si", $token, $user_id);
+                        $stmt->execute();
+                        $stmt->close();
+                    }
                 }
             }
             $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
@@ -261,11 +319,23 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
             setcookie('adept_remember', $token, [
                 'expires' => $expire,
                 'path' => '/',
+                'domain' => '',
                 'secure' => $is_https,
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]);
             $_COOKIE['adept_remember'] = $token;
+
+            $panel = ($role === 'admin') ? 'admin' : 'user';
+            setcookie('beastz_active_panel', $panel, [
+                'expires' => $expire,
+                'path' => '/',
+                'domain' => '',
+                'secure' => $is_https,
+                'httponly' => false,
+                'samesite' => 'Lax'
+            ]);
+            $_COOKIE['beastz_active_panel'] = $panel;
         }
     }
 
@@ -276,12 +346,16 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
             if ($user_id && $conn && !$conn->connect_error) {
                 $uid = (int)$user_id;
                 @$conn->query("UPDATE users SET remember_token = NULL WHERE id = {$uid}");
+                @$conn->query("UPDATE admin SET remember_token = NULL WHERE id = {$uid}");
             }
-            setcookie('adept_remember', '', time() - 86400, '/');
+            $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+            setcookie('adept_remember', '', time() - 86400, '/', '', $is_https, true);
+            setcookie('beastz_active_panel', '', time() - 86400, '/', '', $is_https, false);
             unset($_COOKIE['adept_remember']);
+            unset($_COOKIE['beastz_active_panel']);
         }
     }
-
+    
     if (!function_exists('get_setting')) {
         function get_setting($key, $default = '') {
             global $conn;

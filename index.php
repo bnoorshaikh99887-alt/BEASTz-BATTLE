@@ -1,6 +1,25 @@
 <?php
 require_once __DIR__ . '/common/config.php';
 
+// =============================================================
+// ✅ SESSION PERSISTENCE & REFRESH ROUTER
+// Retains exact logged-in role & panel across reloads / APK restarts
+// =============================================================
+$is_admin_session = (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'));
+$active_panel = $_SESSION['active_panel'] ?? $_COOKIE['active_panel'] ?? '';
+
+if ($is_admin_session) {
+    if (isset($_GET['view']) && $_GET['view'] === 'player') {
+        $_SESSION['active_panel'] = 'user';
+        setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
+    } elseif ($active_panel === 'admin' || !isset($_GET['view'])) {
+        $_SESSION['active_panel'] = 'admin';
+        setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+        safe_redirect("admin/index.php");
+        exit;
+    }
+}
+
 $curr_uid = (int)($_SESSION['user_id'] ?? 0);
 $alert_msg = "";
 $alert_type = "";

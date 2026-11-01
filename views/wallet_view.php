@@ -11,10 +11,10 @@
     <div class="flex items-center justify-between mb-4">
         <div>
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available Balance</span>
-            <div class="text-3xl font-black text-slate-900 font-mono mt-0.5 tracking-tight">
+            <div id="user-wallet-balance-compact" class="text-3xl font-black text-slate-900 font-mono mt-0.5 tracking-tight">
                 <?= format_compact_inr($current_balance); ?>
             </div>
-            <span class="text-[10px] font-bold text-slate-400 block mt-0.5">
+            <span id="user-wallet-balance-full" class="text-[10px] font-bold text-slate-400 block mt-0.5">
                 Full: <?= format_inr($current_balance); ?>
             </span>
         </div>
@@ -37,8 +37,8 @@
 </div>
 
 <!-- Pending Payout Requests Alert -->
-<?php if ($pending_withdrawals && $pending_withdrawals->num_rows > 0): ?>
-    <div class="bg-blue-50/80 border border-blue-200 rounded-2xl p-4 mb-4 shadow-xs space-y-2">
+<div id="user-pending-withdrawals-container" class="<?= ($pending_withdrawals && $pending_withdrawals->num_rows > 0) ? '' : 'hidden' ?> mb-4">
+    <div class="bg-blue-50/80 border border-blue-200 rounded-2xl p-4 shadow-xs space-y-2">
         <div class="flex items-center justify-between">
             <h3 class="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
                 <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> Pending Withdrawals
@@ -59,7 +59,7 @@
             <?php endwhile; ?>
         </div>
     </div>
-<?php endif; ?>
+</div>
 
 <!-- Pending UPI UTR Deposits (Awaiting Admin Approval) -->
 <?php if ($pending_deposits && $pending_deposits->num_rows > 0): ?>

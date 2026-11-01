@@ -208,8 +208,6 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
     
     <!-- CONTAINER 1: ACTIVE & LIVE TOURNAMENTS (0ms CLIENT TOGGLE) -->
     <div id="adminTourneysActive" class="admin-tourney-pane space-y-3">
-        
-        <!-- TAB 1: ACTIVE & LIVE MATCHES -->
         <?php if ($active_tourneys && $active_tourneys->num_rows > 0): ?>
             <?php while ($t = $active_tourneys->fetch_assoc()): ?>
                 <?php
@@ -274,44 +272,16 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                     </div>
                 </div>
             <?php endwhile; ?>
-        
+        <?php else: ?>
+            <div class="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-slate-400 text-xs">
+                <i class="fa-solid fa-gamepad text-2xl text-slate-300 dark:text-slate-600 mb-2 block"></i>
+                No active or live tournaments right now. Create one above!
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- CONTAINER 2: COMPLETED TOURNAMENTS (0ms CLIENT TOGGLE) -->
     <div id="adminTourneysCompleted" class="admin-tourney-pane hidden space-y-3">
-        
-            <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
-                No active or live tournaments right now. Create one above!
-            </div>
-        
-    </div>
-
-    <script>
-    function switchTourneySubTab(tab, btn) {
-        document.querySelectorAll('.tourney-subtab-btn').forEach(function(b) {
-            b.classList.remove('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
-            b.classList.add('text-slate-600', 'dark:text-slate-400', 'font-bold');
-        });
-        if (btn) {
-            btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'font-bold');
-            btn.classList.add('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
-        }
-        document.querySelectorAll('.admin-tourney-pane').forEach(function(p) {
-            p.classList.add('hidden');
-        });
-        if (tab === 'active') {
-            var el = document.getElementById('adminTourneysActive');
-            if (el) el.classList.remove('hidden');
-        } else {
-            var el = document.getElementById('adminTourneysCompleted');
-            if (el) el.classList.remove('hidden');
-        }
-    }
-    </script>
-        
-
-    <?php else: ?>
-        <!-- TAB 2: COMPLETED MATCHES SECTION -->
         <?php if ($completed_tourneys && $completed_tourneys->num_rows > 0): ?>
             <?php while ($ct = $completed_tourneys->fetch_assoc()): ?>
                 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-2.5">
@@ -371,11 +341,33 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
-            <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
+            <div class="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-slate-400 text-xs">
+                <i class="fa-solid fa-trophy text-2xl text-slate-300 dark:text-slate-600 mb-2 block"></i>
                 No completed matches found in archive.
             </div>
         <?php endif; ?>
-    <?php endif; ?>
-</div>
+    </div>
 
-<?php  ?>
+    <script>
+    function switchTourneySubTab(tab, btn) {
+        document.querySelectorAll(".tourney-subtab-btn").forEach(function(b) {
+            b.classList.remove("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+            b.classList.add("text-slate-600", "dark:text-slate-400", "font-bold");
+        });
+        if (btn) {
+            btn.classList.remove("text-slate-600", "dark:text-slate-400", "font-bold");
+            btn.classList.add("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+        }
+        document.querySelectorAll(".admin-tourney-pane").forEach(function(p) {
+            p.classList.add("hidden");
+        });
+        if (tab === "active") {
+            var el = document.getElementById("adminTourneysActive");
+            if (el) el.classList.remove("hidden");
+        } else {
+            var el = document.getElementById("adminTourneysCompleted");
+            if (el) el.classList.remove("hidden");
+        }
+    }
+    </script>
+</div>

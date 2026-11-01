@@ -65,7 +65,7 @@ $deposits = $conn->query("
 
 <div class="mb-5 flex items-center justify-between">
     <div>
-        <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+        <h2 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2 font-display">
             <i class="fa-solid fa-money-bill-transfer text-yellow-500"></i> UPI Deposit Requests
         </h2>
         <p class="text-xs text-slate-500">Verify 12-digit UPI UTR numbers and credit player wallets</p>
@@ -86,11 +86,11 @@ $deposits = $conn->query("
     <?php if ($deposits && $deposits->num_rows > 0): ?>
         <?php while ($d = $deposits->fetch_assoc()): ?>
             <?php $is_pending = ($d['status'] === 'Pending'); ?>
-            <div class="bg-white border <?= $is_pending ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-slate-200' ?> rounded-2xl p-4 shadow-xs space-y-3 transition">
+            <div class="bg-white dark:bg-[#131b2e] border <?= $is_pending ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-slate-200 dark:border-slate-800' ?> rounded-2xl p-4 shadow-xs space-y-3 transition">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-extrabold text-slate-900">@<?= htmlspecialchars($d['username']); ?></span>
+                            <span class="text-sm font-extrabold text-slate-900 dark:text-white">@<?= htmlspecialchars($d['username']); ?></span>
                             <?php if ($is_pending): ?>
                                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
                                     Action Required
@@ -102,16 +102,16 @@ $deposits = $conn->query("
                         </span>
                     </div>
                     <div class="text-right">
-                        <span class="text-base font-mono font-black text-slate-900 block"><?= format_inr($d['amount']); ?></span>
+                        <span class="text-base font-mono font-black text-slate-900 dark:text-white block"><?= format_inr($d['amount']); ?></span>
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 <?= ($d['status'] === 'Completed') ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : (($d['status'] === 'Rejected') ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200') ?>">
                             <?= htmlspecialchars($d['status']); ?>
                         </span>
                     </div>
                 </div>
 
-                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+                <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                     <span class="text-[11px] text-slate-500 font-semibold block mb-0.5">UPI Reference / 12-Digit UTR:</span>
-                    <span class="font-mono text-slate-900 font-black select-all tracking-wider text-sm"><?= htmlspecialchars($d['transaction_id']); ?></span>
+                    <span class="font-mono text-slate-900 dark:text-white font-black select-all tracking-wider text-sm"><?= htmlspecialchars($d['transaction_id']); ?></span>
                 </div>
 
                 <?php if ($is_pending): ?>
@@ -135,7 +135,7 @@ $deposits = $conn->query("
             </div>
         <?php endwhile; ?>
     <?php else: ?>
-        <div class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 shadow-xs">
+        <div class="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-500 shadow-xs">
             <i class="fa-solid fa-receipt text-3xl text-slate-300 mb-2 block"></i>
             <p class="text-xs font-bold">No UPI deposit requests found.</p>
         </div>

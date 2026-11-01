@@ -20,6 +20,8 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
+import android.webkit.CookieManager;
+import android.content.SharedPreferences;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -191,6 +193,13 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setUserAgentString(settings.getUserAgentString() + " BEASTzNativeApp/1.3.0 Android");
 
+        // Enable persistent cookies across reloads, restarts and backgrounding
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cookieManager.setAcceptThirdPartyCookies(webView, true);
+        }
+
         // Native JS Bridge for Direct Web-to-Native Notification Call
         webView.addJavascriptInterface(new Object() {
             @JavascriptInterface
@@ -255,6 +264,15 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 hideSplashScreen();
+                if (url != null && !url.contains("cashfree") && !url.contains("return") && !url.contains("error")) {
+                    getSharedPreferences("beastz_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("last_url", url)
+                            .apply();
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    CookieManager.getInstance().flush();
+                }
                 try {
                     OSDeviceState deviceState = OneSignal.getDeviceState();
                     if (deviceState != null && deviceState.getUserId() != null) {
@@ -347,7 +365,12 @@ public class MainActivity extends Activity {
         });
 
         // 10. Load App
-        webView.loadUrl(APP_URL);
+        SharedPreferences prefs = getSharedPreferences("beastz_prefs", Context.MODE_PRIVATE);
+        String lastUrl = prefs.getString("last_url", APP_URL);
+        if (lastUrl == null || lastUrl.isEmpty() || !lastUrl.startsWith("http")) {
+            lastUrl = APP_URL;
+        }
+        webView.loadUrl(lastUrl);
     }
 
     public void showSystemNotification(String title, String message, String actionUrl) {
@@ -458,6 +481,14 @@ public class MainActivity extends Activity {
                 }
             }
         });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            CookieManager.getInstance().flush();
+        }
     }
 
     @Override
