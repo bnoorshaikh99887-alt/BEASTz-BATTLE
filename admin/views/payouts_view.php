@@ -53,9 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 $device_player_id = trim($token_res['player_id'] ?? '');
 
-                $onesignal_fields = [
-                    'app_id' => $onesignal_app_id,
-                    'include_player_ids' => !empty($device_player_id) ? [$device_player_id] : [], // Direct Device Token Target
+                if (!empty($device_player_id)) {
+                    $onesignal_fields = [
+                        'app_id' => $onesignal_app_id,
+                        'include_player_ids' => [$device_player_id], // Direct Device Token Target
                     'headings' => ['en' => $notif_title],
                     'contents' => ['en' => $notif_body],
                     'data' => [
@@ -72,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
                 curl_setopt($ch, CURLOPT_HTTPHEADER, [
                     'Content-Type: application/json; charset=utf-8',
-                    'Authorization: Basic ' . $onesignal_rest_key
+                    'Authorization: Key ' . $onesignal_rest_key
                 ]);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
                 curl_setopt($ch, CURLOPT_POST, TRUE);
@@ -81,6 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 curl_setopt($ch, CURLOPT_TIMEOUT, 8);
                 curl_exec($ch);
                 curl_close($ch);
+                } else {
+                    $msg .= " (Note: Player ID not found in database for user)";
+                }
 
                 // Store in DB for UI reference
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
