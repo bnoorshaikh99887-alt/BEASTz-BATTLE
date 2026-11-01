@@ -22,9 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $msg_type = "error";
     } else {
         $match_time = date('Y-m-d H:i:s', strtotime($match_time_raw));
-        $stmt = $conn->prepare("INSERT INTO tournaments (title, game, game_name, map, match_type, entry_fee, per_kill, prize_pool, match_time, total_slots, joined_slots, status, commission_percent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'upcoming', ?)");
+        $host_admin_id = (int)($_SESSION['admin_id'] ?? 1);
+        $stmt = $conn->prepare("INSERT INTO tournaments (title, game, game_name, map, match_type, entry_fee, per_kill, prize_pool, match_time, total_slots, joined_slots, status, commission_percent, hosted_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'upcoming', ?, ?)");
         if ($stmt) {
-            $stmt->bind_param("sssssdddsii", $title, $game_name, $game_name, $map, $match_type, $entry_fee, $per_kill, $prize_pool, $match_time, $total_slots, $commission);
+            $stmt->bind_param("sssssdddsiii", $title, $game_name, $game_name, $map, $match_type, $entry_fee, $per_kill, $prize_pool, $match_time, $total_slots, $commission, $host_admin_id);
             if ($stmt->execute()) {
                 $msg = "Tournament '" . htmlspecialchars($title) . "' created successfully!";
                 $msg_type = "success";

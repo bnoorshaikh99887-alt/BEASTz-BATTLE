@@ -75,13 +75,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $t['room_password'] = $room_password;
             $t['status'] = $status;
 
-            // Trigger Push Notification when Room ID is updated/live
-            if (!empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
-                sendOneSignalNotification(
-                    "🔥 Room ID & Password Out!", 
-                    "Match: " . $t['title'] . " | Room ID: " . $room_id . " | Pass: " . $room_password, 
-                    "/?tab=tournaments"
-                );
+            // Trigger Push Notification when Room ID is updated/live (WAR ZONE TAYAR HAI)
+            if (!empty($_POST['send_idp_push']) && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
+                // Fetch enrolled gamer IDs for this match
+                $uids = [];
+                $q_p = $conn->query("SELECT user_id FROM participants WHERE tournament_id = {$tournament_id}");
+                if ($q_p) {
+                    while ($p_r = $q_p->fetch_assoc()) {
+                        $uids[] = (int)$p_r['user_id'];
+                    }
+                }
+
+                $idp_title = "🔥 WAR ZONE TAYAR HAI!";
+                $idp_msg = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
+
+                sendOneSignalNotification($idp_title, $idp_msg, "/?tab=matches", $uids);
             }
         } else {
             $msg = "Update failed: " . $u_stmt->error;
@@ -158,6 +166,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $conn->query("UPDATE tournaments SET status = 'completed', winner_user_id = {$winner_u_id} WHERE id = {$tournament_id}");
         } else {
             $conn->query("UPDATE tournaments SET status = 'completed' WHERE id = {$tournament_id}");
+        }
+
+        // Credit ₹3 per room reward to Match Host Admin if hosted by sub-admin
+        $hosted_by = (int)($t['hosted_by_admin_id'] ?? 0);
+        if ($hosted_by > 0) {
+            $conn->query("UPDATE admin SET wallet_balance = wallet_balance + 3.00, rooms_hosted = rooms_hosted + 1 WHERE id = {$hosted_by}");
         }
 
         $conn->commit();
@@ -335,6 +349,23 @@ $participants = $conn->query("
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Room Password</label>
                 <input type="text" name="room_password" value="<?= htmlspecialchars($t['room_password'] ?? ''); ?>" placeholder="e.g. 1234" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+            </div>
+        </div>
+
+        <!-- 5-Minute IDP Auto Push Notification Option (Default Checked) -->
+        <div class="p-3 bg-yellow-50/80 border border-yellow-300 rounded-2xl space-y-2">
+            <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="send_idp_push" value="1" checked class="w-4 h-4 text-yellow-500 rounded focus:ring-yellow-400 accent-yellow-400">
+                    <span class="text-xs font-black text-slate-900">Auto Push Notification (To Joined Players Only)</span>
+                </label>
+                <span class="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[9px] uppercase shadow-xs">
+                    DEFAULT ACTIVE
+                </span>
+            </div>
+            <div class="text-[11px] text-slate-700 bg-white p-2.5 rounded-xl border border-yellow-200 font-mono">
+                <strong>WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI</strong>
+                <span class="block text-[10px] text-slate-400 mt-1">&bull; Target: Only gamers who booked slot in this match</span>
             </div>
         </div>
 

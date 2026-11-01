@@ -184,10 +184,24 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 </div>
 
 <!-- ============================================================= -->
-<!-- TAB 6: SETTINGS & GATEWAY CONFIG -->
+<!-- TAB 6: "LOGIN USERS" REGISTERED GAMERS DIRECTORY -->
+<!-- ============================================================= -->
+<div id="admin-tab-users" class="admin-spa-view hidden space-y-4">
+    <?php require_once __DIR__ . '/views/users_view.php'; ?>
+</div>
+
+<!-- ============================================================= -->
+<!-- TAB 7: MULTI-ADMIN & HOST REVENUE STUDIO -->
+<!-- ============================================================= -->
+<div id="admin-tab-admins" class="admin-spa-view hidden space-y-4">
+    <?php require_once __DIR__ . '/views/admins_view.php'; ?>
+</div>
+
+<!-- ============================================================= -->
+<!-- TAB 8: SETTINGS & GATEWAY CONFIG (SUPER ADMIN ONLY) -->
 <!-- ============================================================= -->
 <div id="admin-tab-settings" class="admin-spa-view hidden space-y-4">
-    <?php require_once __DIR__ . '/views/settings_view.php'; ?>
+    <?php if ($is_super) { require_once __DIR__ . '/views/settings_view.php'; } ?>
 </div>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>

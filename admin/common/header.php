@@ -110,14 +110,15 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
             </div>
         </header>
 
-        <!-- Quick Sub-Navigation Menu (Ultra-Fast 0.01s SPA Solid Yellow Capsules) -->
+        <!-- Quick Sub-Navigation Menu -->
         <div class="bg-white/95 dark:bg-[#0b0f19]/95 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold no-scrollbar sticky top-12 z-40">
             <button type="button" onclick="switchAdminTab('overview')" id="admin-nav-overview" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition bg-yellow-400 text-slate-950 font-black shadow-xs border border-yellow-400 cursor-pointer">
                 <i class="fa-solid fa-gauge mr-1"></i> Dashboard
             </button>
             <button type="button" onclick="switchAdminTab('tournaments')" id="admin-nav-tournaments" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
-                <i class="fa-solid fa-trophy mr-1"></i> Tournaments
+                <i class="fa-solid fa-trophy mr-1"></i> Tourneys
             </button>
+            <?php if ($is_super): ?>
             <button type="button" onclick="switchAdminTab('deposits')" id="admin-nav-deposits" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
                 <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Deposits
             </button>
@@ -125,10 +126,19 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
                 <i class="fa-solid fa-money-bill-transfer mr-1"></i> Payouts
             </button>
             <button type="button" onclick="switchAdminTab('notifications')" id="admin-nav-notifications" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
-                <i class="fa-solid fa-bell mr-1"></i> Push Alerts
+                <i class="fa-solid fa-bell mr-1"></i> Broadcast
             </button>
+            <button type="button" onclick="switchAdminTab('users')" id="admin-nav-users" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
+                <i class="fa-solid fa-users mr-1"></i> Login Users
+            </button>
+            <?php endif; ?>
+            <button type="button" onclick="switchAdminTab('admins')" id="admin-nav-admins" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
+                <i class="fa-solid fa-users-gear mr-1"></i> <?= $is_super ? "Manage Admins" : "Host Revenue"; ?>
+            </button>
+            <?php if ($is_super): ?>
             <button type="button" onclick="switchAdminTab('settings')" id="admin-nav-settings" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
                 <i class="fa-solid fa-sliders mr-1"></i> Settings
             </button>
+            <?php endif; ?>
         </div>
         
