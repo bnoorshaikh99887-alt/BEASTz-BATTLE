@@ -229,7 +229,7 @@
         </button>
         <h3 class="text-sm font-extrabold text-slate-900 mb-1">Instant Gateway Deposit</h3>
         <p class="text-[11px] text-slate-400 mb-4">Enter amount to add (Min ₹10.00)</p>
-        <form method="POST" action="cashfree_create_order.php" class="space-y-3.5" onsubmit="var b=this.querySelector('button[type=submit]'); if(b){ b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin mr-1.5\'></i> Opening Cashfree...'; }">
+        <form method="POST" action="cashfree_create_order.php" class="space-y-3.5" onsubmit="var b=this.querySelector('button[type=submit]'); if(b){ b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin mr-1.5\'></i> Loading...'; }">
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Amount (₹)</label>
                 <div class="relative">
@@ -267,7 +267,7 @@
             <span class="select-all">UPI: <?= htmlspecialchars($admin_upi); ?></span>
             <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($admin_upi); ?>'); alert('UPI ID copied to clipboard!');" class="text-[10px] bg-white border border-slate-300 px-2 py-0.5 rounded font-bold">Copy</button>
         </div>
-        <form method="POST" action="payment_verify.php" class="space-y-3 text-left">
+        <form id="fastUtrForm" onsubmit="submitFastUTR(event)" class="space-y-3 text-left">
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Deposited Amount (₹)</label>
                 <input type="number" name="amount" min="10" step="1" required placeholder="50" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-yellow-400">
@@ -285,25 +285,93 @@
     </div>
 </div>
 
+
+<!-- ============================================================= -->
+<!-- MODAL: INSUFFICIENT BALANCE INSTANT ALERT POPUP -->
+<!-- ============================================================= -->
+<div id="insufficientBalanceModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl relative text-center">
+        <button type="button" onclick="closeInsufficientModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-base">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-500/20 text-amber-500 flex items-center justify-center text-2xl mb-3 shadow-xs">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+
+        <h3 class="text-base font-extrabold text-slate-900 dark:text-white mb-1.5">
+            Insufficient Balance
+        </h3>
+
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">
+            You currently have <span class="font-black text-rose-500 font-mono text-sm">₹<?= number_format((float)$current_balance, 2); ?></span> in your wallet.
+        </p>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-5">
+            Minimum withdrawal amount is <strong class="text-slate-800 dark:text-slate-200 font-black">₹50.00</strong>. Join matches and win prizes to withdraw real cash!
+        </p>
+
+        <div class="space-y-2">
+            <button type="button" onclick="closeInsufficientModal(); switchAppTab('home');" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-gamepad"></i>
+                <span>Browse Tournaments & Play</span>
+            </button>
+            <button type="button" onclick="closeInsufficientModal()" class="w-full py-2.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 font-bold">
+                Dismiss
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
-    function openDepositModal() { document.getElementById('depositChoiceModal').classList.remove('hidden'); }
-    function closeDepositModal() { document.getElementById('depositChoiceModal').classList.add('hidden'); }
+    var userCurrentBalance = <?= (float)$current_balance; ?>;
+
+    function openDepositModal() { 
+        var m = document.getElementById('depositChoiceModal');
+        if (m) m.classList.remove('hidden'); 
+    }
+    function closeDepositModal() { 
+        var m = document.getElementById('depositChoiceModal');
+        if (m) m.classList.add('hidden'); 
+    }
+
     function openCashfreeModal() {
         closeDepositModal();
-        document.getElementById('cashfreeModal').classList.remove('hidden');
+        var m = document.getElementById('cashfreeModal');
+        if (m) m.classList.remove('hidden');
     }
-    function closeCashfreeModal() { document.getElementById('cashfreeModal').classList.add('hidden'); }
+    function closeCashfreeModal() { 
+        var m = document.getElementById('cashfreeModal');
+        if (m) m.classList.add('hidden'); 
+    }
+
     function openQRModal() {
         closeDepositModal();
-        document.getElementById('qrModal').classList.remove('hidden');
+        var m = document.getElementById('qrModal');
+        if (m) m.classList.remove('hidden');
     }
-    function closeQRModal() { document.getElementById('qrModal').classList.add('hidden'); }
+    function closeQRModal() { 
+        var m = document.getElementById('qrModal');
+        if (m) m.classList.add('hidden'); 
+    }
 
     function openWithdrawModal() {
-        document.getElementById('withdrawModal').classList.remove('hidden');
+        if (userCurrentBalance < 50) {
+            var ins = document.getElementById('insufficientBalanceModal');
+            if (ins) ins.classList.remove('hidden');
+            return;
+        }
+        var m = document.getElementById('withdrawModal');
+        if (m) m.classList.remove('hidden');
     }
+
     function closeWithdrawModal() {
-        document.getElementById('withdrawModal').classList.add('hidden');
+        var m = document.getElementById('withdrawModal');
+        if (m) m.classList.add('hidden');
+    }
+
+    function closeInsufficientModal() {
+        var m = document.getElementById('insufficientBalanceModal');
+        if (m) m.classList.add('hidden');
     }
 
     function showFastToast(msg, type) {
@@ -321,8 +389,64 @@
         setTimeout(function() { el.style.opacity = "0"; el.style.transform = "translate(-50%, -10px)"; }, 3500);
     }
 
+    // Fast 0.3s UTR Submission
+    function submitFastUTR(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var form = e.target;
+        var btn = form.querySelector('button[type="submit"]');
+        var amountInput = form.querySelector('input[name="amount"]');
+        var utrInput = form.querySelector('input[name="transaction_id"]');
+        var amount = parseFloat(amountInput.value);
+        var utr = utrInput.value.trim();
+
+        if (!amount || amount < 10) {
+            showFastToast("Minimum deposit amount is ₹10", "error");
+            return false;
+        }
+        if (!utr || utr.length < 6) {
+            showFastToast("Please enter a valid 12-digit UPI UTR number", "error");
+            return false;
+        }
+
+        btn.disabled = true;
+        var origText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> <span>Submitting UTR...</span>';
+
+        var fd = new FormData();
+        fd.append("is_ajax", "1");
+        fd.append("amount", amount);
+        fd.append("transaction_id", utr);
+
+        fetch("payment_verify.php", {
+            method: "POST",
+            headers: { "Accept": "application/json" },
+            body: fd
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            if (data.success) {
+                closeQRModal();
+                form.reset();
+                showFastToast("✅ UTR submitted! Admin is verifying on banking portal.", "success");
+            } else {
+                showFastToast(data.message || "Failed to submit UTR", "error");
+            }
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            showFastToast("Network error submitting UTR. Please try again.", "error");
+        });
+        return false;
+    }
+
+    // Fast In-Page Withdrawal Submission (NO RELOAD / NO INTRO)
     function submitFastWithdrawal(e) {
         e.preventDefault();
+        e.stopPropagation();
         var form = e.target;
         var btn = form.querySelector('button[type="submit"]');
         var amountInput = form.querySelector('input[name="amount"]');
@@ -330,18 +454,25 @@
         var amount = parseFloat(amountInput.value);
         var upi = upiInput.value.trim();
 
+        if (userCurrentBalance < 50) {
+            closeWithdrawModal();
+            var ins = document.getElementById('insufficientBalanceModal');
+            if (ins) ins.classList.remove('hidden');
+            return false;
+        }
+
         if (!amount || amount < 50) {
             showFastToast("Minimum withdrawal amount is ₹50", "error");
-            return;
+            return false;
         }
         if (!upi || upi.indexOf("@") === -1) {
             showFastToast("Please enter a valid UPI ID (e.g. yourname@upi)", "error");
-            return;
+            return false;
         }
 
         btn.disabled = true;
         var origText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Processing Payout...</span>';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> <span>Processing Payout...</span>';
 
         var fd = new FormData();
         fd.append("amount", amount);
@@ -357,17 +488,12 @@
             btn.innerHTML = origText;
             if (data.success) {
                 closeWithdrawModal();
+                userCurrentBalance = data.new_balance;
                 var balEls = document.querySelectorAll(".user-wallet-balance-val");
                 balEls.forEach(function(el) {
                     el.innerText = data.new_balance_formatted;
                 });
-                // Stay on current page, show instant inline confirmation and alert (NO RELOAD / NO INTRO)
                 showFastToast("✅ Withdrawal request submitted! Status: Pending Approval", "success");
-                var alertBox = document.getElementById("walletInlineAlert");
-                if (alertBox) {
-                    alertBox.innerHTML = '<div class="p-3.5 mb-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-circle-check"></i><span>Withdrawal request of ₹' + amount.toFixed(2) + ' submitted successfully! Pending approval.</span></div>';
-                    alertBox.classList.remove("hidden");
-                }
             } else {
                 showFastToast(data.error || "Failed to submit withdrawal", "error");
             }
@@ -377,5 +503,6 @@
             btn.innerHTML = origText;
             showFastToast("Network error submitting withdrawal", "error");
         });
+        return false;
     }
 </script>
