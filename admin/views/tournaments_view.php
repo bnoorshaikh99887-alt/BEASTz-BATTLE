@@ -196,12 +196,12 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
     </div>
 
     <!-- Navigation Tabs (Active vs Completed Section) -->
-    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 rounded-2xl text-xs font-bold">
-        <a href="tournament.php?tab=active" class="py-2 text-center rounded-xl transition <?= ($current_tab !== 'completed') ? 'bg-white text-slate-950 font-black shadow-xs' : 'text-slate-600 hover:text-slate-900'; ?>">
-            Active & Live (<?= $active_cnt; ?>)
+    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 dark:bg-slate-800 rounded-2xl text-xs font-bold">
+        <a href="index.php?tab=tournaments&tourney_tab=active" class="py-2 text-center rounded-xl transition <?= ($current_tab !== 'completed') ? 'bg-yellow-400 text-slate-950 font-black shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'; ?>">
+            <i class="fa-solid fa-gamepad mr-1"></i> Active & Live (<?= $active_cnt; ?>)
         </a>
-        <a href="tournament.php?tab=completed" class="py-2 text-center rounded-xl transition <?= ($current_tab === 'completed') ? 'bg-white text-slate-950 font-black shadow-xs' : 'text-slate-600 hover:text-slate-900'; ?>">
-            Completed Matches (<?= $completed_cnt; ?>)
+        <a href="index.php?tab=tournaments&tourney_tab=completed" class="py-2 text-center rounded-xl transition <?= ($current_tab === 'completed') ? 'bg-yellow-400 text-slate-950 font-black shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'; ?>">
+            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Completed Matches (<?= $completed_cnt; ?>)
         </a>
     </div>
 
@@ -324,7 +324,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
 
                     <!-- Manage / Anti-Cheat Rollback Button -->
                     <div class="flex items-center gap-2 pt-1">
-                        <a href="manage_tournament.php?id=<?= $ct['id']; ?>" class="flex-1 py-2 bg-slate-100 hover:bg-yellow-50 text-slate-800 hover:text-slate-950 text-center font-bold border border-slate-200 rounded-xl text-xs transition">
+                        <a href="manage_tournament.php?id=<?= $ct['id']; ?>&anti_cheat=1" class="flex-1 py-2 bg-slate-100 hover:bg-yellow-50 text-slate-800 hover:text-slate-950 text-center font-bold border border-slate-200 rounded-xl text-xs transition">
                             <i class="fa-solid fa-shield-halved text-rose-500 mr-1"></i> View Results & Anti-Cheat
                         </a>
                         <form method="POST" action="tournament.php?tab=completed" onsubmit="return confirm('Delete completed tournament archive?');" class="shrink-0">
