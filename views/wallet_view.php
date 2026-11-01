@@ -361,10 +361,13 @@
                 balEls.forEach(function(el) {
                     el.innerText = data.new_balance_formatted;
                 });
-                showFastToast(data.message, "success");
-                setTimeout(function() {
-                    location.reload();
-                }, 1200);
+                // Stay on current page, show instant inline confirmation and alert (NO RELOAD / NO INTRO)
+                showFastToast("✅ Withdrawal request submitted! Status: Pending Approval", "success");
+                var alertBox = document.getElementById("walletInlineAlert");
+                if (alertBox) {
+                    alertBox.innerHTML = '<div class="p-3.5 mb-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-circle-check"></i><span>Withdrawal request of ₹' + amount.toFixed(2) + ' submitted successfully! Pending approval.</span></div>';
+                    alertBox.classList.remove("hidden");
+                }
             } else {
                 showFastToast(data.error || "Failed to submit withdrawal", "error");
             }
