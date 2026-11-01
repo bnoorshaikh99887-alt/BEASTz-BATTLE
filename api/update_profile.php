@@ -30,6 +30,7 @@ if ($action === 'update_avatar') {
         $stmt->bind_param("si", $avatar, $curr_uid);
         if ($stmt->execute()) {
             $stmt->close();
+            $_SESSION['user_avatar'] = $avatar;
             echo json_encode([
                 'success' => true,
                 'avatar' => $avatar,
@@ -54,6 +55,7 @@ if ($upd) {
     $upd->bind_param("ssssssi", $game_name, $game_id, $phone, $phone, $upi_id, $upi_id, $curr_uid);
     if ($upd->execute()) {
         $upd->close();
+        if (!empty($game_name)) $_SESSION['user_game_name'] = $game_name;
         echo json_encode([
             'success' => true,
             'message' => 'Account settings saved successfully!',
@@ -67,5 +69,4 @@ if ($upd) {
     $upd->close();
 }
 
-echo json_encode(['success' => false, 'error' => 'Failed to save account settings.']);
-?>
+echo json_encode(['success' => false, 'error' => 'Failed to save account settings: ' . $conn->error]);
