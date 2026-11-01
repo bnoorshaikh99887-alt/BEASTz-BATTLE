@@ -6,7 +6,7 @@
     </div>
 <?php endif; ?>
 
-<!-- Wallet Balance Card (Matching User Request: Compact Currency e.g. 1k, 1.2k, 10M) -->
+<!-- Wallet Balance Card -->
 <div class="bg-white border border-slate-200 rounded-3xl p-5 mb-5 shadow-xs relative overflow-hidden">
     <div class="flex items-center justify-between mb-4">
         <div>
@@ -89,7 +89,7 @@
     </div>
 <?php endif; ?>
 
-<!-- Passbook History (Recent 15 Entries Matching Video) -->
+<!-- Passbook History -->
 <div class="space-y-3">
     <div class="flex items-center justify-between px-1">
         <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -136,7 +136,7 @@
 </div>
 
 <!-- ============================================================= -->
-<!-- MODAL: WITHDRAW MONEY DIRECTLY (NO REDIRECT TO SETTINGS) -->
+<!-- MODAL: WITHDRAW MONEY DIRECTLY -->
 <!-- ============================================================= -->
 <div id="withdrawModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
     <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative">
@@ -198,7 +198,6 @@
         <p class="text-[11px] text-slate-400 mb-4">Choose your preferred deposit method</p>
 
         <div class="space-y-2.5">
-            <!-- Option 1: Instant Cashfree Payment Gateway -->
             <button type="button" onclick="openCashfreeModal()" class="w-full bg-slate-50 hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
                 <div class="w-10 h-10 rounded-xl bg-yellow-400 text-slate-950 flex items-center justify-center text-lg font-black shadow-xs">
                     <i class="fa-solid fa-bolt"></i>
@@ -209,7 +208,6 @@
                 </div>
             </button>
 
-            <!-- Option 2: Direct UPI QR Code & 12-Digit UTR -->
             <button type="button" onclick="openQRModal()" class="w-full bg-slate-50 hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
                 <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center text-lg font-bold shadow-xs">
                     <i class="fa-solid fa-qrcode"></i>
@@ -317,8 +315,8 @@
             document.body.appendChild(el);
         }
         el.className = "fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 " + 
-            (type === "success" ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-rose-500 text-white shadow-rose-500/20");
-        el.innerHTML = (type === "success" ? "<i class="fa-solid fa-circle-check"></i> " : "<i class="fa-solid fa-circle-exclamation"></i> ") + msg;
+            (type === 'success' ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-rose-500 text-white shadow-rose-500/20");
+        el.innerHTML = (type === 'success' ? '<i class="fa-solid fa-circle-check"></i> ' : '<i class="fa-solid fa-circle-exclamation"></i> ') + msg;
         setTimeout(function() { el.style.opacity = "1"; el.style.transform = "translate(-50%, 0)"; }, 20);
         setTimeout(function() { el.style.opacity = "0"; el.style.transform = "translate(-50%, -10px)"; }, 3500);
     }
@@ -326,9 +324,9 @@
     function submitFastWithdrawal(e) {
         e.preventDefault();
         var form = e.target;
-        var btn = form.querySelector("button[type="submit"]");
-        var amountInput = form.querySelector("input[name="amount"]");
-        var upiInput = form.querySelector("input[name="upi_id"]");
+        var btn = form.querySelector('button[type="submit"]');
+        var amountInput = form.querySelector('input[name="amount"]');
+        var upiInput = form.querySelector('input[name="upi_id"]');
         var amount = parseFloat(amountInput.value);
         var upi = upiInput.value.trim();
 
@@ -343,13 +341,13 @@
 
         btn.disabled = true;
         var origText = btn.innerHTML;
-        btn.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> <span>Processing Payout...</span>";
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Processing Payout...</span>';
 
         var fd = new FormData();
         fd.append("amount", amount);
         fd.append("upi_id", upi);
 
-        fetch("/api/request_withdrawal.php", {
+        fetch("api/request_withdrawal.php", {
             method: "POST",
             body: fd
         })
@@ -377,5 +375,4 @@
             showFastToast("Network error submitting withdrawal", "error");
         });
     }
-
 </script>
