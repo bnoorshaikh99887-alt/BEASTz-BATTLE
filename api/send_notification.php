@@ -1,21 +1,39 @@
 <?php
+require_once __DIR__ . '/../common/config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../common/config.php';
+
 global $conn;
 
+// Custom sanitize function fallback
+if (!function_exists('sanitize')) {
+    function sanitize($data) {
+        return htmlspecialchars(strip_tags(trim($data)));
+    }
+}
+
 // ==========================================
-// NEW ULTRA-SAFE SUPER ADMIN CHECK
+// BULLETPROOF SUPER ADMIN CHECK
 // ==========================================
 $is_authorized = false;
+
+// Naye session variables check
 if (isset($_SESSION['is_super_admin']) && $_SESSION['is_super_admin'] === true) {
     $is_authorized = true;
 } elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'super_admin') {
     $is_authorized = true;
+} 
+// Username se direct check (Fallback)
+elseif (isset($_SESSION['admin_username']) && $_SESSION['admin_username'] === 'anonymous.349') {
+    $is_authorized = true;
+} 
+// Purane session structure se check (Agar kisi ne logout nahi kiya)
+elseif (isset($_SESSION['username']) && $_SESSION['username'] === 'anonymous.349') {
+    $is_authorized = true;
 }
 
 if (!$is_authorized) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized administrator access']);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized Access. PLEASE LOGOUT AND LOGIN AGAIN FROM ADMIN PANEL.']);
     exit;
 }
 
@@ -119,3 +137,4 @@ echo json_encode([
     'response_raw' => $onesignal_res,
     'message' => 'Push notification broadcasted successfully to all gamer devices!'
 ]);
+?>
