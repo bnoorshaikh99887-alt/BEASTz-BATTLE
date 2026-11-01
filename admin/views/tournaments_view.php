@@ -197,15 +197,18 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
 
     <!-- Navigation Tabs (Active vs Completed Section) -->
     <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 dark:bg-slate-800 rounded-2xl text-xs font-bold">
-        <a href="index.php?tab=tournaments&tourney_tab=active" class="py-2 text-center rounded-xl transition <?= ($current_tab !== 'completed') ? 'bg-yellow-400 text-slate-950 font-black shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'; ?>">
+        <button type="button" onclick="switchTourneySubTab('active', this)" id="adminBtnTourneyActive" class="tourney-subtab-btn py-2 text-center rounded-xl transition bg-yellow-400 text-slate-950 font-black shadow-xs cursor-pointer">
             <i class="fa-solid fa-gamepad mr-1"></i> Active & Live (<?= $active_cnt; ?>)
-        </a>
-        <a href="index.php?tab=tournaments&tourney_tab=completed" class="py-2 text-center rounded-xl transition <?= ($current_tab === 'completed') ? 'bg-yellow-400 text-slate-950 font-black shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'; ?>">
+        </button>
+        <button type="button" onclick="switchTourneySubTab('completed', this)" id="adminBtnTourneyCompleted" class="tourney-subtab-btn py-2 text-center rounded-xl transition text-slate-600 dark:text-slate-400 hover:text-slate-900 font-bold cursor-pointer">
             <i class="fa-solid fa-clock-rotate-left mr-1"></i> Completed Matches (<?= $completed_cnt; ?>)
-        </a>
+        </button>
     </div>
 
-    <?php if ($current_tab !== 'completed'): ?>
+    
+    <!-- CONTAINER 1: ACTIVE & LIVE TOURNAMENTS (0ms CLIENT TOGGLE) -->
+    <div id="adminTourneysActive" class="admin-tourney-pane space-y-3">
+        
         <!-- TAB 1: ACTIVE & LIVE MATCHES -->
         <?php if ($active_tourneys && $active_tourneys->num_rows > 0): ?>
             <?php while ($t = $active_tourneys->fetch_assoc()): ?>
@@ -271,11 +274,41 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                     </div>
                 </div>
             <?php endwhile; ?>
-        <?php else: ?>
+        
+    </div>
+
+    <!-- CONTAINER 2: COMPLETED TOURNAMENTS (0ms CLIENT TOGGLE) -->
+    <div id="adminTourneysCompleted" class="admin-tourney-pane hidden space-y-3">
+        
             <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
                 No active or live tournaments right now. Create one above!
             </div>
-        <?php endif; ?>
+        
+    </div>
+
+    <script>
+    function switchTourneySubTab(tab, btn) {
+        document.querySelectorAll('.tourney-subtab-btn').forEach(function(b) {
+            b.classList.remove('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
+            b.classList.add('text-slate-600', 'dark:text-slate-400', 'font-bold');
+        });
+        if (btn) {
+            btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'font-bold');
+            btn.classList.add('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
+        }
+        document.querySelectorAll('.admin-tourney-pane').forEach(function(p) {
+            p.classList.add('hidden');
+        });
+        if (tab === 'active') {
+            var el = document.getElementById('adminTourneysActive');
+            if (el) el.classList.remove('hidden');
+        } else {
+            var el = document.getElementById('adminTourneysCompleted');
+            if (el) el.classList.remove('hidden');
+        }
+    }
+    </script>
+        
 
     <?php else: ?>
         <!-- TAB 2: COMPLETED MATCHES SECTION -->
