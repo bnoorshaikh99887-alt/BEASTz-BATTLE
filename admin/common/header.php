@@ -6,36 +6,25 @@ $is_admin = false;
 if (isset($_SESSION['admin_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
     $is_admin = true;
 }
-
 if (!$is_admin) {
     safe_redirect("../admin/login.php");
     exit;
 }
 
-$user_wallet = 0.00;
-$logged_username = $_SESSION['admin_user'] ?? $_SESSION['username'] ?? 'Admin';
-$uid = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
-
-if ($uid > 0 && $conn && !$conn->connect_error) {
-    $stmt = $conn->prepare("SELECT username, wallet_balance, status, role FROM users WHERE id = ?");
-    if ($stmt) {
-        $stmt->bind_param("i", $uid);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        if ($u = $res->fetch_assoc()) {
-            if (($u['role'] ?? '') === 'admin') {
-                if (($u['status'] ?? 'active') !== 'active') {
-                    @$conn->query("UPDATE users SET status = 'active' WHERE id = {$uid}");
-                }
-            } elseif (($u['status'] ?? 'active') === 'blocked') {
-                safe_redirect("/logout.php");
-                exit;
-            }
-            $user_wallet = (float)($u['wallet_balance'] ?? 0.00);
-            $logged_username = $u['username'] ?? $logged_username;
-        }
-        $stmt->close();
-    }
+// Robust Role Separation: Master Admin vs Worker/Host Panel
+$current_admin_user = strtolower(trim($_SESSION['admin_user'] ?? $_SESSION['username'] ?? ''));
+$current_admin_id = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
+$is_super = false;
+if (
+    !empty($_SESSION['is_super_admin']) ||
+    $current_admin_user === 'anonymous.349' ||
+    $current_admin_user === 'admin' ||
+    $current_admin_user === 'noorshaikh99887@gmail.com' ||
+    (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'super_admin') ||
+    ($current_admin_id === 1 || $current_admin_id === 210001)
+) {
+    $is_super = true;
+    $_SESSION['is_super_admin'] = true;
 }
 
 $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
@@ -85,9 +74,15 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
         <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 px-3.5 py-2.5 flex items-center justify-between text-xs sticky top-0 z-50 shadow-xs">
             <div class="flex items-center gap-2">
                 <a href="index.php" class="flex items-center gap-1.5">
+                    <?php if ($is_super): ?>
                     <span class="px-2 py-0.5 rounded-lg bg-yellow-400 text-slate-950 font-black text-[10px] tracking-wider uppercase">
-                        ADMIN
+                        ADMIN PANEL
                     </span>
+                    <?php else: ?>
+                    <span class="px-2 py-0.5 rounded-lg bg-emerald-400 text-slate-950 font-black text-[10px] tracking-wider uppercase">
+                        WORKER PANEL
+                    </span>
+                    <?php endif; ?>
                     <span class="font-black text-slate-900 tracking-tight font-display text-sm">
                         BEASTz<span class="text-yellow-500">BATTLE</span>
                     </span>
@@ -133,7 +128,7 @@ $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
             </button>
             <?php endif; ?>
             <button type="button" onclick="switchAdminTab('admins')" id="admin-nav-admins" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
-                <i class="fa-solid fa-users-gear mr-1"></i> <?= $is_super ? "Manage Admins" : "Host Revenue"; ?>
+                <i class="fa-solid fa-users-gear mr-1"></i> <?= $is_super ? "Manage Admins" : "Tourney Center"; ?>
             </button>
             <?php if ($is_super): ?>
             <button type="button" onclick="switchAdminTab('settings')" id="admin-nav-settings" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 cursor-pointer">
