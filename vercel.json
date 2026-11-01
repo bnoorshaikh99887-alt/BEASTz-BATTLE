@@ -4,7 +4,7 @@
       "runtime": "vercel-php@0.9.0",
       "memory": 1024,
       "maxDuration": 15,
-      "includeFiles": "{BEASTz-BATTLE.apk,api/**}"
+      "includeFiles": "{BEASTz-BATTLE.apk,**}"
     }
   },
   "regions": ["sin1"],
