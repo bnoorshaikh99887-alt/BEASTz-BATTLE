@@ -3,9 +3,26 @@ require_once __DIR__ . '/common/config.php';
 check_user_auth();
 
 $user_id = (int)$_SESSION['user_id'];
+$is_ajax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') 
+    || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+    || isset($_POST['is_ajax']);
+
+function return_response($success, $message, $extra = []) {
+    global $is_ajax;
+    if ($is_ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(array_merge(['success' => $success, 'message' => $message], $extra));
+        exit;
+    }
+    if ($success) {
+        safe_redirect("wallet.php?success=" . urlencode($message));
+    } else {
+        safe_redirect("wallet.php?error=" . urlencode($message));
+    }
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
     // -------------------------------------------------------------
     // 1. Handle Manual Direct UPI Deposit (12-Digit UTR Submission)
     // -------------------------------------------------------------
@@ -14,13 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deposit_amount = (float)($_POST['amount'] ?? 0.00);
 
         if (empty($utr) || strlen($utr) < 6) {
-            safe_redirect("wallet.php?error=" . urlencode("Please enter a valid 12-digit UPI reference / UTR number."));
-            exit;
+            return_response(false, "Please enter a valid 12-digit UPI reference / UTR number.");
         }
 
         if ($deposit_amount < 10.0) {
-            safe_redirect("wallet.php?error=" . urlencode("Minimum deposit amount is ₹10.00."));
-            exit;
+            return_response(false, "Minimum deposit amount is ₹10.00.");
         }
 
         try {
@@ -33,8 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $chk->close();
 
                 if ($existing_dep) {
-                    safe_redirect("wallet.php?error=" . urlencode("This UPI Reference / UTR has already been submitted (" . $existing_dep['status'] . ")."));
-                    exit;
+                    return_response(false, "This UPI Reference / UTR has already been submitted (" . $existing_dep['status'] . ").");
                 }
             }
 
@@ -46,22 +60,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($ins) {
                 $ins->bind_param("isdss", $user_id, $unique_order_id, $deposit_amount, $utr, $utr);
                 if ($ins->execute()) {
+                    $new_dep_id = $ins->insert_id;
                     $ins->close();
-                    safe_redirect("wallet.php?success=" . urlencode("Deposit request of " . format_inr($deposit_amount) . " (UTR: " . $utr . ") submitted! Admin will verify and credit your wallet shortly."));
-                    exit;
+                    return_response(true, "Deposit request of " . format_inr($deposit_amount) . " (UTR: " . $utr . ") submitted! Admin will verify and credit your wallet shortly.", [
+                        'deposit_id' => $new_dep_id,
+                        'amount' => $deposit_amount,
+                        'amount_formatted' => format_inr($deposit_amount),
+                        'utr' => $utr
+                    ]);
                 } else {
                     $err = $ins->error;
                     $ins->close();
-                    safe_redirect("wallet.php?error=" . urlencode("Unable to record deposit: " . $err));
-                    exit;
+                    return_response(false, "Unable to record deposit: " . $err);
                 }
             } else {
-                safe_redirect("wallet.php?error=" . urlencode("Database preparation failed. Please try again."));
-                exit;
+                return_response(false, "Database error preparing statement.");
             }
         } catch (Throwable $t) {
-            safe_redirect("wallet.php?error=" . urlencode("Deposit submission error: " . $t->getMessage()));
-            exit;
+            return_response(false, "Deposit submission error: " . $t->getMessage());
         }
     }
 
@@ -72,24 +88,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deposit_amount = isset($_POST['amount']) ? (float)$_POST['amount'] : 0.00;
 
     if (empty($razorpay_payment_id) || $deposit_amount <= 0) {
-        safe_redirect("wallet.php?error=" . urlencode("Payment was cancelled or invalid response received."));
-        exit;
+        return_response(false, "Payment was cancelled or invalid response received.");
     }
 
     try {
-        // Double Spending Prevention
         $chk = $conn->prepare("SELECT id FROM transactions WHERE description LIKE ?");
         $search_pattern = "%" . $razorpay_payment_id . "%";
         $chk->bind_param("s", $search_pattern);
         $chk->execute();
         if ($chk->get_result()->num_rows > 0) {
             $chk->close();
-            safe_redirect("wallet.php?error=" . urlencode("This payment has already been credited to your wallet."));
-            exit;
+            return_response(false, "This payment has already been credited to your wallet.");
         }
         $chk->close();
 
-        // Credit User Wallet
         $conn->begin_transaction();
         $upd = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
         $upd->bind_param("di", $deposit_amount, $user_id);
@@ -107,14 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dep->bind_param("isdss", $user_id, $order_id, $deposit_amount, $razorpay_payment_id, $razorpay_payment_id);
         $dep->execute();
         $dep->close();
-
         $conn->commit();
-        safe_redirect("wallet.php?success=" . urlencode("Payment of " . format_inr($deposit_amount) . " successfully added to your wallet!"));
-        exit;
+
+        return_response(true, "Payment of " . format_inr($deposit_amount) . " successfully added to your wallet!");
     } catch (Throwable $e) {
         $conn->rollback();
-        safe_redirect("wallet.php?error=" . urlencode("Database error processing payment: " . $e->getMessage()));
-        exit;
+        return_response(false, "Database error processing payment: " . $e->getMessage());
     }
 } else {
     safe_redirect("wallet.php");
