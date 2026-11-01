@@ -151,6 +151,22 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
                 <span class="text-[10px] text-slate-400">UPI & Gateway</span>
             </div>
         </a>
+
+        <!-- ============================================== -->
+        <!-- NEW SUPER ADMIN BUTTON: PUSH NOTIFICATIONS -->
+        <!-- ============================================== -->
+        <?php if (isset($_SESSION['is_super_admin']) && $_SESSION['is_super_admin'] === true): ?>
+        <a onclick="switchAdminTab('notifications')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group col-span-2">
+            <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+                <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <div>
+                <span class="text-xs font-bold text-slate-900 block">Push Alerts Studio</span>
+                <span class="text-[10px] text-slate-400">Send Custom Announcements</span>
+            </div>
+        </a>
+        <?php endif; ?>
+
     </div>
 </div>
 </div>
@@ -201,7 +217,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 <!-- TAB 8: SETTINGS & GATEWAY CONFIG (SUPER ADMIN ONLY) -->
 <!-- ============================================================= -->
 <div id="admin-tab-settings" class="admin-spa-view hidden space-y-4">
-    <?php if ($is_super) { require_once __DIR__ . '/views/settings_view.php'; } ?>
+    <?php if (isset($is_super) && $is_super) { require_once __DIR__ . '/views/settings_view.php'; } ?>
 </div>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>
