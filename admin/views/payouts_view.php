@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg_type = "success";
 
                 // ========================================================
-                // TARGETED PUSH NOTIFICATION (BACKGROUND FIX APPLIED)
+                // TARGETED PUSH NOTIFICATION (V1 + V2 API FIX APPLIED)
                 // ========================================================
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
@@ -46,7 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 $onesignal_fields = [
                     'app_id' => $onesignal_app_id,
-                    'include_external_user_ids' => [strval($user_id)], // Direct to Player
+                    'include_external_user_ids' => [strval($user_id)], // V1 Support
+                    'include_aliases' => ['external_id' => [strval($user_id)]], // V2 API Support
+                    'target_channel' => 'push',
                     'channel_for_external_user_ids' => 'push',
                     'headings' => ['en' => $notif_title],
                     'contents' => ['en' => $notif_body],
@@ -55,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'badge_type' => 'PAYOUT_SUCCESS'
                     ],
                     'priority' => 10,
-                    // FIX: Force wake-up and display for Background / Killed Android App
                     'android_visibility' => 1,
                     'content_available' => true,
                     'android_sound' => 'notification'
