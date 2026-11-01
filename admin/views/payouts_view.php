@@ -36,9 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
 
+                $onesignal_app_id = '561bd59e-8355-47c8-88cc-0766688a105a';
+                // Decoding base64 strictly to avoid quote errors
+                $onesignal_rest_key = base64_decode('b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=');
+
                 $onesignal_fields = [
-                    'app_id' => '561bd59e-8355-47c8-88cc-0766688a105a',
-                    'include_external_user_ids' => [strval($user_id)],
+                    'app_id' => $onesignal_app_id,
+                    'include_external_user_ids' => [strval($user_id)], // Direct to Player
                     'channel_for_external_user_ids' => 'push',
                     'headings' => ['en' => $notif_title],
                     'contents' => ['en' => $notif_body],
@@ -53,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
                 curl_setopt($ch, CURLOPT_HTTPHEADER, [
                     'Content-Type: application/json; charset=utf-8',
-                    'Authorization: Basic " . base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=") . "'
+                    'Authorization: Basic ' . $onesignal_rest_key
                 ]);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
                 curl_setopt($ch, CURLOPT_POST, TRUE);
@@ -63,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 curl_exec($ch);
                 curl_close($ch);
 
-                // Also store notification for record
+                // Store in DB for UI reference
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 
             } catch (Exception $e) {
@@ -149,7 +153,6 @@ $withdrawals = $conn->query("
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-extrabold text-slate-900 dark:text-white">@<?= htmlspecialchars($w['username']); ?></span>
                             
-                            <!-- Yellow Glow Admin Request Badge -->
                             <?php if ($is_host_req): ?>
                                 <span class="px-2.5 py-0.5 rounded-full bg-yellow-400 text-slate-950 font-black text-[10px] uppercase shadow-md shadow-yellow-400/40 animate-pulse flex items-center gap-1">
                                     <i class="fa-solid fa-crown text-[9px]"></i>
@@ -205,7 +208,7 @@ $withdrawals = $conn->query("
                 <!-- Approval / Rejection Actions -->
                 <?php if ($is_pending): ?>
                     <div class="flex items-center gap-2 pt-1">
-                        <form method="POST" action="withdrawals.php" class="flex-1" onsubmit="return confirm('Confirm payout sent to <?= htmlspecialchars($w['upi_id']); ?>? Targeted push notification will be delivered immediately.');">
+                        <form method="POST" action="index.php?tab=payouts" class="flex-1" onsubmit="return confirm('Confirm payout sent to <?= htmlspecialchars($w['upi_id']); ?>? Targeted push notification will be delivered immediately.');">
                             <input type="hidden" name="action" value="complete">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
@@ -214,7 +217,7 @@ $withdrawals = $conn->query("
                             </button>
                         </form>
 
-                        <form method="POST" action="withdrawals.php" onsubmit="return confirm('Reject and refund ₹<?= $w['amount']; ?> back?');">
+                        <form method="POST" action="index.php?tab=payouts" onsubmit="return confirm('Reject and refund ₹<?= $w['amount']; ?> back?');">
                             <input type="hidden" name="action" value="reject">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 font-bold rounded-xl text-xs transition active:scale-95 border border-slate-200 dark:border-slate-700 cursor-pointer">
