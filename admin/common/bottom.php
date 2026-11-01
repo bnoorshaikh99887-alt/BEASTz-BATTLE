@@ -1,3 +1,18 @@
+<?php
+$current_admin_user = strtolower(trim($_SESSION['admin_user'] ?? $_SESSION['username'] ?? ''));
+$current_admin_id = (int)($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0);
+$is_super = false;
+if (
+    !empty($_SESSION['is_super_admin']) ||
+    $current_admin_user === 'anonymous.349' ||
+    $current_admin_user === 'admin' ||
+    $current_admin_user === 'noorshaikh99887@gmail.com' ||
+    (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'super_admin') ||
+    ($current_admin_id === 1 || $current_admin_id === 210001)
+) {
+    $is_super = true;
+}
+?>
 </main>
 
         <!-- Admin Fixed Bottom Navigation -->
