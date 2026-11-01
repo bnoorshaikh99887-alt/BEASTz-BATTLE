@@ -424,6 +424,11 @@ require_once __DIR__ . '/common/header.php';
     <?php require __DIR__ . '/views/leaderboard_view.php'; ?>
 </div>
 
+<!-- TAB 6: BEASTZ STORE (COMING SOON / REWARDS) -->
+<div id="spa-tab-store" class="spa-tab-view <?= ($current_active_tab === 'store' ? '' : 'hidden') ?>">
+    <?php require __DIR__ . '/views/store_view.php'; ?>
+</div>
+
 <!-- TAB 5: PROFILE & ACCOUNT SETTINGS -->
 <div id="spa-tab-profile" class="spa-tab-view <?= ($current_active_tab === 'profile' ? '' : 'hidden') ?>">
     <?php require __DIR__ . '/views/profile_view.php'; ?>
