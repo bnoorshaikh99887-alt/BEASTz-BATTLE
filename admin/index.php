@@ -177,7 +177,7 @@ $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 </div>
 
 <!-- ============================================================= -->
-<!-- TAB 5: PUSH NOTIFICATIONS STUDIO (ZOMATO STYLE) -->
+<!-- TAB 5: PUSH NOTIFICATIONS STUDIO  -->
 <!-- ============================================================= -->
 <div id="admin-tab-notifications" class="admin-spa-view hidden space-y-4">
     <?php require_once __DIR__ . '/views/notifications_tab.php'; ?>

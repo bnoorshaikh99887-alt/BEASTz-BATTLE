@@ -231,7 +231,7 @@ window.switchAppTab = switchAppTab;
                             }
 
                             // 3. In-App Floating Toast
-                            showInAppAlert(n.title, n.message, n.target_url);
+                            // showInAppAlert disabled per user request (system notification tray only)
                         }
                     });
                 }

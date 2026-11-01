@@ -154,10 +154,10 @@
 
         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-4 flex items-center justify-between text-xs">
             <span class="text-slate-500 font-semibold">Available Balance:</span>
-            <span class="font-black text-slate-900 font-mono text-sm"><?= format_compact_inr($current_balance); ?></span>
+            <span class="font-black text-slate-900 font-mono text-sm user-wallet-balance-val"><?= format_compact_inr($current_balance); ?></span>
         </div>
 
-        <form method="POST" action="wallet.php" class="space-y-3.5">
+        <form id="fastWithdrawalForm" onsubmit="submitFastWithdrawal(event)" class="space-y-3.5">
             <input type="hidden" name="action" value="request_withdrawal">
             
             <div>
@@ -307,4 +307,75 @@
     function closeWithdrawModal() {
         document.getElementById('withdrawModal').classList.add('hidden');
     }
+
+    function showFastToast(msg, type) {
+        var el = document.getElementById("fastToastAlert");
+        if (!el) {
+            el = document.createElement("div");
+            el.id = "fastToastAlert";
+            el.className = "fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 transform -translate-y-5 opacity-0 flex items-center gap-2";
+            document.body.appendChild(el);
+        }
+        el.className = "fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 " + 
+            (type === "success" ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-rose-500 text-white shadow-rose-500/20");
+        el.innerHTML = (type === "success" ? "<i class="fa-solid fa-circle-check"></i> " : "<i class="fa-solid fa-circle-exclamation"></i> ") + msg;
+        setTimeout(function() { el.style.opacity = "1"; el.style.transform = "translate(-50%, 0)"; }, 20);
+        setTimeout(function() { el.style.opacity = "0"; el.style.transform = "translate(-50%, -10px)"; }, 3500);
+    }
+
+    function submitFastWithdrawal(e) {
+        e.preventDefault();
+        var form = e.target;
+        var btn = form.querySelector("button[type="submit"]");
+        var amountInput = form.querySelector("input[name="amount"]");
+        var upiInput = form.querySelector("input[name="upi_id"]");
+        var amount = parseFloat(amountInput.value);
+        var upi = upiInput.value.trim();
+
+        if (!amount || amount < 50) {
+            showFastToast("Minimum withdrawal amount is ₹50", "error");
+            return;
+        }
+        if (!upi || upi.indexOf("@") === -1) {
+            showFastToast("Please enter a valid UPI ID (e.g. yourname@upi)", "error");
+            return;
+        }
+
+        btn.disabled = true;
+        var origText = btn.innerHTML;
+        btn.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> <span>Processing Payout...</span>";
+
+        var fd = new FormData();
+        fd.append("amount", amount);
+        fd.append("upi_id", upi);
+
+        fetch("/api/request_withdrawal.php", {
+            method: "POST",
+            body: fd
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            if (data.success) {
+                closeWithdrawModal();
+                var balEls = document.querySelectorAll(".user-wallet-balance-val");
+                balEls.forEach(function(el) {
+                    el.innerText = data.new_balance_formatted;
+                });
+                showFastToast(data.message, "success");
+                setTimeout(function() {
+                    location.reload();
+                }, 1200);
+            } else {
+                showFastToast(data.error || "Failed to submit withdrawal", "error");
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            showFastToast("Network error submitting withdrawal", "error");
+        });
+    }
+
 </script>

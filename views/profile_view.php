@@ -54,25 +54,25 @@
     <div class="grid grid-cols-2 gap-2.5 text-xs">
         <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
             <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Game Name (IGN)</span>
-            <span class="font-extrabold text-slate-800 break-all">
+            <span id="viewGameName" class="font-extrabold text-slate-800 break-all">
                 <?= !empty($my_ign) ? htmlspecialchars($my_ign) : '<span class="text-rose-500 font-semibold text-[11px]">Not configured</span>'; ?>
             </span>
         </div>
         <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
             <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Free Fire UID</span>
-            <span class="font-mono font-bold text-slate-800 break-all">
+            <span id="viewGameUid" class="font-mono font-bold text-slate-800 break-all">
                 <?= !empty($my_game_id) ? htmlspecialchars($my_game_id) : '<span class="text-rose-500 font-semibold text-[11px]">Not configured</span>'; ?>
             </span>
         </div>
         <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
             <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Registered Phone</span>
-            <span class="font-mono font-bold text-slate-800">
+            <span id="viewPhone" class="font-mono font-bold text-slate-800">
                 <?= !empty($my_phone) ? '+91 ' . htmlspecialchars($my_phone) : '<span class="text-slate-400">None</span>'; ?>
             </span>
         </div>
         <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
             <span class="text-[10px] font-bold text-slate-400 block mb-0.5">Payout UPI ID</span>
-            <span class="font-mono font-bold text-slate-800 truncate block">
+            <span id="viewUpi" class="font-mono font-bold text-slate-800 truncate block">
                 <?= !empty($my_upi) ? htmlspecialchars($my_upi) : '<span class="text-slate-400">Not set</span>'; ?>
             </span>
         </div>
@@ -222,7 +222,7 @@
             <p class="text-[11px] text-slate-400">Save your in-game identity for tournaments</p>
         </div>
 
-        <form method="POST" action="profile.php" class="space-y-3">
+        <form id="fastAccountForm" onsubmit="submitFastAccount(event)" class="space-y-3">
             <input type="hidden" name="action" value="update_account_settings">
             
             <div>
@@ -266,7 +266,7 @@
             <p class="text-[11px] text-slate-400">Upload a picture from phone or select an avatar</p>
         </div>
 
-        <form method="POST" action="profile.php" id="avatarForm" class="space-y-4">
+        <form id="avatarForm" onsubmit="submitFastAvatar(event)" class="space-y-4">
             <input type="hidden" name="action" value="update_avatar">
             <input type="hidden" name="avatar" id="selectedAvatarInput" value="<?= htmlspecialchars($my_avatar); ?>">
 
@@ -393,4 +393,93 @@
             reader.readAsDataURL(file);
         });
     }
+
+    function showFastToast(msg, type) {
+        var el = document.getElementById("fastToastAlert");
+        if (!el) {
+            el = document.createElement("div");
+            el.id = "fastToastAlert";
+            el.className = "fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 transform -translate-y-5 opacity-0 flex items-center gap-2";
+            document.body.appendChild(el);
+        }
+        el.className = "fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 " + 
+            (type === "success" ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-rose-500 text-white shadow-rose-500/20");
+        el.innerHTML = (type === "success" ? "<i class="fa-solid fa-circle-check"></i> " : "<i class="fa-solid fa-circle-exclamation"></i> ") + msg;
+        setTimeout(function() { el.style.opacity = "1"; el.style.transform = "translate(-50%, 0)"; }, 20);
+        setTimeout(function() { el.style.opacity = "0"; el.style.transform = "translate(-50%, -10px)"; }, 2800);
+    }
+
+    function submitFastAccount(e) {
+        e.preventDefault();
+        var form = e.target;
+        var btn = form.querySelector("button[type="submit"]");
+        var fd = new FormData(form);
+
+        btn.disabled = true;
+        var origText = btn.innerHTML;
+        btn.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>";
+
+        fetch("/api/update_profile.php", {
+            method: "POST",
+            body: fd
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            if (data.success) {
+                closeAccountModal();
+                if (document.getElementById("viewGameName")) document.getElementById("viewGameName").innerText = data.game_name || "Not configured";
+                if (document.getElementById("viewGameUid")) document.getElementById("viewGameUid").innerText = data.game_id || "Not configured";
+                if (document.getElementById("viewPhone")) document.getElementById("viewPhone").innerText = data.phone ? ("+91 " + data.phone) : "None";
+                if (document.getElementById("viewUpi")) document.getElementById("viewUpi").innerText = data.upi_id || "Not set";
+                showFastToast(data.message, "success");
+            } else {
+                showFastToast(data.error || "Failed to save settings", "error");
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            showFastToast("Network error saving settings", "error");
+        });
+    }
+
+    function submitFastAvatar(e) {
+        e.preventDefault();
+        var btn = document.getElementById("saveAvatarBtn");
+        var avatar = document.getElementById("selectedAvatarInput").value;
+
+        btn.disabled = true;
+        var origText = btn.innerHTML;
+        btn.innerHTML = "<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving Photo...</span>";
+
+        var fd = new FormData();
+        fd.append("action", "update_avatar");
+        fd.append("avatar", avatar);
+
+        fetch("/api/update_profile.php", {
+            method: "POST",
+            body: fd
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            if (data.success) {
+                closeAvatarModal();
+                var headerImg = document.getElementById("profileHeaderAvatar");
+                if (headerImg) headerImg.src = data.avatar;
+                showFastToast(data.message, "success");
+            } else {
+                showFastToast(data.error || "Failed to update photo", "error");
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            showFastToast("Network error updating avatar", "error");
+        });
+    }
+
 </script>

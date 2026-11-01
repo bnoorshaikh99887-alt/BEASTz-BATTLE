@@ -5,10 +5,12 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -28,9 +30,19 @@ jobs:
         working-directory: ./android-app
         run: gradle assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: BEASTz-BATTLE-APK
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
-          
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "BEASTz BATTLE Latest APK"
+          body: "Official Android APK release for BEASTz BATTLE. Features real OneSignal system push notifications (Android notification bar even when app is killed), instant native splash screen, and ultra-fast AJAX profile & payout updates."
+          files: android-app/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

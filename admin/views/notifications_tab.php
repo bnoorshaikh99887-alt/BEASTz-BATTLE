@@ -1,5 +1,5 @@
 <!-- ============================================================= -->
-<!-- PUSH NOTIFICATIONS BROADCAST CENTER (ZOMATO STYLE) -->
+<!-- PUSH NOTIFICATIONS BROADCAST CENTER  -->
 <!-- ============================================================= -->
 <div class="space-y-4">
     <!-- Header -->
@@ -12,7 +12,7 @@
             <p class="text-[11px] text-slate-500">Broadcast instant pop-up notifications to all active APK & Web gamers</p>
         </div>
         <span class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black rounded-full text-[10px] uppercase shadow-xs">
-            Zomato Style
+            PRO BROADCAST
         </span>
     </div>
 
