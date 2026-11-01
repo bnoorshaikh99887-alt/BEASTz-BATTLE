@@ -6,17 +6,24 @@ $msg = "";
 $msg_type = "";
 
 // Helper Function to Trigger OneSignal Push Notification via REST API
-function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home") {
+function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $include_uids = []) {
     $content = array("en" => $message);
     $headings = array("en" => $title);
     
     $fields = array(
         'app_id' => "561bd59e-8355-47c8-88cc-0766688a105a",
-        'included_segments' => array('All'),
         'contents' => $content,
         'headings' => $headings,
         'data' => array('url' => $targetUrl)
     );
+    
+    // Agar specific users ki array bheji hai toh sirf unko bhejo, nahi toh sabko bhejo
+    if (!empty($include_uids)) {
+        $fields['include_external_user_ids'] = array_map('strval', $include_uids);
+        $fields['channel_for_external_user_ids'] = "push";
+    } else {
+        $fields['included_segments'] = array('All');
+    }
     
     $fields = json_encode($fields);
     
@@ -75,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $t['room_password'] = $room_password;
             $t['status'] = $status;
 
-            // Trigger Push Notification when Room ID is updated/live (WAR ZONE TAYAR HAI)
+            // Trigger Push Notification when Room ID is updated/live (TARGETED USERS ONLY)
             if (!empty($_POST['send_idp_push']) && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
                 // Fetch enrolled gamer IDs for this match
                 $uids = [];
@@ -85,11 +92,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $uids[] = (int)$p_r['user_id'];
                     }
                 }
+                
+                // Sirf agar kisi ne join kiya hai tabhi push jayega
+                if (!empty($uids)) {
+                    $idp_title = "🔥 WAR ZONE TAYAR HAI!";
+                    $idp_msg = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
 
-                $idp_title = "🔥 WAR ZONE TAYAR HAI!";
-                $idp_msg = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
-
-                sendOneSignalNotification($idp_title, $idp_msg, "/?tab=matches", $uids);
+                    sendOneSignalNotification($idp_title, $idp_msg, "/?tab=my_matches", $uids);
+                }
             }
         } else {
             $msg = "Update failed: " . $u_stmt->error;
@@ -111,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     try {
         $total_distributed = 0.00;
         $winner_u_id = null;
+        $participating_uids = [];
 
         // Fetch all participants to process
         $p_query = $conn->prepare("SELECT id, user_id, in_game_name FROM participants WHERE tournament_id = ?");
@@ -122,6 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         while ($p_item = $participants_list->fetch_assoc()) {
             $pid = (int)$p_item['id'];
             $p_uid = (int)$p_item['user_id'];
+            $participating_uids[] = $p_uid;
+            
             $kills = isset($kills_arr[$pid]) ? max(0, (int)$kills_arr[$pid]) : 0;
             $bonus = isset($bonus_arr[$pid]) ? max(0.0, (float)$bonus_arr[$pid]) : 0.00;
             $rank_no = isset($rank_arr[$pid]) ? max(0, (int)$rank_arr[$pid]) : 0;
@@ -168,23 +181,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $conn->query("UPDATE tournaments SET status = 'completed' WHERE id = {$tournament_id}");
         }
 
-        // Credit ₹3 per room reward to Match Host Admin if hosted by sub-admin
-        $hosted_by = (int)($t['hosted_by_admin_id'] ?? 0);
-        if ($hosted_by > 0) {
-            $conn->query("UPDATE admin SET wallet_balance = wallet_balance + 3.00, rooms_hosted = rooms_hosted + 1 WHERE id = {$hosted_by}");
-        }
-
         $conn->commit();
         $msg = "Match results successfully published! Total " . format_inr($total_distributed) . " credited to gamer wallets based on kills and rankings.";
         $msg_type = "success";
         $t['status'] = 'completed';
 
-        // Trigger Push Notification for Results Declared
-        sendOneSignalNotification(
-            "🏆 Results Declared!", 
-            "Match results for '" . $t['title'] . "' have been published. Check your wallet & rankings!", 
-            "/?tab=tournaments"
-        );
+        // Trigger Push Notification for Results Declared (TARGETED USERS ONLY)
+        if (!empty($participating_uids)) {
+            sendOneSignalNotification(
+                "🏆 Results Declared!", 
+                "Match results for '" . $t['title'] . "' have been published. Check your wallet & rankings!", 
+                "/?tab=leaderboard",
+                $participating_uids
+            );
+        }
 
     } catch (Exception $e) {
         $conn->rollback();
