@@ -122,7 +122,8 @@ $withdrawals = $conn->query("
     </div>
 <?php endif; ?>
 
-<div class="space-y-3">
+<!-- Container with ID for live auto-refresh background sync -->
+<div id="admin-payouts-cards-container" class="space-y-3">
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
         <?php while ($w = $withdrawals->fetch_assoc()): ?>
             <?php 
@@ -220,3 +221,27 @@ $withdrawals = $conn->query("
         </div>
     <?php endif; ?>
 </div>
+
+<!-- AUTO-REFRESH / LIVE POLLING SCRIPT (No app restart needed for new payouts) -->
+<script>
+setInterval(function() {
+    // Agar user ne kisi form par focus kiya hua hai ya typing kar raha hai toh polling skip karo
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var newContainer = doc.getElementById('admin-payouts-cards-container');
+            var currentContainer = document.getElementById('admin-payouts-cards-container');
+            
+            if (newContainer && currentContainer) {
+                if (newContainer.innerHTML.trim() !== currentContainer.innerHTML.trim()) {
+                    currentContainer.innerHTML = newContainer.innerHTML;
+                }
+            }
+        })
+        .catch(err => {});
+}, 6000); // Har 6 second mein automatic naye withdrawals check karega
+</script>
