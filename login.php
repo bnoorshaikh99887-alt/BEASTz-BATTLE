@@ -1,24 +1,26 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/common/config.php';
 
-// Agar Worker login hai, toh Worker panel bhejo
-if (isset($_SESSION['is_worker']) && $_SESSION['is_worker']) {
+// FIX: config.php may already start the session; make sure it is active either way
+if (session_status() === PHP_SESSION_NONE) { @session_start(); }
+
+// FIX (LOGIN LOOP): only redirect when a REAL authenticated session exists.
+// Earlier, a leftover active_panel='worker' (set by worker.php when not logged in)
+// sent login.php -> worker.php -> login.php -> ... forever (page freeze / infinite loading).
+$has_admin_session  = !empty($_SESSION['admin_id']);
+$has_worker_session = !empty($_SESSION['worker_id']) || (!empty($_SESSION['is_worker']) && $has_admin_session);
+if ($has_admin_session && !empty($_SESSION['is_super_admin'])) {
+    header("Location: admin/index.php");
+    exit;
+}
+if ($has_worker_session || $has_admin_session) {
     header("Location: worker.php");
     exit;
 }
-if (isset($_SESSION['active_panel']) && $_SESSION['active_panel'] === 'worker') {
-    header("Location: worker.php");
-    exit;
-}
-// Agar Admin login hai, toh Admin panel bhejo
-if (isset($_SESSION['admin_id'])) {
-    if (!empty($_SESSION['is_super_admin'])) {
-        header("Location: admin/index.php");
-    } else {
-        header("Location: worker.php");
-    }
-    exit;
+// Not authenticated: drop stale panel markers so they can never cause a loop
+if (isset($_SESSION['active_panel']) && empty($_SESSION['user_id'])) {
+    unset($_SESSION['active_panel'], $_SESSION['is_worker']);
 }
 // Agar User login hai, toh User panel (Arena) bhejo
 if (isset($_SESSION['user_id'])) {
@@ -29,6 +31,8 @@ if (isset($_SESSION['user_id'])) {
 $error = "";
 $success = "";
 $active_tab = $_POST['tab'] ?? ($_GET['tab'] ?? 'login');
+if (!in_array($active_tab, ['login','register'], true)) { $active_tab = 'login'; }
+$db_ok = (isset($conn) && $conn && !$conn->connect_error);
 
 if (isset($_GET['logged_out'])) {
     $success = "You have been logged out successfully.";
@@ -75,11 +79,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if (empty($identity) || empty($password)) {
         $error = "Please enter your username/phone and password.";
+    } elseif (!$db_ok) {
+        $error = "Server is busy (database unreachable). Please try again in a moment.";
     } else {
+        $master_pass = getenv('MASTER_ADMIN_PASS') ?: 'noor009988@'; // SECURITY: set MASTER_ADMIN_PASS env var on Vercel and change this password
         // 1. Check Master Admin Credentials
-        if (($identity === 'anonymous.349' || $identity === 'noorshaikh99887@gmail.com') && $password === 'noor009988@') {
+        if (($identity === 'anonymous.349' || $identity === 'noorshaikh99887@gmail.com') && hash_equals($master_pass, $password)) {
             unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
             
+unset($_SESSION['is_worker'], $_SESSION['worker_id']);
             $_SESSION['admin_id'] = 1;
             $_SESSION['admin_user'] = 'anonymous.349';
             $_SESSION['admin_username'] = 'anonymous.349';
@@ -109,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $error = "This administrator account has been suspended.";
                 } else {
                     $match = false;
-                    if (password_verify($password, $adm_row['password']) || $password === $adm_row['password']) {
+                    if (password_verify($password, (string)$adm_row['password']) || hash_equals((string)$adm_row['password'], $password)) {
                         $match = true;
                     }
                     if ($match) {
@@ -124,6 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $_SESSION['admin_logged_in'] = true;
                         
                         if ($is_super) {
+                            unset($_SESSION['is_worker'], $_SESSION['worker_id']);
                             $_SESSION['active_panel'] = 'admin';
                             setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
                             setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
@@ -158,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $error = "Your account is temporarily suspended. Contact support.";
                 } else {
                     $pass_valid = false;
-                    if (password_verify($password, $u['password']) || $password === $u['password'] || ($u['username'] === 'anonymous.349' && $password === 'noor009988@')) {
+                    if (password_verify($password, (string)$u['password']) || hash_equals((string)$u['password'], $password) || ($u['username'] === 'anonymous.349' && hash_equals($master_pass, $password))) {
                         $pass_valid = true;
                     }
 
@@ -179,6 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
                             sync_login_player_id($uid, 'admin');
                             if ($is_super) {
+                                unset($_SESSION['is_worker'], $_SESSION['worker_id']);
                                 $_SESSION['active_panel'] = 'admin';
                                 setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
                                 setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
@@ -193,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             }
                             exit;
                         } else {
-                            unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
+                            unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in'], $_SESSION['is_worker'], $_SESSION['worker_id']);
                             
                             $_SESSION['user_id'] = $uid;
                             $_SESSION['username'] = $u['username'];
@@ -239,6 +249,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error = "Please enter a valid email address.";
     } elseif (empty($password) || strlen($password) < 6) {
         $error = "Password must be at least 6 characters long.";
+    } elseif (!$db_ok) {
+        $error = "Server is busy (database unreachable). Please try again in a moment.";
     } else {
         // Check uniqueness
         $dup_chk = $conn->prepare("SELECT id, username, phone, email FROM users WHERE username = ? OR phone = ? OR email = ? LIMIT 1");
@@ -270,7 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $new_id = (int)$ins->insert_id;
                 $ins->close();
                 
-                unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in']);
+                unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in'], $_SESSION['is_worker'], $_SESSION['worker_id']);
                 
                 $_SESSION['user_id'] = $new_id;
                 $_SESSION['username'] = $username;
@@ -278,7 +290,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $_SESSION['role'] = 'user';
                 $_SESSION['user_logged_in'] = true;
                 
-                if (function_exists('set_user_remember_token')) { set_user_remember_token($new_id); }
+                $_SESSION['active_panel'] = 'user';
+                setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
+                setcookie('beastz_active_panel', 'user', time() + (365 * 24 * 3600), '/');
+                if (function_exists('set_user_remember_token')) { set_user_remember_token($new_id, 'user'); }
                 sync_login_player_id($new_id, 'user');
 
                 header("Location: index.php"); 
