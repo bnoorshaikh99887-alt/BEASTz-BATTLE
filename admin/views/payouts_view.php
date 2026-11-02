@@ -87,6 +87,10 @@ $withdrawals = $conn->query("
     LEFT JOIN users u ON w.user_id = u.id 
     ORDER BY CASE WHEN LOWER(w.status) = 'pending' THEN 0 ELSE 1 END, w.id DESC
 ");
+
+// Count initial pending withdrawals for smart notification check
+$count_res = $conn->query("SELECT COUNT(*) as cnt FROM withdrawals WHERE LOWER(status) = 'pending'");
+$initial_pending_count = ($count_res) ? (int)$count_res->fetch_assoc()['cnt'] : 0;
 ?>
 
 <div class="mb-5 flex items-center justify-between">
@@ -104,6 +108,15 @@ $withdrawals = $conn->query("
 
 <!-- AJAX Success / Error Banner -->
 <div id="payout-alert-box" class="hidden mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all"></div>
+
+<!-- Tap-to-Refresh Notification Banner for New Withdrawals -->
+<div id="new-withdrawal-banner" onclick="location.reload();" class="hidden mb-4 p-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 rounded-2xl text-xs font-black flex items-center justify-between shadow-lg cursor-pointer animate-pulse">
+    <div class="flex items-center gap-2">
+        <i class="fa-solid fa-bell text-sm"></i>
+        <span>New Withdrawal Request Available! Tap here to refresh.</span>
+    </div>
+    <i class="fa-solid fa-rotate text-sm"></i>
+</div>
 
 <div id="admin-payouts-cards-container" class="space-y-3">
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
@@ -200,7 +213,7 @@ $withdrawals = $conn->query("
     <?php endif; ?>
 </div>
 
-<!-- AJAX SCRIPT FOR SEAMLESS APPROVAL AND LIVE AUTO-REFRESH -->
+<!-- AJAX SCRIPT FOR SEAMLESS APPROVAL AND SMART TAP-TO-REFRESH NOTIFICATION -->
 <script>
 function processPayout(withdrawalId, actionType) {
     var confirmMsg = actionType === 'complete' ? "Approve and send targeted Push Notification?" : "Are you sure you want to reject this request?";
@@ -257,7 +270,9 @@ function processPayout(withdrawalId, actionType) {
     });
 }
 
-// SAFE BACKGROUND AUTO-REFRESH (Fetches new withdrawals every 6 seconds without touching buttons)
+// SMART BACKGROUND CHECKER (Notifies when new withdrawal is placed without breaking active buttons)
+let initialPendingCount = <?= $initial_pending_count; ?>;
+
 setInterval(function() {
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
@@ -266,13 +281,14 @@ setInterval(function() {
         .then(html => {
             var parser = new DOMParser();
             var doc = parser.parseFromString(html, 'text/html');
-            var newContainer = doc.getElementById('admin-payouts-cards-container');
-            var currentContainer = document.getElementById('admin-payouts-cards-container');
             
-            if (newContainer && currentContainer) {
-                // Only update if HTML differs and no active processing is going on
-                if (newContainer.innerHTML.trim() !== currentContainer.innerHTML.trim() && !document.querySelector('.fa-spin')) {
-                    currentContainer.innerHTML = newContainer.innerHTML;
+            // Count pending forms in fetched HTML
+            var newPendingCount = doc.querySelectorAll('form input[name="ajax_action"][value="complete"]').length;
+            
+            if (newPendingCount > initialPendingCount) {
+                var banner = document.getElementById('new-withdrawal-banner');
+                if (banner) {
+                    banner.classList.remove('hidden');
                 }
             }
         })
