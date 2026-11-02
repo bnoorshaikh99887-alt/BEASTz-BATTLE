@@ -6,11 +6,6 @@ $tournament_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $msg = "";
 $msg_type = "";
 
-// Helper Function to Trigger OneSignal Push Notification via REST API
-function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $player_ids = [], $user_ids = []) {
-    return send_onesignal_push($title, $message, $targetUrl, $player_ids, $user_ids);
-}
-
 // Fetch Tournament Details
 $stmt = $conn->prepare("
     SELECT t.*, 
@@ -32,13 +27,12 @@ if (!$t) {
 $per_kill_rate = (float)($t['per_kill'] ?? 0.00);
 
 // -------------------------------------------------------------
-// 1. Handle Room Credentials & Match Status Update (GLITCH FIXED)
+// 1. Handle Room Credentials & Match Status Update
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_room') {
     $room_id = sanitize($_POST['room_id'] ?? '');
     $room_password = sanitize($_POST['room_password'] ?? '');
     
-    // STRICT FIX: Agar status post mein nahi hai ya khali hai, toh database ka purana status hi rakho!
     $status = sanitize($_POST['status'] ?? '');
     if (empty($status)) {
         $status = $t['status'];
@@ -54,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $t['room_password'] = $room_password;
             $t['status'] = $status;
 
-            // Trigger Push Notification when Room ID is updated/live (TARGETED JOINED PLAYERS ONLY)
             if (!empty($_POST['send_idp_push']) && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
                 $target_pids = [];
                 $target_uids = [];
@@ -64,11 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     FROM participants p 
                     JOIN users u ON p.user_id = u.id 
                     WHERE p.tournament_id = {$tournament_id}
-                    UNION
-                    SELECT DISTINCT ut.user_id, u.player_id 
-                    FROM user_tournaments ut 
-                    JOIN users u ON ut.user_id = u.id 
-                    WHERE ut.tournament_id = {$tournament_id}
                 ");
                 if ($q_joined) {
                     while ($p_r = $q_joined->fetch_assoc()) {
@@ -104,37 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $msg_type = "error";
         }
         $u_stmt->close();
-    }
-}
-
-// -------------------------------------------------------------
-// 1.5 Handle Anti-Cheat Fund Revocation
-// -------------------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'revoke_participant_fund') {
-    $participant_id = (int)$_POST['participant_id'];
-    $p_stmt = $conn->prepare("SELECT p.*, t.title FROM participants p JOIN tournaments t ON p.tournament_id = t.id WHERE p.id = ?");
-    $p_stmt->bind_param("i", $participant_id);
-    $p_stmt->execute();
-    $p_data = $p_stmt->get_result()->fetch_assoc();
-    $p_stmt->close();
-
-    if ($p_data && (float)$p_data['prize_won'] > 0) {
-        $revoke_amount = (float)$p_data['prize_won'];
-        $p_uid = (int)$p_data['user_id'];
-        $conn->begin_transaction();
-        try {
-            $conn->query("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - {$revoke_amount}), winning_balance = GREATEST(0, winning_balance - {$revoke_amount}) WHERE id = {$p_uid}");
-            $conn->query("UPDATE participants SET prize_won = 0, is_revoked = 1, revoke_note = 'Anti-Cheat Violation: Fund Revoked by Admin' WHERE id = {$participant_id}");
-            $t_title = $conn->real_escape_string($p_data['title']);
-            $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$p_uid}, {$revoke_amount}, 'debit', 'Anti-Cheat Fund Clawback: {$t_title}')");
-            $conn->commit();
-            $msg = "Anti-Cheat Alert: ₹" . number_format($revoke_amount, 2) . " successfully revoked from player wallet!";
-            $msg_type = "success";
-        } catch (Exception $e) {
-            $conn->rollback();
-            $msg = "Revoke failed: " . $e->getMessage();
-            $msg_type = "error";
-        }
     }
 }
 
@@ -219,11 +176,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             FROM participants p 
             JOIN users u ON p.user_id = u.id 
             WHERE p.tournament_id = {$tournament_id}
-            UNION
-            SELECT DISTINCT u.player_id, ut.user_id 
-            FROM user_tournaments ut 
-            JOIN users u ON ut.user_id = u.id 
-            WHERE ut.tournament_id = {$tournament_id}
         ");
         if ($q_pids) {
             while ($pr = $q_pids->fetch_assoc()) {
@@ -260,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // -------------------------------------------------------------
-// 3. Handle Anti-Cheat Hacker Rollback
+// 3. Handle Anti-Cheat Hacker Rollback (Preserve Kills & Room ID)
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'rollback_hacker_prize') {
     $participant_id = (int)($_POST['participant_id'] ?? 0);
@@ -295,7 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $tx->close();
             }
 
-            $rst = $conn->prepare("UPDATE participants SET prize_won = 0.00, rank_no = 0, kills = 0 WHERE id = ?");
+            // Only reset prize_won to 0.00; keep kills and ranks completely safe!
+            $rst = $conn->prepare("UPDATE participants SET prize_won = 0.00 WHERE id = ?");
             $rst->bind_param("i", $participant_id);
             $rst->execute();
             $rst->close();
@@ -308,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $upd_t->close();
 
             $conn->commit();
-            $msg = "Anti-Cheat Action Applied: Revoked " . format_inr($prize_revoked) . " prize from @" . htmlspecialchars($p_row['username']) . "!";
+            $msg = "Anti-Cheat Action Applied: Revoked " . format_inr($prize_revoked) . " prize from @" . htmlspecialchars($p_row['username']) . "! Match moved to Live with support notice.";
             $msg_type = "success";
             $t['status'] = 'live';
             $t['room_id'] = $notice_room_id;
@@ -507,7 +460,7 @@ $participants = $conn->query("
                             </div>
                         </div>
 
-                        <?php if ($has_won): ?>
+                        <?php if ($has_won || $p['kills'] > 0 || $p['rank_no'] > 0): ?>
                             <div class="pt-1.5 border-t border-amber-200 flex items-center justify-between">
                                 <span class="text-[10px] text-rose-700 font-bold flex items-center gap-1">
                                     <i class="fa-solid fa-shield-virus"></i> Suspected Cheating?
@@ -538,14 +491,14 @@ $participants = $conn->query("
 <!-- Modal: Hacker Prize Reclaim Confirmation -->
 <div id="hackerModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
     <div class="w-full max-w-sm bg-white border border-rose-200 rounded-3xl p-5 shadow-2xl relative text-left">
-        <button type="button" onclick="closeHackerModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-base">
+        <button type="button" onclick="closeHackerModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-base cursor-pointer">
             <i class="fa-solid fa-xmark"></i>
         </button>
         <div class="text-center mb-3">
             <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl font-black mb-2 shadow-xs">
                 <i class="fa-solid fa-shield-halved"></i>
             </div>
-            <h3 class="text-sm font-extrabold text-slate-900">Anti-Cheat Prize Reclaim</h3>
+            <h3 class="sm:text-sm font-extrabold text-slate-900">Anti-Cheat Prize Reclaim</h3>
             <p class="text-[11px] text-slate-500">Revoke prize from hacker and move match back to Live</p>
         </div>
 
