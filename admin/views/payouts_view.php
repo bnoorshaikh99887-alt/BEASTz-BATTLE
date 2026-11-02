@@ -36,40 +36,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg_type = "success";
 
                 // ========================================================
-                // TARGETED PUSH NOTIFICATION (USING DATABASE PLAYER_ID)
+                // TARGETED PUSH NOTIFICATION (USING SPECIFIC USER PLAYER_ID)
                 // ========================================================
-                // ========================================================
-                // TARGETED PUSH NOTIFICATION (USING DATABASE PLAYER_ID & USER_ID)
-                // ========================================================
-                if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) { require_once __DIR__ . "/../../common/onesignal_helper.php"; } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) { require_once __DIR__ . "/../common/onesignal_helper.php"; }
-if (false) {
-                    require_once __DIR__ . "/../../common/onesignal_helper.php";
+                if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) { 
+                    require_once __DIR__ . "/../../common/onesignal_helper.php"; 
+                } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) { 
+                    require_once __DIR__ . "/../common/onesignal_helper.php"; 
                 }
+                
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
                 $target_pids = [];
-                // 1. Fetch all tokens from user_devices table
-                $d_res = $conn->query("SELECT player_id FROM user_devices WHERE user_id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
-                if ($d_res) {
-                    while ($dr = $d_res->fetch_assoc()) {
-                        if (!empty($dr['player_id'])) $target_pids[] = trim($dr['player_id']);
+                
+                // 1. Fetch from withdrawals table directly
+                if (!empty($w['player_id']) && strlen(trim($w['player_id'])) > 15) {
+                    $target_pids[] = trim($w['player_id']);
+                }
+                
+                // 2. Fetch all tokens from user_devices table for this specific user
+                if ($user_id > 0) {
+                    $d_res = $conn->query("SELECT player_id FROM user_devices WHERE user_id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
+                    if ($d_res) {
+                        while ($dr = $d_res->fetch_assoc()) {
+                            if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 15) {
+                                $target_pids[] = trim($dr['player_id']);
+                            }
+                        }
+                    }
+                    // 3. Fetch primary token from users table
+                    $u_res = $conn->query("SELECT player_id FROM users WHERE id = {$user_id}");
+                    if ($u_res && ($ur = $u_res->fetch_assoc())) {
+                        if (!empty($ur['player_id']) && strlen(trim($ur['player_id'])) > 15) {
+                            $target_pids[] = trim($ur['player_id']);
+                        }
                     }
                 }
-                // 2. Fetch primary token from users table
-                $u_res = $conn->query("SELECT player_id FROM users WHERE id = {$user_id}");
-                if ($u_res && ($ur = $u_res->fetch_assoc())) {
-                    if (!empty($ur['player_id'])) $target_pids[] = trim($ur['player_id']);
-                }
+                
                 if ($is_host_request && $host_admin_id > 0) {
                     $adm_t = $conn->query("SELECT player_id FROM admin WHERE id = {$host_admin_id}");
                     if ($adm_t && ($ares = $adm_t->fetch_assoc())) {
-                        if (!empty($ares['player_id'])) $target_pids[] = trim($ares['player_id']);
+                        if (!empty($ares['player_id']) && strlen(trim($ares['player_id'])) > 15) {
+                            $target_pids[] = trim($ares['player_id']);
+                        }
                     }
                 }
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
-                $target_uids = [$user_id];
-                if (function_exists("send_onesignal_push")) {
-                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
+                $target_uids = $user_id > 0 ? [$user_id] : [];
+                
+                // STRICT TARGETED PUSH: Only send if player_ids are found for this specific user.
+                // NEVER fall back to included_segments: ["All"].
+                if (!empty($target_pids)) {
+                    if (function_exists("send_onesignal_push")) {
+                        send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
+                    }
                 }
                 // Store in DB for UI reference
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");

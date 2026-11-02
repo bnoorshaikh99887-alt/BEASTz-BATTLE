@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $msg = "Room ID & Password saved successfully!";
             $msg_type = "success";
 
-            // Trigger Push Notification when requested
+            // Trigger Push Notification when requested (TARGETED JOINED PLAYERS ONLY)
             if ($send_push && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
                 $pids = [];
                 $uids = [];
@@ -71,21 +71,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 ");
                 if ($qp) {
                     while ($pr = $qp->fetch_assoc()) {
-                        if (!empty($pr['player_id'])) $pids[] = $pr['player_id'];
-                        $uids[] = (string)$pr['user_id'];
+                        if (!empty($pr['player_id']) && strlen(trim($pr['player_id'])) > 15) {
+                            $pids[] = trim($pr['player_id']);
+                        }
+                        if (!empty($pr['user_id'])) {
+                            $uids[] = (string)$pr['user_id'];
+                        }
                     }
                 }
+                if (!empty($uids)) {
+                    $uid_list = implode(',', array_unique(array_map('intval', $uids)));
+                    $q_dev = $conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$uid_list}) AND player_id IS NOT NULL AND player_id != ''");
+                    if ($q_dev) {
+                        while ($dr = $q_dev->fetch_assoc()) {
+                            if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 15) {
+                                $pids[] = trim($dr['player_id']);
+                            }
+                        }
+                    }
+                }
+                $pids = array_values(array_unique(array_filter($pids)));
 
                 $idp_title = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI";
                 $idp_body = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
 
-                $push_res = send_onesignal_push($idp_title, $idp_body, "/?tab=matches", $pids, $uids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tournament_id]);
-                @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($idp_title) . "', '" . $conn->real_escape_string($idp_body) . "', '/?tab=matches', 'ROOM_IDP')");
-                
-                if (empty($uids)) {
-                    $msg = "Room ID & Password saved! (Push alert was NOT dispatched because 0 players have joined this match).";
+                if (!empty($pids)) {
+                    $push_res = send_onesignal_push($idp_title, $idp_body, "/?tab=matches", $pids, $uids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tournament_id], false);
+                    @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($idp_title) . "', '" . $conn->real_escape_string($idp_body) . "', '/?tab=matches', 'ROOM_IDP')");
+                    $msg = "Room IDP saved and instant push alert dispatched to joined players! (" . count($pids) . " devices notified)";
                 } else {
-                    $msg = "Room IDP saved and instant push alert dispatched to joined players! (" . count($uids) . " players notified)";
+                    $msg = "Room ID & Password saved! (Push alert was NOT dispatched because 0 joined players have registered device tokens).";
                 }
             }
         } else {
@@ -184,11 +199,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $msg = "Results declared successfully! Total ₹" . number_format($total_distributed, 2) . " disbursed into gamer wallets.";
         $msg_type = "success";
 
-        // Dispatch Results Push Notification
+        // Fetch participating player_ids from participants, user_tournaments, users, and user_devices
+        $participating_pids = [];
+        $qp_res = $conn->query("
+            SELECT DISTINCT u.player_id 
+            FROM participants p 
+            JOIN users u ON p.user_id = u.id 
+            WHERE p.tournament_id = {$tournament_id}
+            UNION
+            SELECT DISTINCT u.player_id 
+            FROM user_tournaments ut 
+            JOIN users u ON ut.user_id = u.id 
+            WHERE ut.tournament_id = {$tournament_id}
+        ");
+        if ($qp_res) {
+            while ($pr = $qp_res->fetch_assoc()) {
+                if (!empty($pr['player_id']) && strlen(trim($pr['player_id'])) > 15) {
+                    $participating_pids[] = trim($pr['player_id']);
+                }
+            }
+        }
+        if (!empty($participating_uids)) {
+            $u_list = implode(',', array_unique(array_map('intval', $participating_uids)));
+            $q_devs = $conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$u_list}) AND player_id IS NOT NULL AND player_id != ''");
+            if ($q_devs) {
+                while ($dr = $q_devs->fetch_assoc()) {
+                    if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 15) {
+                        $participating_pids[] = trim($dr['player_id']);
+                    }
+                }
+            }
+        }
+        $participating_pids = array_values(array_unique(array_filter($participating_pids)));
+
+        // Dispatch Results Push Notification ONLY to joined players
         $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
         $results_body = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
-        send_onesignal_push($results_title, $results_body, "/?tab=matches", $participating_pids, $participating_uids, ["badge_type" => "RESULTS_ANNOUNCED", "tournament_id" => $tournament_id]);
-        @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($results_title) . "', '" . $conn->real_escape_string($results_body) . "', '/?tab=matches', 'RESULTS_ANNOUNCED')");
+
+        if (!empty($participating_pids)) {
+            send_onesignal_push($results_title, $results_body, "/?tab=matches", $participating_pids, $participating_uids, ["badge_type" => "RESULTS_ANNOUNCED", "tournament_id" => $tournament_id], false);
+            @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($results_title) . "', '" . $conn->real_escape_string($results_body) . "', '/?tab=matches', 'RESULTS_ANNOUNCED')");
+        }
 
     } catch (Exception $e) {
         $conn->rollback();

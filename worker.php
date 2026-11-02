@@ -117,18 +117,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                     ");
                     if ($j_q) {
                         while ($p = $j_q->fetch_assoc()) {
-                            if (!empty($p["player_id"])) $player_ids[] = $p["player_id"];
-                            $user_ids[] = $p["user_id"];
+                            if (!empty($p["player_id"]) && strlen(trim($p["player_id"])) > 15) {
+                                $player_ids[] = trim($p["player_id"]);
+                            }
+                            if (!empty($p["user_id"])) {
+                                $user_ids[] = (int)$p["user_id"];
+                            }
                         }
                     }
+                    if (!empty($user_ids)) {
+                        $uid_list = implode(',', array_unique($user_ids));
+                        $q_dev = $conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$uid_list}) AND player_id IS NOT NULL AND player_id != ''");
+                        if ($q_dev) {
+                            while ($dr = $q_dev->fetch_assoc()) {
+                                if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 15) {
+                                    $player_ids[] = trim($dr['player_id']);
+                                }
+                            }
+                        }
+                    }
+                    $player_ids = array_values(array_unique(array_filter($player_ids)));
 
                     $n_title = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI";
                     $n_body = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_pass;
-                    send_onesignal_push($n_title, $n_body, "/?tab=matches", $player_ids, $user_ids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tid]);
-                    
-                    $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($n_title) . "', '" . $conn->real_escape_string($n_body) . "', '/?tab=matches', 'ROOM_IDP')");
-                    $feedback_msg = "Room IDP saved and instant push alert dispatched to joined players!";
-                    $feedback_type = "success";
+
+                    if (!empty($player_ids)) {
+                        send_onesignal_push($n_title, $n_body, "/?tab=matches", $player_ids, $user_ids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tid], false);
+                        $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($n_title) . "', '" . $conn->real_escape_string($n_body) . "', '/?tab=matches', 'ROOM_IDP')");
+                        $feedback_msg = "Room IDP saved and instant push alert dispatched to joined players! (" . count($player_ids) . " devices notified)";
+                        $feedback_type = "success";
+                    } else {
+                        $feedback_msg = "Room ID & Password saved successfully! (Push alert skipped: no registered player devices found for joined users).";
+                        $feedback_type = "success";
+                    }
                 } else {
                     $feedback_msg = "Room ID & Password saved successfully for Match #" . $tid . "!";
                     $feedback_type = "success";

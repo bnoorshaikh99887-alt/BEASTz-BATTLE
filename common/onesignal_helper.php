@@ -97,8 +97,8 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
         $has_direct_targets = true;
     }
 
-    // 3. CRITICAL INVERSION FIX:
-    // If no direct recipients are targeted, ONLY broadcast if explicitly allowed!
+    // 3. STRICT TARGETING ENFORCEMENT:
+    // When broadcasting is disallowed (for auto-push events), NEVER include included_segments!
     if (!$has_direct_targets) {
         if ($allow_broadcast) {
             $payload["included_segments"] = ["Total Subscriptions"];
