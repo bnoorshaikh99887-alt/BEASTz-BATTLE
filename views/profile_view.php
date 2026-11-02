@@ -190,33 +190,33 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 </div>
 
 <!-- ============================================================= -->
-<!-- SECTION 3: RECENT PASSBOOK TRANSACTIONS (COMPACT SCROLL BOX) -->
+<!-- SECTION 3: RECENT PASSBOOK TRANSACTIONS (STRICT 5-ITEM SCROLL BOX) -->
 <!-- ============================================================= -->
-<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-8">
-    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs mb-8">
+    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2">
             <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs">
                 <i class="fa-solid fa-receipt"></i>
             </div>
-            <span class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Passbook History</span>
+            <span class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Passbook History</span>
         </div>
         <button type="button" onclick="switchAppTab('wallet')" class="text-[10px] font-bold text-yellow-600 hover:underline cursor-pointer">Deposit / Withdraw</button>
     </div>
 
-    <!-- Compact Scrollable Box Container -->
-    <div class="max-h-52 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+    <!-- Strict Fixed Height & Vertical Scroll Container -->
+    <div class="max-h-[260px] overflow-y-auto pr-1.5 space-y-2 custom-scrollbar">
         <?php if ($tx_res && $tx_res->num_rows > 0): ?>
             <?php while ($tx = $tx_res->fetch_assoc()): ?>
-                <div class="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
+                <div class="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs">
                     <div class="pr-2">
-                        <span class="font-bold text-slate-900 block text-[11px] leading-tight">
+                        <span class="font-bold text-slate-900 dark:text-white block text-[11px] leading-tight">
                             <?= htmlspecialchars($tx['description'] ?? 'Transaction'); ?>
                         </span>
                         <span class="text-[9px] text-slate-400">
                             <?= date('d M Y, h:i A', strtotime($tx['created_at'])); ?>
                         </span>
                     </div>
-                    <span class="font-black font-mono whitespace-nowrap text-xs <?= ($tx['type'] === 'credit') ? 'text-emerald-600' : 'text-rose-600'; ?>">
+                    <span class="font-black font-mono whitespace-nowrap text-xs <?= ($tx['type'] === 'credit') ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'; ?>">
                         <?= ($tx['type'] === 'credit') ? '+' : '-'; ?><?= format_inr($tx['amount']); ?>
                     </span>
                 </div>
@@ -226,6 +226,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
         <?php endif; ?>
     </div>
 </div>
+
 <!-- ============================================================= -->
 <!-- MODAL 1: ACCOUNT SETTINGS (IGN, Free Fire Game ID, Phone, UPI) -->
 <!-- ============================================================= -->
