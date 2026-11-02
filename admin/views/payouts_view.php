@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // 1. Mark withdrawals table as completed
                 $conn->query("UPDATE withdrawals SET status = 'Completed' WHERE id = $w_id");
                 
-                // 2. FIX: Update User's Passbook (transactions table) so it no longer says 'Pending'
+                // 2. Update User's Passbook (transactions table) so it no longer says 'Pending'
                 $safe_upi = $conn->real_escape_string($upi_id);
                 $conn->query("UPDATE transactions SET description = 'Withdrawal Processed: Sent to {$safe_upi}' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
 
@@ -83,14 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
                 $target_uids = $user_id > 0 ? [$user_id] : [];
                 
-                // STRICT TARGETED PUSH: Only send if player_ids are found for this specific user.
-                // NEVER fall back to included_segments: ["All"].
                 if (!empty($target_pids) || !empty($target_uids)) {
                     if (function_exists("send_onesignal_push")) {
                         send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
                     }
                 }
-                // Store in DB for UI reference
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 
             } catch (Exception $e) {
@@ -102,19 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $conn->begin_transaction();
             try {
                 if ($is_host_request && $host_admin_id > 0) {
-                    // Refund to host admin wallet
                     $conn->query("UPDATE admin SET wallet_balance = wallet_balance + {$amount} WHERE id = {$host_admin_id}");
                 } else {
-                    // Refund held amount back to user's wallet
                     $ref = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
                     $ref->bind_param("di", $amount, $user_id);
                     $ref->execute();
                     $ref->close();
 
-                    // FIX: Remove 'Pending' text from old transaction on Reject
                     $conn->query("UPDATE transactions SET description = 'Withdrawal Request (Rejected)' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
 
-                    // Record refund transaction
                     $desc = "Withdrawal Rejected Refund (Ref #" . $w_id . ")";
                     $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'credit', ?)");
                     $tx->bind_param("ids", $user_id, $amount, $desc);
@@ -135,12 +128,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Fetch Withdrawals
+// Fetch Withdrawals (SORTED: Pending First, then History/Completed/Rejected descending by ID)
 $withdrawals = $conn->query("
     SELECT w.*, COALESCE(u.username, 'Host Admin') as username, COALESCE(u.wallet_balance, 0.00) as wallet_balance 
     FROM withdrawals w 
     LEFT JOIN users u ON w.user_id = u.id 
-    ORDER BY w.is_admin_request DESC, w.id DESC
+    ORDER BY CASE WHEN LOWER(w.status) = 'pending' THEN 0 ELSE 1 END, w.id DESC
 ");
 ?>
 
@@ -234,7 +227,7 @@ $withdrawals = $conn->query("
                 <!-- Approval / Rejection Actions -->
                 <?php if ($is_pending): ?>
                     <div class="flex items-center gap-2 pt-1">
-                        <form method="POST" action="index.php?tab=payouts" class="flex-1" >
+                        <form method="POST" action="index.php?tab=payouts" class="flex-1">
                             <input type="hidden" name="action" value="complete">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
@@ -243,7 +236,7 @@ $withdrawals = $conn->query("
                             </button>
                         </form>
 
-                        <form method="POST" action="index.php?tab=payouts" >
+                        <form method="POST" action="index.php?tab=payouts">
                             <input type="hidden" name="action" value="reject">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 font-bold rounded-xl text-xs transition active:scale-95 border border-slate-200 dark:border-slate-700 cursor-pointer">
@@ -254,7 +247,7 @@ $withdrawals = $conn->query("
                 <?php endif; ?>
 
             </div>
-        <?php endwhile; ?>
+        <?endwhile; ?>
     <?php else: ?>
         <div class="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-500 shadow-sm">
             <i class="fa-solid fa-money-bill-transfer text-3xl text-slate-300 dark:text-slate-700 mb-2 block"></i>
