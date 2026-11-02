@@ -292,7 +292,9 @@ function initPageTabs() {
 // ============================================================
 var LiveSyncEngine = (function() {
     var timerId = null;
-    var pollInterval = 3500; // 3.5 seconds
+    var pollInterval = 5000; // 5s (was 3.5s) - lighter on mobile + serverless
+    var failCount = 0;        // consecutive failures -> exponential backoff
+    var isAuthPage = /\/(login|install|update_database)(\.php)?\/?$/.test(window.location.pathname);
     var lastWalletBal = null;
     var lastCompletedWithdrawalId = null;
     var isPolling = false;
@@ -497,40 +499,60 @@ var LiveSyncEngine = (function() {
         }
     }
 
+    function scheduleNext() {
+        if (timerId) clearTimeout(timerId);
+        timerId = null;
+        if (document.hidden || isAuthPage) return;
+        // backoff: 5s, 10s, 20s ... max 60s when the server keeps failing
+        var delay = Math.min(pollInterval * Math.pow(2, Math.min(failCount, 4)), 60000);
+        timerId = setTimeout(doPoll, delay);
+    }
+
     function doPoll() {
-        if (document.hidden) return; // Pause while app/tab is backgrounded to save mobile battery
+        if (document.hidden || isAuthPage) return; // never poll in background or on login screen
         if (isPolling) return;
         isPolling = true;
 
-        var apiPath = window.location.pathname.indexOf('/admin/') !== -1 ? '../api/live_sync.php' : 'api/live_sync.php';
+        var apiPath = window.location.pathname.indexOf('/admin/') !== -1 ? '../api/live_sync.php' : '/api/live_sync.php';
+
+        // FIX (FREEZE): a hung request used to leave isPolling=true forever, so live sync died silently.
+        var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var abortTimer = ctrl ? setTimeout(function() { ctrl.abort(); }, 8000) : null;
 
         fetch(apiPath, {
             method: 'GET',
             headers: { 'Accept': 'application/json' },
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'same-origin',
+            signal: ctrl ? ctrl.signal : undefined
         })
         .then(function(res) {
             if (!res.ok) throw new Error('Network status ' + res.status);
             return res.json();
         })
         .then(function(data) {
+            failCount = 0;
             syncUI(data);
         })
-        .catch(function(err) {})
+        .catch(function(err) { failCount++; })
         .finally(function() {
+            if (abortTimer) clearTimeout(abortTimer);
             isPolling = false;
+            scheduleNext();
         });
     }
 
     function start() {
-        if (timerId) clearInterval(timerId);
-        setTimeout(doPoll, 500);
-        timerId = setInterval(doPoll, pollInterval);
+        if (timerId) clearTimeout(timerId);
+        timerId = null;
+        if (isAuthPage) return;
+        failCount = 0;
+        timerId = setTimeout(doPoll, 500);
     }
 
     function stop() {
         if (timerId) {
-            clearInterval(timerId);
+            clearTimeout(timerId);
             timerId = null;
         }
     }
@@ -539,7 +561,6 @@ var LiveSyncEngine = (function() {
         if (document.hidden) {
             stop();
         } else {
-            doPoll();
             start();
         }
     });
