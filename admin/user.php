@@ -13,7 +13,7 @@ $msg_type = "";
 // Handle Block / Unblock User Action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_status') {
     $uid = (int)($_POST['user_id'] ?? 0);
-    $new_status = ($_POST['new_status'] === 'blocked') ? 'blocked' : 'active';
+    $new_status = (($_POST['new_status'] ?? '') === 'blocked') ? 'blocked' : 'active';
 
     if ($uid <= 0) {
         $msg = "Invalid user specified.";
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if ($stmt) {
                     $stmt->bind_param("si", $new_status, $uid);
                     if ($stmt->execute()) {
-                        $msg = "User @" . htmlspecialchars($target_user['username']) . " status updated to " . ucfirst($new_status) . ".";
+                        $msg = "User @" . $target_user['username'] . " status updated to " . ucfirst($new_status) . ".";
                         $msg_type = "success";
                     } else {
                         $msg = "Failed to update user status: " . $stmt->error;
@@ -52,11 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Fetch all Users
+// FIX: har user ke liye alag subquery (N+1) + unlimited rows = freeze. Ab ek JOIN + LIMIT 300
 $users = $conn->query("
     SELECT u.id, u.username, u.email, u.phone, u.wallet_balance, u.upi_id, u.role, u.status,
-    (SELECT COUNT(*) FROM participants WHERE user_id = u.id) as total_tourneys
-    FROM users u 
+    COALESCE(pc.cnt, 0) as total_tourneys
+    FROM users u
+    LEFT JOIN (SELECT user_id, COUNT(*) AS cnt FROM participants GROUP BY user_id) pc ON pc.user_id = u.id
     ORDER BY CASE WHEN u.role = 'admin' THEN 1 ELSE 2 END, u.id DESC
+    LIMIT 300
 ");
 ?>
 
@@ -123,7 +126,7 @@ $users = $conn->query("
                     </div>
                     <div class="text-right">
                         <span class="text-[11px] text-slate-500 font-semibold block mb-0.5">Tournaments:</span>
-                        <span class="font-black text-slate-900"><?= $u['total_tourneys']; ?></span>
+                        <span class="font-black text-slate-900"><?= (int)$u['total_tourneys']; ?></span>
                     </div>
                 </div>
 
@@ -137,7 +140,7 @@ $users = $conn->query("
                 <?php else: ?>
                     <form method="POST" action="user.php" class="pt-1" onsubmit="return confirm('Are you sure you want to <?= $is_blocked ? 'unblock' : 'suspend / block' ?> this user?');">
                         <input type="hidden" name="action" value="toggle_status">
-                        <input type="hidden" name="user_id" value="<?= $u['id']; ?>">
+                        <input type="hidden" name="user_id" value="<?= (int)$u['id']; ?>">
                         <input type="hidden" name="new_status" value="<?= $is_blocked ? 'active' : 'blocked'; ?>">
                         
                         <button type="submit" class="w-full py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 <?= $is_blocked ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200' ?>">
@@ -156,4 +159,11 @@ $users = $conn->query("
     <?php endif; ?>
 </div>
 
+<script>
+document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f.dataset.locked === '1') { e.preventDefault(); return; }
+    setTimeout(function () { f.dataset.locked = '1'; f.querySelectorAll('button[type=submit]').forEach(function (b) { b.disabled = true; b.style.opacity = '.5'; }); }, 0);
+});
+</script>
 <?php require_once __DIR__ . '/common/bottom.php'; ?>
