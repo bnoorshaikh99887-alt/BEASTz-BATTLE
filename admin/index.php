@@ -3,7 +3,8 @@ require_once __DIR__ . '/common/header.php';
 
 // Maintain persistent active_panel = admin
 $_SESSION['active_panel'] = 'admin';
-if (!isset($_COOKIE['active_panel']) || $_COOKIE['active_panel'] !== 'admin' || !isset($_COOKIE['beastz_active_panel']) || $_COOKIE['beastz_active_panel'] !== 'admin') {
+if (empty($_SESSION['panel_cookie_set']) && (!isset($_COOKIE['active_panel']) || $_COOKIE['active_panel'] !== 'admin' || !isset($_COOKIE['beastz_active_panel']) || $_COOKIE['beastz_active_panel'] !== 'admin')) {
+    $_SESSION['panel_cookie_set'] = 1; // FIX: har request par cookie set nahi hogi
     setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
     setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
 }
@@ -16,7 +17,10 @@ if (!in_array($req_admin_tab, $valid_admin_tabs)) {
 
 // Ultra-Fast 0.05s Session-Cached Aggregated Statistics (15s TTL)
 $now = time();
-if (!isset($_SESSION['admin_stats_cache']) || !isset($_SESSION['admin_stats_cache_time']) || ($now - $_SESSION['admin_stats_cache_time'] > 15) || isset($_GET['refresh'])) {
+// FIX: deposit/payout/tournament action ke baad stats purane (15s stale) dikhte the -> ab turant refresh
+$__ref = (string)($_SERVER['HTTP_REFERER'] ?? '');
+$__force = isset($_GET['refresh']) || (bool)preg_match('#/(deposits|payouts|withdrawals|tournament|manage_tournament|user|settings)\.php#', $__ref);
+if (!isset($_SESSION['admin_stats_cache']) || !isset($_SESSION['admin_stats_cache_time']) || ($now - $_SESSION['admin_stats_cache_time'] > 15) || $__force) {
     $q = $conn->query("
         SELECT 
             (SELECT COUNT(*) FROM users) as users_cnt,
@@ -41,6 +45,12 @@ $total_revenue = max(0, $total_collected - $prize_dist);
 $pending_deposits = (int)($stats_row['pending_deposits'] ?? 0);
 $pending_withdrawals = (int)($stats_row['pending_withdrawals'] ?? 0);
 ?>
+
+<style>
+/* FIX: late click / 300ms tap delay & double-tap zoom hatao */
+a, button, [role=button], input, select, label { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+a[onclick], [role=button] { cursor: pointer; user-select: none; }
+</style>
 
 <!-- ============================================================= -->
 <!-- TAB 1: DASHBOARD OVERVIEW -->
