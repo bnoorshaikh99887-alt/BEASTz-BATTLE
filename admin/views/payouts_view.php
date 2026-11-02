@@ -36,41 +36,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg_type = "success";
 
                 // ========================================================
-                // SMART ONESIGNAL PUSH (TARGETS ALL USER DEVICES VIA EXTERNAL ID)
+                // LOAD ONESIGNAL HELPER AND DISPATCH PUSH
                 // ========================================================
+                $helper_paths = [
+                    __DIR__ . "/../../common/onesignal_helper.php",
+                    __DIR__ . "/../common/onesignal_helper.php",
+                    __DIR__ . "/common/onesignal_helper.php",
+                    dirname(__DIR__, 2) . "/common/onesignal_helper.php"
+                ];
+
+                $helper_loaded = false;
+                foreach ($helper_paths as $path) {
+                    if (file_exists($path)) {
+                        require_once $path;
+                        $helper_loaded = true;
+                        break;
+                    }
+                }
+
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")!";
-                
-                // OneSignal Credentials (Apne app ke credentials yahan confirm rakhna)
-                $onesignal_app_id = defined('ONESIGNAL_APP_ID') ? ONESIGNAL_APP_ID : ($GLOBALS['ONESIGNAL_APP_ID'] ?? 'YOUR_ONESIGNAL_APP_ID');
-                $onesignal_api_key = defined('ONESIGNAL_API_KEY') ? ONESIGNAL_API_KEY : ($GLOBALS['ONESIGNAL_API_KEY'] ?? 'YOUR_ONESIGNAL_REST_API_KEY');
 
-                if (!empty($onesignal_app_id) && $onesignal_app_id !== 'YOUR_ONESIGNAL_APP_ID' && $user_id > 0) {
-                    $content = ["en" => $notif_body];
-                    $heading = ["en" => $notif_title];
-                    
-                    $fields = [
-                        'app_id' => $onesignal_app_id,
-                        'headings' => $heading,
-                        'contents' => $content,
-                        'include_external_user_ids' => [strval($user_id)], // Ye user ke sabhi registered devices par ek sath bhejega!
-                        'data' => ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id, "url" => "/?tab=wallet"]
-                    ];
-
-                    $fields = json_encode($fields);
-                    
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8', 'Authorization: Basic ' . $onesignal_api_key]);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                    curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                    curl_setopt($ch, CURLOPT_POST, TRUE);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-                    
-                    $response = curl_exec($ch);
-                    curl_close($ch);
+                if ($helper_loaded && function_exists("send_onesignal_push")) {
+                    // Helper function automatically checks user_devices & users table using [$user_id]
+                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", [], [$user_id], ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
                 }
 
                 // Store in app_notifications table for in-app bell notification
