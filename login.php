@@ -264,7 +264,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $ins = $conn->prepare("INSERT INTO users (username, name, email, phone, password, role, status, wallet_balance, avatar, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, 'user', 'active', ?, ?, ?, ?)");
             $my_ref_code = 'BEAST' . strtoupper(substr(md5($username . time()), 0, 5));
             
-            // YAHAN PAR FIX KIYA HAI: "sssssdssss" ki jagah "sssssdsss" (Total 9 parameters)
             $ins->bind_param("sssssdsss", $username, $username, $email, $phone, $hashed, $initial_wallet, $default_avatar, $my_ref_code, $referral);
 
             if ($ins->execute()) {
@@ -318,6 +317,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
+    
+    <!-- GOOGLE AUTH SCRIPT ADDED HERE -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-[#080a0f] text-slate-100 min-h-screen flex items-center justify-center p-4">
 
@@ -365,30 +367,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <!-- ========================================== -->
         <!-- FORM 1: SIGN IN (UNIFIED) -->
         <!-- ========================================== -->
-        <form method="POST" action="login.php" id="formLogin" class="space-y-3.5 <?= ($active_tab === 'login') ? '' : 'hidden'; ?>">
-            <input type="hidden" name="action" value="do_login">
+        <div id="formLogin" class="space-y-3.5 <?= ($active_tab === 'login') ? '' : 'hidden'; ?>">
+            <form method="POST" action="login.php" class="space-y-3.5">
+                <input type="hidden" name="action" value="do_login">
 
-            <div>
-                <label class="block text-[11px] font-bold text-slate-400 mb-1">Username, Mobile or Email</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-user"></i></span>
-                    <input type="text" name="identity" required placeholder="e.g. gamer_pro or 9878385810" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-bold focus:outline-none">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-400 mb-1">Username, Mobile or Email</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" name="identity" required placeholder="e.g. gamer_pro or 9878385810" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-bold focus:outline-none">
+                    </div>
                 </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-400 mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" name="password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Sign In to Arena</span>
+                </button>
+            </form>
+            
+            <!-- GOOGLE LOGIN BUTTON SECTION ADDED HERE -->
+            <div class="flex items-center my-3">
+                <div class="flex-grow border-t border-slate-700"></div>
+                <span class="px-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">OR</span>
+                <div class="flex-grow border-t border-slate-700"></div>
             </div>
 
-            <div>
-                <label class="block text-[11px] font-bold text-slate-400 mb-1">Password</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" name="password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none">
-                </div>
+            <!-- Google Setup -->
+            <div id="g_id_onload"
+                 data-client_id="202554953418-39ib6bd6t6c8uj395lm6m70i05povk1b.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleGoogleLogin"
+                 data-auto_prompt="false">
             </div>
 
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
-                <i class="fa-solid fa-right-to-bracket"></i>
-                <span>Sign In to Arena</span>
-            </button>
-        </form>
+            <!-- Google Button UI -->
+            <div class="g_id_signin w-full flex justify-center mt-2"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="filled_black"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
+            
+        </div>
 
         <!-- ========================================== -->
         <!-- FORM 2: REGISTER (PHONE NUMBER MANDATORY) -->
@@ -441,6 +472,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </form>
 
     </div>
+
+    <!-- GOOGLE LOGIN JAVASCRIPT HANDLER ADDED HERE -->
+    <script>
+        function handleGoogleLogin(response) {
+            const googleToken = response.credential;
+            const btnContainer = document.querySelector('.g_id_signin');
+            
+            // Loading state (thoda blur kar do taaki click na ho)
+            if(btnContainer) btnContainer.style.opacity = '0.5';
+
+            fetch('google_auth.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token: googleToken })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    window.location.href = data.redirect || 'index.php'; // Login ke baad Arena pe bhejo
+                } else {
+                    alert("Login Failed: " + data.message);
+                    if(btnContainer) btnContainer.style.opacity = '1';
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Server error, please try again.");
+                if(btnContainer) btnContainer.style.opacity = '1';
+            });
+        }
+    </script>
 
     <script>
         function setAuthTab(tab) {
