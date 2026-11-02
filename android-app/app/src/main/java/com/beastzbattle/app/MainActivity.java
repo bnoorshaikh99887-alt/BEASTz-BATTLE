@@ -39,8 +39,6 @@ import android.widget.Toast;
 
 import com.onesignal.OneSignal;
 import com.onesignal.OSDeviceState;
-import com.onesignal.OSSubscriptionObserver;
-import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OSNotificationOpenedResult;
 
 import org.json.JSONObject;
@@ -120,7 +118,7 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // 5. Fast Native Branded Splash Screen (Zero Black Screen Delay)
+        // 5. Fast Native Branded Splash Screen
         splashLayout = new FrameLayout(this);
         splashLayout.setBackgroundColor(0xFF080A0F);
 
@@ -195,14 +193,13 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setUserAgentString(settings.getUserAgentString() + " BEASTzNativeApp/1.3.0 Android");
 
-        // Enable persistent cookies across reloads, restarts and backgrounding
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             cookieManager.setAcceptThirdPartyCookies(webView, true);
         }
 
-        // Native JS Bridge for Direct Web-to-Native Notification Call
+        // Native JS Bridge for Direct Web-to-Native Notification Call & Device Sync
         webView.addJavascriptInterface(new Object() {
             @JavascriptInterface
             public void postNativeNotification(String title, String message, String actionUrl) {
@@ -289,7 +286,6 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url == null) return false;
 
-                // Support UPI apps
                 if (url.startsWith("upi://") || url.startsWith("intent://") || 
                     url.startsWith("whatsapp://") || url.startsWith("phonepe://") || 
                     url.startsWith("paytmmp://") || url.startsWith("tez://")) {
@@ -507,7 +503,7 @@ public class MainActivity extends Activity {
                             + "    window.onNativePlayerIdReady('" + playerId + "'); "
                             + "} "
                             + "if (typeof fetch === 'function') { "
-                            + "    fetch('/save_player_id.php', { "
+                            + "    fetch('https://beastz-battle.vercel.app/save_player_id.php', { "
                             + "        method: 'POST', "
                             + "        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, "
                             + "        body: 'player_id=' + encodeURIComponent('" + playerId + "') "
