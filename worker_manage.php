@@ -11,7 +11,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Ensure Worker / Host Authentication
 $is_authenticated = false;
 $logged_worker_id = 0;
 $logged_worker_name = "Host Worker";
@@ -29,7 +28,6 @@ if (!$is_authenticated) {
     exit;
 }
 
-// Lock active panel strictly to worker
 $_SESSION['active_panel'] = 'worker';
 setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
 setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
@@ -54,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $msg = "Room ID & Password saved successfully!";
             $msg_type = "success";
 
-            // Trigger Push Notification when requested (TARGETED JOINED PLAYERS ONLY)
             if ($send_push && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
                 $pids = [];
                 $uids = [];
@@ -91,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $idp_body = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
 
                 if (!empty($pids) || !empty($uids)) {
-                    $push_res = send_onesignal_push($idp_title, $idp_body, "/?tab=matches", $pids, $uids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tournament_id], false);
+                    send_onesignal_push($idp_title, $idp_body, "/?tab=matches", $pids, $uids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tournament_id], false);
                     @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($idp_title) . "', '" . $conn->real_escape_string($idp_body) . "', '/?tab=matches', 'ROOM_IDP')");
                     $msg = "Room IDP saved and instant push alert dispatched to joined players! (" . count($pids) . " devices notified)";
                 } else {
@@ -163,7 +160,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $msg = "Results declared successfully! Total ₹" . number_format($total_distributed, 2) . " disbursed into gamer wallets.";
         $msg_type = "success";
 
-        // Fetch participating player_ids cleanly
         $qp_res = $conn->query("
             SELECT DISTINCT u.player_id, u.id as user_id 
             FROM participants p 
@@ -193,7 +189,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         $participating_pids = array_values(array_unique(array_filter($participating_pids)));
 
-        // Dispatch Results Push Notification ONLY to joined players
         $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
         $results_body = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
 
@@ -206,6 +201,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $conn->rollback();
         $msg = "Results error: " . $e->getMessage();
         $msg_type = "error";
+    }
+}
+
+// -------------------------------------------------------------
+// 3. Handle Anti-Cheat Hacker Rollback (Worker Panel)
+// -------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'rollback_hacker_prize') {
+    $participant_id = (int)($_POST['participant_id'] ?? 0);
+    $admin_reason = sanitize($_POST['admin_reason'] ?? 'Cheating / Hacker Detected');
+
+    $p_stmt = $conn->prepare("
+        SELECT p.*, u.username, u.wallet_balance, u.winning_balance 
+        FROM participants p 
+        INNER JOIN users u ON p.user_id = u.id 
+        WHERE p.id = ? AND p.tournament_id = ?");
+    $p_stmt->bind_param("ii", $participant_id, $tournament_id);
+    $p_stmt->execute();
+    $p_row = $p_stmt->get_result()->fetch_assoc();
+    $p_stmt->close();
+
+    if ($p_row) {
+        $p_uid = (int)$p_row['user_id'];
+        $prize_revoked = (float)$p_row['prize_won'];
+
+        $conn->begin_transaction();
+        try {
+            if ($prize_revoked > 0) {
+                $ded = $conn->prepare("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - ?), winning_balance = GREATEST(0, winning_balance - ?) WHERE id = ?");
+                $ded->bind_param("ddi", $prize_revoked, $prize_revoked, $p_uid);
+                $ded->execute();
+                $ded->close();
+
+                $desc = "Prize Reclaimed (Anti-Cheat Violation in " . $t['title'] . "): " . $admin_reason;
+                $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'debit', ?)");
+                $tx->bind_param("ids", $p_uid, $prize_revoked, $desc);
+                $tx->execute();
+                $tx->close();
+            }
+
+            $rst = $conn->prepare("UPDATE participants SET prize_won = 0.00, rank_no = 0, kills = 0 WHERE id = ?");
+            $rst->bind_param("i", $participant_id);
+            $rst->execute();
+            $rst->close();
+
+            $notice_room_id = "MATCH UNDER REVIEW";
+            $notice_pass = "Contact Customer Support within 1 hr";
+            $upd_t = $conn->prepare("UPDATE tournaments SET status = 'live', room_id = ?, room_password = ?, winner_user_id = NULL WHERE id = ?");
+            $upd_t->bind_param("ssi", $notice_room_id, $notice_pass, $tournament_id);
+            $upd_t->execute();
+            $upd_t->close();
+
+            $conn->commit();
+            $msg = "Anti-Cheat Action Applied: Revoked " . number_format($prize_revoked, 2) . " prize from @" . htmlspecialchars($p_row['username']) . "!";
+            $msg_type = "success";
+            $t['status'] = 'live';
+            $t['room_id'] = $notice_room_id;
+            $t['room_password'] = $notice_pass;
+        } catch (Exception $e) {
+            $conn->rollback();
+            $msg = "Hacker rollback error: " . $e->getMessage();
+            $msg_type = "error";
+        }
     }
 }
 
@@ -253,7 +310,6 @@ if ($p_res) {
 <body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen pb-16">
     <div class="max-w-xl mx-auto px-4 py-4 space-y-4">
         
-        <!-- Header Bar with Back Button strictly to worker.php -->
         <header class="flex items-center justify-between bg-slate-800/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-700">
             <a href="worker.php" class="flex items-center gap-2 text-xs font-bold text-yellow-400 hover:text-yellow-300">
                 <i class="fa-solid fa-arrow-left"></i>
@@ -265,7 +321,6 @@ if ($p_res) {
             </div>
         </header>
 
-        <!-- Feedback Alert Message -->
         <?php if (!empty($msg)): ?>
             <div class="p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 <?= ($msg_type === 'success') ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40' ?>">
                 <i class="fa-solid <?= ($msg_type === 'success') ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-rose-400' ?> text-sm"></i>
@@ -273,7 +328,6 @@ if ($p_res) {
             </div>
         <?php endif; ?>
 
-        <!-- Tournament Overview Card -->
         <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 space-y-3">
             <div class="flex items-start justify-between">
                 <div>
@@ -349,7 +403,6 @@ if ($p_res) {
                     </select>
                 </div>
 
-                <!-- Auto Push Preview Box -->
                 <div class="p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-xl space-y-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="send_idp_push" value="1" checked class="w-4 h-4 accent-yellow-400 rounded">
@@ -383,43 +436,74 @@ if ($p_res) {
                 <form method="POST" action="worker_manage.php?id=<?= $t['id']; ?>" class="space-y-3 text-xs">
                     <input type="hidden" name="action" value="distribute_winnings">
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
-                            <thead>
-                                <tr class="text-[10px] text-slate-400 uppercase border-b border-slate-800">
-                                    <th class="py-2 px-2">Slot</th>
-                                    <th class="py-2 px-2">Player</th>
-                                    <th class="py-2 px-2">Kills</th>
-                                    <th class="py-2 px-2">Rank</th>
-                                    <th class="py-2 px-2">Bonus ₹</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800">
-                                <?php foreach ($participants as $p): ?>
-                                    <tr>
-                                        <td class="py-2.5 px-2 font-mono font-bold text-yellow-400">#<?= $p['slot_no']; ?></td>
-                                        <td class="py-2.5 px-2">
-                                            <span class="font-bold text-white block">@<?= htmlspecialchars($p['username']); ?></span>
-                                            <span class="text-[10px] text-slate-400 font-mono"><?= htmlspecialchars($p['in_game_name'] ?: 'No IGN'); ?></span>
-                                        </td>
-                                        <td class="py-2.5 px-2">
-                                            <input type="number" name="kills[<?= $p['id']; ?>]" value="<?= $p['kills'] ?? 0; ?>" min="0" class="w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono font-bold text-white focus:border-yellow-400">
-                                        </td>
-                                        <td class="py-2.5 px-2">
-                                            <input type="number" name="rank_no[<?= $p['id']; ?>]" value="<?= $p['rank_no'] ?? 0; ?>" min="0" placeholder="Rank" class="w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono font-bold text-yellow-400 focus:border-yellow-400">
-                                        </td>
-                                        <td class="py-2.5 px-2">
-                                            <input type="number" step="1" name="bonus[<?= $p['id']; ?>]" value="<?= $p['prize_won'] ?? 0; ?>" min="0" placeholder="0" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono font-bold text-emerald-400 focus:border-yellow-400">
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="space-y-3 my-2">
+                        <?php foreach ($participants as $p): ?>
+                            <?php 
+                                $pid = $p['id'];
+                                $has_won = ($p['prize_won'] > 0);
+                            ?>
+                            <div class="p-3 rounded-xl border <?= $has_won ? 'border-amber-400/50 bg-amber-400/5' : 'border-slate-800 bg-slate-900' ?> text-xs space-y-2">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[10px]">
+                                                Slot #<?= $p['slot_no'] ?: 'Auto'; ?>
+                                            </span>
+                                            <span class="font-extrabold text-white text-xs">
+                                                @<?= htmlspecialchars($p['username']); ?>
+                                            </span>
+                                        </div>
+                                        <div class="text-[10px] text-slate-400 font-mono mt-0.5">
+                                            IGN: <strong class="text-slate-300"><?= htmlspecialchars($p['in_game_name'] ?: 'No IGN'); ?></strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-right">
+                                        <?php if ($has_won): ?>
+                                            <span class="text-xs font-black text-amber-400 font-mono block">
+                                                ₹<?= number_format($p['prize_won'], 2); ?> Won
+                                            </span>
+                                            <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.5 rounded">
+                                                Rank #<?= $p['rank_no']; ?> &bull; <?= $p['kills']; ?> Kills
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-[10px] text-slate-400 font-bold">Pending Result</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800">
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Kills</label>
+                                        <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-yellow-400 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Rank</label>
+                                        <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-yellow-400 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Bonus ₹</label>
+                                        <input type="number" step="0.5" name="bonus[<?= $pid; ?>]" min="0" value="<?= (float)$p['prize_won']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-emerald-400 font-mono font-bold focus:border-yellow-400 focus:outline-none">
+                                    </div>
+                                </div>
+
+                                <?php if ($has_won): ?>
+                                    <div class="pt-1.5 border-t border-amber-500/30 flex items-center justify-between">
+                                        <span class="text-[10px] text-rose-400 font-bold flex items-center gap-1">
+                                            <i class="fa-solid fa-shield-virus"></i> Suspected Cheating?
+                                        </span>
+                                        <button type="button" onclick="triggerHackerRevoke(<?= $pid; ?>, '<?= addslashes($p['username']); ?>', <?= (float)$p['prize_won']; ?>)" class="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 rounded-lg text-[10px] font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer">
+                                            <i class="fa-solid fa-rotate-left"></i> Reclaim Prize (Hacker)
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
 
-                    <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <span>Publish Results, Disburse Winnings & Send Push Alert</span>
+                    <button type="submit" onclick="return confirm('Calculate and credit prize winnings to each player wallet based on kills and rank?');" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-award text-sm"></i>
+                        <span>Publish Results & Credit Wallets</span>
                     </button>
                 </form>
             <?php else: ?>
@@ -430,5 +514,59 @@ if ($p_res) {
         </div>
 
     </div>
+
+    <!-- Modal: Hacker Prize Reclaim Confirmation -->
+    <div id="hackerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-[#111827] border border-rose-500/40 rounded-3xl p-5 shadow-2xl relative text-left">
+            <button type="button" onclick="closeHackerModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center mb-3">
+                <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-black mb-2 border border-rose-500/40">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="text-sm font-extrabold text-white">Anti-Cheat Prize Reclaim</h3>
+                <p class="text-[11px] text-slate-400">Revoke prize from hacker and move match back to Live</p>
+            </div>
+
+            <form method="POST" action="worker_manage.php?id=<?= $tournament_id; ?>" class="space-y-3 text-xs">
+                <input type="hidden" name="action" value="rollback_hacker_prize">
+                <input type="hidden" name="participant_id" id="hackerParticipantId" value="">
+
+                <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-semibold">Suspected Player:</span>
+                        <strong class="text-white" id="hackerUsernameText">@player</strong>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-semibold">Prize to Revoke:</span>
+                        <strong class="text-rose-400 font-mono font-bold" id="hackerPrizeText">₹0.00</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-1">Reason for Reclaim</label>
+                    <input type="text" name="admin_reason" value="Cheating / Third-Party Tools Detected" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-yellow-400 focus:outline-none">
+                </div>
+
+                <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-shield-virus"></i>
+                    <span>Confirm Revoke & Move to Live</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function triggerHackerRevoke(pid, username, prize) {
+            document.getElementById('hackerParticipantId').value = pid;
+            document.getElementById('hackerUsernameText').innerText = '@' + username;
+            document.getElementById('hackerPrizeText').innerText = '₹' + prize.toFixed(2);
+            document.getElementById('hackerModal').classList.remove('hidden');
+        }
+        function closeHackerModal() {
+            document.getElementById('hackerModal').classList.add('hidden');
+        }
+    </script>
 </body>
 </html>
