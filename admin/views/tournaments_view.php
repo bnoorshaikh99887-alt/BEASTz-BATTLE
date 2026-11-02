@@ -1,6 +1,4 @@
 <?php
-
-
 $msg = "";
 $msg_type = "";
 
@@ -194,7 +192,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
             <input type="datetime-local" name="match_time" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none">
         </div>
 
-        <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5">
+        <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-bolt text-xs"></i>
             <span>Publish Tournament Match</span>
         </button>
@@ -219,8 +217,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
         </button>
     </div>
 
-    
-    <!-- CONTAINER 1: ACTIVE & LIVE TOURNAMENTS (0ms CLIENT TOGGLE) -->
+    <!-- CONTAINER 1: ACTIVE & LIVE TOURNAMENTS -->
     <div id="adminTourneysActive" class="admin-tourney-pane space-y-3">
         <?php if ($active_tourneys && $active_tourneys->num_rows > 0): ?>
             <?php while ($t = $active_tourneys->fetch_assoc()): ?>
@@ -279,7 +276,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                         <form method="POST" action="index.php?tab=tournaments" onsubmit="return confirm('Are you sure you want to delete this tournament and remove its participants?');" class="shrink-0">
                             <input type="hidden" name="action" value="delete_tournament">
                             <input type="hidden" name="tournament_id" value="<?= $t['id']; ?>">
-                            <button type="submit" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs border border-rose-200 transition" title="Delete Match">
+                            <button type="submit" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs border border-rose-200 transition cursor-pointer" title="Delete Match">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </form>
@@ -294,7 +291,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
         <?php endif; ?>
     </div>
 
-    <!-- CONTAINER 2: COMPLETED TOURNAMENTS (0ms CLIENT TOGGLE) -->
+    <!-- CONTAINER 2: COMPLETED TOURNAMENTS -->
     <div id="adminTourneysCompleted" class="admin-tourney-pane hidden space-y-3">
         <?php if ($completed_tourneys && $completed_tourneys->num_rows > 0): ?>
             <?php while ($ct = $completed_tourneys->fetch_assoc()): ?>
@@ -347,7 +344,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                         <form method="POST" action="index.php?tab=tournaments" onsubmit="return confirm('Delete completed tournament archive?');" class="shrink-0">
                             <input type="hidden" name="action" value="delete_tournament">
                             <input type="hidden" name="tournament_id" value="<?= $ct['id']; ?>">
-                            <button type="submit" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs border border-rose-200 transition" title="Delete Archive">
+                            <button type="submit" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs border border-rose-200 transition cursor-pointer" title="Delete Archive">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </form>
