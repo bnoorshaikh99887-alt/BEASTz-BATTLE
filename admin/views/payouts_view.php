@@ -87,10 +87,6 @@ $withdrawals = $conn->query("
     LEFT JOIN users u ON w.user_id = u.id 
     ORDER BY CASE WHEN LOWER(w.status) = 'pending' THEN 0 ELSE 1 END, w.id DESC
 ");
-
-// Count initial pending withdrawals for smart notification check
-$count_res = $conn->query("SELECT COUNT(*) as cnt FROM withdrawals WHERE LOWER(status) = 'pending'");
-$initial_pending_count = ($count_res) ? (int)$count_res->fetch_assoc()['cnt'] : 0;
 ?>
 
 <div class="mb-5 flex items-center justify-between">
@@ -101,22 +97,19 @@ $initial_pending_count = ($count_res) ? (int)$count_res->fetch_assoc()['cnt'] : 
         </h2>
         <p class="text-xs text-slate-500">Send money to player UPI ID and mark payout completed</p>
     </div>
-    <span class="text-xs font-bold px-3 py-1 bg-yellow-100 dark:bg-yellow-400/10 text-yellow-900 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-400/30 rounded-full">
-        Payouts Studio
-    </span>
+    <div class="flex items-center gap-2">
+        <button type="button" onclick="location.reload();" class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm cursor-pointer">
+            <i class="fa-solid fa-rotate text-[10px]"></i>
+            <span>Refresh</span>
+        </button>
+        <span class="text-xs font-bold px-3 py-1 bg-yellow-100 dark:bg-yellow-400/10 text-yellow-900 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-400/30 rounded-full">
+            Payouts Studio
+        </span>
+    </div>
 </div>
 
 <!-- AJAX Success / Error Banner -->
 <div id="payout-alert-box" class="hidden mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all"></div>
-
-<!-- Tap-to-Refresh Notification Banner for New Withdrawals -->
-<div id="new-withdrawal-banner" onclick="location.reload();" class="hidden mb-4 p-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 rounded-2xl text-xs font-black flex items-center justify-between shadow-lg cursor-pointer animate-pulse">
-    <div class="flex items-center gap-2">
-        <i class="fa-solid fa-bell text-sm"></i>
-        <span>New Withdrawal Request Available! Tap here to refresh.</span>
-    </div>
-    <i class="fa-solid fa-rotate text-sm"></i>
-</div>
 
 <div id="admin-payouts-cards-container" class="space-y-3">
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
@@ -213,7 +206,7 @@ $initial_pending_count = ($count_res) ? (int)$count_res->fetch_assoc()['cnt'] : 
     <?php endif; ?>
 </div>
 
-<!-- AJAX SCRIPT FOR SEAMLESS APPROVAL AND SMART TAP-TO-REFRESH NOTIFICATION -->
+<!-- STABLE AJAX SCRIPT WITHOUT AUTO-POLLING GLITCHES -->
 <script>
 function processPayout(withdrawalId, actionType) {
     var confirmMsg = actionType === 'complete' ? "Approve and send targeted Push Notification?" : "Are you sure you want to reject this request?";
@@ -269,29 +262,4 @@ function processPayout(withdrawalId, actionType) {
         location.reload();
     });
 }
-
-// SMART BACKGROUND CHECKER (Notifies when new withdrawal is placed without breaking active buttons)
-let initialPendingCount = <?= $initial_pending_count; ?>;
-
-setInterval(function() {
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-
-    fetch(window.location.href)
-        .then(res => res.text())
-        .then(html => {
-            var parser = new DOMParser();
-            var doc = parser.parseFromString(html, 'text/html');
-            
-            // Count pending forms in fetched HTML
-            var newPendingCount = doc.querySelectorAll('form input[name="ajax_action"][value="complete"]').length;
-            
-            if (newPendingCount > initialPendingCount) {
-                var banner = document.getElementById('new-withdrawal-banner');
-                if (banner) {
-                    banner.classList.remove('hidden');
-                }
-            }
-        })
-        .catch(err => {});
-}, 6000);
 </script>
