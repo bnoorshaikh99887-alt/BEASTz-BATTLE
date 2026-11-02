@@ -108,7 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
                 }
 
-                // Insert into app_notifications table (Fixed: removed user_id column)
+                // Safely ensure table supports notifications without errors
+                @$conn->query("ALTER TABLE app_notifications ADD COLUMN IF NOT EXISTS user_id INT DEFAULT 0");
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 
             } catch (Exception $e) {
