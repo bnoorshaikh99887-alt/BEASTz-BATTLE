@@ -10,47 +10,6 @@ $msg_type = "";
 function sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $player_ids = [], $user_ids = []) {
     return send_onesignal_push($title, $message, $targetUrl, $player_ids, $user_ids);
 }
-function _old_sendOneSignalNotification($title, $message, $targetUrl = "/?tab=home", $player_ids = []) {
-    $os_app_id = "561bd59e-8355-47c8-88cc-0766688a105a";
-    $os_key = base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
-    
-    if (!is_array($player_ids)) $player_ids = !empty($player_ids) ? [$player_ids] : [];
-    $cleaned_pids = array_values(array_unique(array_filter($player_ids, function($p) {
-        return !empty($p) && is_string($p) && strlen(trim($p)) > 15;
-    })));
-    
-    // STRICT: If no valid player_ids exist, NEVER broadcast to All!
-    if (empty($cleaned_pids)) {
-        return json_encode(["success" => false, "skipped_broadcast" => true]);
-    }
-
-    $fields = array(
-        "app_id" => $os_app_id,
-        "include_player_ids" => $cleaned_pids,
-        "contents" => array("en" => $message),
-        "headings" => array("en" => $title),
-        "data" => array("target_url" => $targetUrl),
-        "priority" => 10,
-        "android_visibility" => 1,
-        "content_available" => true,
-        "android_sound" => "notification"
-    );
-    
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        "Content-Type: application/json; charset=utf-8",
-        "Authorization: Key " . $os_key
-    ));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($ch, CURLOPT_POST, TRUE);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    $response = curl_exec($ch);
-    curl_close($ch);
-    return $response;
-}
 
 // Fetch Tournament Details
 $stmt = $conn->prepare("
@@ -73,12 +32,17 @@ if (!$t) {
 $per_kill_rate = (float)($t['per_kill'] ?? 0.00);
 
 // -------------------------------------------------------------
-// 1. Handle Room Credentials & Match Status Update
+// 1. Handle Room Credentials & Match Status Update (GLITCH FIXED)
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_room') {
     $room_id = sanitize($_POST['room_id'] ?? '');
     $room_password = sanitize($_POST['room_password'] ?? '');
-    $status = sanitize($_POST['status'] ?? 'upcoming');
+    
+    // STRICT FIX: Agar status post mein nahi hai ya khali hai, toh database ka purana status hi rakho!
+    $status = sanitize($_POST['status'] ?? '');
+    if (empty($status)) {
+        $status = $t['status'];
+    }
 
     $u_stmt = $conn->prepare("UPDATE tournaments SET room_id = ?, room_password = ?, status = ? WHERE id = ?");
     if ($u_stmt) {
@@ -95,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $target_pids = [];
                 $target_uids = [];
                 
-                // 1. Fetch joined players from participants and user_tournaments
                 $q_joined = $conn->query("
                     SELECT DISTINCT p.user_id, u.player_id 
                     FROM participants p 
@@ -116,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     }
                 }
                 
-                // 2. Fetch all registered devices from user_devices table for joined players
                 if (!empty($target_uids)) {
                     $uid_list = implode(',', array_unique($target_uids));
                     $q_dev = $conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$uid_list}) AND player_id IS NOT NULL AND player_id != ''");
@@ -130,7 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
                 
-                // Sirf agar joined players ke player_ids milein tabhi push jayega (STRICT: NO BROADCAST TO ALL)
                 if (!empty($target_pids) || !empty($target_uids)) {
                     $idp_title = "🔥 WAR ZONE TAYAR HAI!";
                     $idp_msg = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
@@ -146,9 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-
 // -------------------------------------------------------------
-// 1.5 Handle Anti-Cheat Fund Revocation (Keep Kills & Logs 24h)
+// 1.5 Handle Anti-Cheat Fund Revocation
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'revoke_participant_fund') {
     $participant_id = (int)$_POST['participant_id'];
@@ -163,15 +123,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $p_uid = (int)$p_data['user_id'];
         $conn->begin_transaction();
         try {
-            // Deduct prize money from gamer wallet back to platform
             $conn->query("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - {$revoke_amount}), winning_balance = GREATEST(0, winning_balance - {$revoke_amount}) WHERE id = {$p_uid}");
-            // Mark participant as revoked without deleting kills or rankings
             $conn->query("UPDATE participants SET prize_won = 0, is_revoked = 1, revoke_note = 'Anti-Cheat Violation: Fund Revoked by Admin' WHERE id = {$participant_id}");
-            // Record debit transaction
             $t_title = $conn->real_escape_string($p_data['title']);
             $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$p_uid}, {$revoke_amount}, 'debit', 'Anti-Cheat Fund Clawback: {$t_title}')");
             $conn->commit();
-            $msg = "Anti-Cheat Alert: ₹" . number_format($revoke_amount, 2) . " successfully revoked from player wallet! Match kills & log preserved.";
+            $msg = "Anti-Cheat Alert: ₹" . number_format($revoke_amount, 2) . " successfully revoked from player wallet!";
             $msg_type = "success";
         } catch (Exception $e) {
             $conn->rollback();
@@ -195,7 +152,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $winner_u_id = null;
         $participating_uids = [];
 
-        // Fetch all participants to process
         $p_query = $conn->prepare("SELECT id, user_id, in_game_name FROM participants WHERE tournament_id = ?");
         $p_query->bind_param("i", $tournament_id);
         $p_query->execute();
@@ -215,23 +171,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $winner_u_id = $p_uid;
             }
 
-            // Calculate earnings: (kills * per_kill_rate) + placement bonus
             $earned = ($kills * $per_kill_rate) + $bonus;
 
-            // Update participant row
             $upd_p = $conn->prepare("UPDATE participants SET kills = ?, rank_no = ?, prize_won = ? WHERE id = ?");
             $upd_p->bind_param("iidi", $kills, $rank_no, $earned, $pid);
             $upd_p->execute();
             $upd_p->close();
 
-            // Credit winnings to player wallet if > 0
             if ($earned > 0) {
                 $upd_w = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ?, winning_balance = winning_balance + ? WHERE id = ?");
                 $upd_w->bind_param("ddi", $earned, $earned, $p_uid);
                 $upd_w->execute();
                 $upd_w->close();
 
-                // Create clear ledger transaction
                 $desc = "Match Winnings: " . $t['title'] . " (" . $kills . " Kills @ " . format_inr($per_kill_rate);
                 if ($rank_no > 0) {
                     $desc .= " + Rank #" . $rank_no . " Bonus " . format_inr($bonus);
@@ -246,7 +198,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
 
-        // Set tournament to completed
         if ($winner_u_id) {
             $conn->query("UPDATE tournaments SET status = 'completed', winner_user_id = {$winner_u_id} WHERE id = {$tournament_id}");
         } else {
@@ -254,17 +205,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         $conn->commit();
-        $msg = "Match results successfully published! Total " . format_inr($total_distributed) . " credited to gamer wallets based on kills and rankings.";
+        $msg = "Match results successfully published! Total " . format_inr($total_distributed) . " credited to gamer wallets.";
         $msg_type = "success";
         $t['status'] = 'completed';
 
-        // Trigger Push Notification for Results Declared (TARGETED JOINED PLAYERS ONLY)
         $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
         $results_msg = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
         $participating_pids = [];
         $participating_uids = [];
         
-        // 1. Fetch from users table for participants & user_tournaments
         $q_pids = $conn->query("
             SELECT DISTINCT u.player_id, p.user_id 
             FROM participants p 
@@ -285,7 +234,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
         
-        // 2. Fetch from user_devices table for joined players
         if (!empty($participating_uids)) {
             $u_list = implode(',', array_unique(array_map('intval', $participating_uids)));
             $q_devs = $conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$u_list}) AND player_id IS NOT NULL AND player_id != ''");
@@ -299,15 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         $participating_pids = array_values(array_unique(array_filter($participating_pids)));
         
-        // STRICT: Only send if participating player IDs exist - NEVER broadcast to All
         if (!empty($participating_pids) || !empty($participating_uids)) {
-            sendOneSignalNotification(
-                $results_title, 
-                $results_msg, 
-                "/?tab=matches",
-                $participating_pids,
-                $participating_uids
-            );
+            sendOneSignalNotification($results_title, $results_msg, "/?tab=matches", $participating_pids, $participating_uids);
             $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($results_title) . "', '" . $conn->real_escape_string($results_msg) . "', '/?tab=matches', 'RESULTS_ANNOUNCED')");
         }
 
@@ -319,7 +260,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // -------------------------------------------------------------
-// 3. Handle Anti-Cheat Hacker Rollback (Reclaim Prize Pool & Revert to Live)
+// 3. Handle Anti-Cheat Hacker Rollback
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'rollback_hacker_prize') {
     $participant_id = (int)($_POST['participant_id'] ?? 0);
@@ -341,14 +282,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $conn->begin_transaction();
         try {
-            // 1. Revoke prize from hacker's wallet balance
             if ($prize_revoked > 0) {
                 $ded = $conn->prepare("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - ?), winning_balance = GREATEST(0, winning_balance - ?) WHERE id = ?");
                 $ded->bind_param("ddi", $prize_revoked, $prize_revoked, $p_uid);
                 $ded->execute();
                 $ded->close();
 
-                // Record ledger transaction
                 $desc = "Prize Reclaimed (Anti-Cheat Violation in " . $t['title'] . "): " . $admin_reason;
                 $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'debit', ?)");
                 $tx->bind_param("ids", $p_uid, $prize_revoked, $desc);
@@ -356,13 +295,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $tx->close();
             }
 
-            // 2. Reset participant earnings
             $rst = $conn->prepare("UPDATE participants SET prize_won = 0.00, rank_no = 0, kills = 0 WHERE id = ?");
             $rst->bind_param("i", $participant_id);
             $rst->execute();
             $rst->close();
 
-            // 3. Move tournament back from 'completed' to 'live' and set support notice
             $notice_room_id = "MATCH UNDER REVIEW";
             $notice_pass = "Contact Customer Support within 1 hr";
             $upd_t = $conn->prepare("UPDATE tournaments SET status = 'live', room_id = ?, room_password = ?, winner_user_id = NULL WHERE id = ?");
@@ -371,7 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $upd_t->close();
 
             $conn->commit();
-            $msg = "Anti-Cheat Action Applied: Revoked " . format_inr($prize_revoked) . " prize from @" . htmlspecialchars($p_row['username']) . "! Match reverted to LIVE section with 'Contact Customer Support within 1 hr' notice.";
+            $msg = "Anti-Cheat Action Applied: Revoked " . format_inr($prize_revoked) . " prize from @" . htmlspecialchars($p_row['username']) . "!";
             $msg_type = "success";
             $t['status'] = 'live';
             $t['room_id'] = $notice_room_id;
@@ -381,13 +318,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $msg = "Hacker rollback error: " . $e->getMessage();
             $msg_type = "error";
         }
-    } else {
-        $msg = "Participant record not found.";
-        $msg_type = "error";
     }
 }
 
-// Fetch all enrolled participants with Game UID and user details
 $participants = $conn->query("
     SELECT p.*, u.username, u.email, u.phone, u.wallet_balance, u.game_id as user_game_id
     FROM participants p
@@ -429,7 +362,6 @@ $participants = $conn->query("
         </div>
     </div>
 
-    <!-- Match Parameters Matrix -->
     <div class="grid grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center text-xs">
         <div>
             <span class="text-[10px] text-slate-400 block">Entry Fee</span>
@@ -450,7 +382,6 @@ $participants = $conn->query("
     </div>
 </div>
 
-<!-- Alert Feedback -->
 <?php if (!empty($msg)): ?>
     <div class="mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 <?= ($msg_type === 'success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200' ?>">
         <i class="fa-solid <?= ($msg_type === 'success') ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-rose-600' ?>"></i>
@@ -478,7 +409,6 @@ $participants = $conn->query("
             </div>
         </div>
 
-        <!-- 5-Minute IDP Auto Push Notification Option (Default Checked) -->
         <div class="p-3 bg-yellow-50/80 border border-yellow-300 rounded-2xl space-y-2">
             <div class="flex items-center justify-between">
                 <label class="flex items-center gap-2 cursor-pointer">
@@ -491,7 +421,6 @@ $participants = $conn->query("
             </div>
             <div class="text-[11px] text-slate-700 bg-white p-2.5 rounded-xl border border-yellow-200 font-mono">
                 <strong>WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI</strong>
-                <span class="block text-[10px] text-slate-400 mt-1">&bull; Target: Only gamers who booked slot in this match</span>
             </div>
         </div>
 
@@ -504,7 +433,7 @@ $participants = $conn->query("
             </select>
         </div>
 
-        <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
+        <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-save"></i>
             <span>Save Room Credentials & Status</span>
         </button>
@@ -547,7 +476,6 @@ $participants = $conn->query("
                                     <span class="font-extrabold text-slate-900 text-xs">
                                         <?= htmlspecialchars($p['in_game_name'] ?: $p['username']); ?>
                                     </span>
-                                    <span class="text-[10px] text-slate-400 font-semibold">(@<?= htmlspecialchars($p['username']); ?>)</span>
                                 </div>
                                 <div class="text-[10px] text-slate-500 font-mono mt-0.5">
                                     Game UID: <strong class="text-slate-800"><?= htmlspecialchars($p['game_id'] ?: ($p['user_game_id'] ?: 'N/A')); ?></strong>
@@ -568,7 +496,6 @@ $participants = $conn->query("
                             </div>
                         </div>
 
-                        <!-- Kills & Rank Inputs -->
                         <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60">
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Kills (x <?= format_inr($per_kill_rate); ?>)</label>
@@ -580,13 +507,12 @@ $participants = $conn->query("
                             </div>
                         </div>
 
-                        <!-- Anti-Cheat Hacker Prize Reclaim Action -->
                         <?php if ($has_won): ?>
                             <div class="pt-1.5 border-t border-amber-200 flex items-center justify-between">
                                 <span class="text-[10px] text-rose-700 font-bold flex items-center gap-1">
                                     <i class="fa-solid fa-shield-virus"></i> Suspected Cheating?
                                 </span>
-                                <button type="button" onclick="triggerHackerRevoke(<?= $pid; ?>, '<?= addslashes($p['username']); ?>', <?= (float)$p['prize_won']; ?>)" class="px-2 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded text-[10px] font-bold transition flex items-center gap-1 active:scale-95">
+                                <button type="button" onclick="triggerHackerRevoke(<?= $pid; ?>, '<?= addslashes($p['username']); ?>', <?= (float)$p['prize_won']; ?>)" class="px-2 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded text-[10px] font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer">
                                     <i class="fa-solid fa-rotate-left"></i> Reclaim Prize (Hacker)
                                 </button>
                             </div>
@@ -601,7 +527,7 @@ $participants = $conn->query("
         </div>
 
         <?php if ($participants && $participants->num_rows > 0): ?>
-            <button type="submit" onclick="return confirm('Calculate and credit prize winnings to each player wallet based on kills and rank?');" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2">
+            <button type="submit" onclick="return confirm('Calculate and credit prize winnings to each player wallet based on kills and rank?');" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fa-solid fa-award text-sm"></i>
                 <span>Publish Results & Credit Wallets</span>
             </button>
@@ -643,11 +569,7 @@ $participants = $conn->query("
                 <input type="text" name="admin_reason" value="Cheating / Third-Party Tools Detected" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
             </div>
 
-            <p class="text-[10px] text-slate-500 leading-tight">
-                This will deduct the prize from the player's wallet, revert tournament status back to <strong>LIVE</strong>, and set room notice to <strong>"Contact Customer Support within 1 hr"</strong>.
-            </p>
-
-            <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5">
+            <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-shield-virus"></i>
                 <span>Confirm Revoke & Move to Live</span>
             </button>
