@@ -2,7 +2,7 @@
 $msg = "";
 $msg_type = "";
 
-// Handle Withdrawal Completion / Rejection
+// Handle Withdrawal Completion / Rejection (Standard PHP Form Submit)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $w_id = (int)$_POST['withdrawal_id'];
     $act = $_POST['action'];
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // 1. Mark withdrawals table as completed
                 $conn->query("UPDATE withdrawals SET status = 'Completed' WHERE id = $w_id");
                 
-                // 2. Update User's Passbook (transactions table) so it no longer says 'Pending'
+                // 2. Update User's Passbook (transactions table)
                 $safe_upi = $conn->real_escape_string($upi_id);
                 $conn->query("UPDATE transactions SET description = 'Withdrawal Processed: Sent to {$safe_upi}' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
 
@@ -35,9 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg = "Payout of " . format_inr($amount) . " to " . htmlspecialchars($upi_id) . " marked as Completed!";
                 $msg_type = "success";
 
-                // ========================================================
-                // TARGETED PUSH NOTIFICATION (USING SPECIFIC USER PLAYER_ID)
-                // ========================================================
+                // Target Push Notification
                 if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) { 
                     require_once __DIR__ . "/../../common/onesignal_helper.php"; 
                 } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) { 
@@ -45,50 +43,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 
                 $notif_title = "✅ Withdrawal Successfully Completed!";
-                $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")! Check your bank/UPI app.";
+                $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")!";
                 $target_pids = [];
-                
-                // 1. Fetch from withdrawals table directly
-                if (!empty($w['player_id']) && strlen(trim($w['player_id'])) > 15) {
-                    $target_pids[] = trim($w['player_id']);
-                }
-                
-                // 2. Fetch all tokens from user_devices table for this specific user
+                if (!empty($w['player_id']) && strlen(trim($w['player_id'])) > 15) { $target_pids[] = trim($w['player_id']); }
                 if ($user_id > 0) {
                     $d_res = $conn->query("SELECT player_id FROM user_devices WHERE user_id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
-                    if ($d_res) {
-                        while ($dr = $d_res->fetch_assoc()) {
-                            if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 15) {
-                                $target_pids[] = trim($dr['player_id']);
-                            }
-                        }
-                    }
-                    // 3. Fetch primary token from users table
-                    $u_res = $conn->query("SELECT player_id FROM users WHERE id = {$user_id}");
-                    if ($u_res && ($ur = $u_res->fetch_assoc())) {
-                        if (!empty($ur['player_id']) && strlen(trim($ur['player_id'])) > 15) {
-                            $target_pids[] = trim($ur['player_id']);
-                        }
-                    }
-                }
-                
-                if ($is_host_request && $host_admin_id > 0) {
-                    $adm_t = $conn->query("SELECT player_id FROM admin WHERE id = {$host_admin_id}");
-                    if ($adm_t && ($ares = $adm_t->fetch_assoc())) {
-                        if (!empty($ares['player_id']) && strlen(trim($ares['player_id'])) > 15) {
-                            $target_pids[] = trim($ares['player_id']);
-                        }
-                    }
+                    if ($d_res) { while ($dr = $d_res->fetch_assoc()) { if (!empty($dr['player_id'])) $target_pids[] = trim($dr['player_id']); } }
                 }
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
-                $target_uids = $user_id > 0 ? [$user_id] : [];
-                
-                if (!empty($target_pids) || !empty($target_uids)) {
-                    if (function_exists("send_onesignal_push")) {
-                        send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
-                    }
+                if (!empty($target_pids) && function_exists("send_onesignal_push")) {
+                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, [$user_id], ["badge_type" => "PAYOUT_SUCCESS"], false);
                 }
-                $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 
             } catch (Exception $e) {
                 $conn->rollback();
@@ -128,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Fetch Withdrawals (SORTED: Pending First, then History/Completed/Rejected descending by ID)
+// Fetch Withdrawals (Pending first, then history sorted by ID desc)
 $withdrawals = $conn->query("
     SELECT w.*, COALESCE(u.username, 'Host Admin') as username, COALESCE(u.wallet_balance, 0.00) as wallet_balance 
     FROM withdrawals w 
@@ -143,7 +108,7 @@ $withdrawals = $conn->query("
             <i class="fa-solid fa-hand-holding-dollar text-yellow-500"></i>
             <span>UPI Withdrawal Requests</span>
         </h2>
-        <p class="text-xs text-slate-500">Send money to player UPI ID and mark payout completed with auto-push notification</p>
+        <p class="text-xs text-slate-500">Send money to player UPI ID and mark payout completed</p>
     </div>
     <span class="text-xs font-bold px-3 py-1 bg-yellow-100 dark:bg-yellow-400/10 text-yellow-900 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-400/30 rounded-full">
         Payouts Studio
@@ -157,7 +122,7 @@ $withdrawals = $conn->query("
     </div>
 <?php endif; ?>
 
-<div id="admin-payouts-cards-container" class="space-y-3">
+<div class="space-y-3">
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
         <?php while ($w = $withdrawals->fetch_assoc()): ?>
             <?php 
@@ -180,7 +145,7 @@ $withdrawals = $conn->query("
                             <?php endif; ?>
 
                             <?php if ($is_pending): ?>
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/10 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-400/30">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/10 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-400/35">
                                     Pending Payment
                                 </span>
                             <?php elseif ($is_completed): ?>
@@ -224,7 +189,7 @@ $withdrawals = $conn->query("
                     </div>
                 </div>
 
-                <!-- Approval / Rejection Actions -->
+                <!-- Approval / Rejection Form Actions -->
                 <?php if ($is_pending): ?>
                     <div class="flex items-center gap-2 pt-1">
                         <form method="POST" action="index.php?tab=payouts" class="flex-1">
@@ -247,7 +212,7 @@ $withdrawals = $conn->query("
                 <?php endif; ?>
 
             </div>
-        <?endwhile; ?>
+        <?php endwhile; ?>
     <?php else: ?>
         <div class="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-500 shadow-sm">
             <i class="fa-solid fa-money-bill-transfer text-3xl text-slate-300 dark:text-slate-700 mb-2 block"></i>
