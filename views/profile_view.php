@@ -190,7 +190,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 </div>
 
 <!-- ============================================================= -->
-<!-- SECTION 3: RECENT PASSBOOK TRANSACTIONS -->
+<!-- SECTION 3: RECENT PASSBOOK TRANSACTIONS (COMPACT SCROLL BOX) -->
 <!-- ============================================================= -->
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-8">
     <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
@@ -203,7 +203,8 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
         <button type="button" onclick="switchAppTab('wallet')" class="text-[10px] font-bold text-yellow-600 hover:underline cursor-pointer">Deposit / Withdraw</button>
     </div>
 
-    <div class="space-y-2">
+    <!-- Compact Scrollable Box Container -->
+    <div class="max-h-52 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
         <?php if ($tx_res && $tx_res->num_rows > 0): ?>
             <?php while ($tx = $tx_res->fetch_assoc()): ?>
                 <div class="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
@@ -225,7 +226,6 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
         <?php endif; ?>
     </div>
 </div>
-
 <!-- ============================================================= -->
 <!-- MODAL 1: ACCOUNT SETTINGS (IGN, Free Fire Game ID, Phone, UPI) -->
 <!-- ============================================================= -->
