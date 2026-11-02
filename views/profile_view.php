@@ -1,10 +1,11 @@
 <?php
-// Ensure transactions are fetched if not already provided by controller
+// Ensure transactions are fetched for Passbook History in Settings/Profile view
 if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
     $current_uid = (int)$me['id'];
     $tx_res = $conn->query("SELECT * FROM transactions WHERE user_id = $current_uid ORDER BY id DESC LIMIT 15");
 }
 ?>
+
 <!-- Alert Feedback -->
 <?php if (!empty($msg)): ?>
     <div class="mb-4 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 <?= ($msg_type === 'success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'; ?>">
@@ -87,7 +88,6 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 </div>
 
 <!-- ============================================================= -->
-<!-- ============================================================= -->
 <!-- THEME & DISPLAY PREFERENCES (DARK / LIGHT MODE) -->
 <!-- ============================================================= -->
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-3.5">
@@ -112,7 +112,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 <!-- SECTION 2: QUICK ACTION BUTTONS -->
 <!-- ============================================================= -->
 <div class="space-y-2 mb-4">
-        <!-- FAQ SECTION (FREQUENTLY ASKED QUESTIONS) -->
+    <!-- FAQ SECTION (FREQUENTLY ASKED QUESTIONS) -->
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs mb-3">
         <h3 class="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center gap-2 mb-3">
             <i class="fa-solid fa-circle-question text-yellow-500"></i>
