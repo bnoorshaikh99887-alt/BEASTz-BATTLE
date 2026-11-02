@@ -420,11 +420,6 @@ if ($leaderboard_res) {
         $players[] = $row;
     }
 }
-if (count($players) < 3) {
-    if (!isset($players[0])) $players[0] = ['id' => 991, 'username' => 'BEAST_PRO', 'wallet_balance' => 150000.00, 'avatar' => ''];
-    if (!isset($players[1])) $players[1] = ['id' => 992, 'username' => 'HeadshotKing', 'wallet_balance' => 98500.00, 'avatar' => ''];
-    if (!isset($players[2])) $players[2] = ['id' => 993, 'username' => 'ShadowSniper', 'wallet_balance' => 74200.00, 'avatar' => ''];
-}
 
 $my_rank = 1;
 $my_earnings = $current_balance;
