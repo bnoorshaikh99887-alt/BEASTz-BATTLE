@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 
                 // STRICT TARGETED PUSH: Only send if player_ids are found for this specific user.
                 // NEVER fall back to included_segments: ["All"].
-                if (!empty($target_pids)) {
+                if (!empty($target_pids) || !empty($target_uids)) {
                     if (function_exists("send_onesignal_push")) {
                         send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
                     }

@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $list_title = "⚔️ New Tournament Listed: " . $title;
                 $list_msg = "New " . $game_name . " (" . $match_type . ") match is live for registration! Entry: " . format_inr($entry_fee) . " | Prize: " . format_inr($prize_pool) . ". Join now!";
                 if (function_exists("send_onesignal_push")) {
-                    send_onesignal_push($list_title, $list_msg, "/?tab=home", [], [], ["badge_type" => "NEW_TOURNAMENT", "tournament_id" => $new_tid]);
+                    send_onesignal_push($list_title, $list_msg, "/?tab=home", [], [], ["badge_type" => "NEW_TOURNAMENT", "tournament_id" => $new_tid], true);
                 }
                 @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($list_title) . "', '" . $conn->real_escape_string($list_msg) . "', '/?tab=home', 'NEW_TOURNAMENT')");
                 $msg = "Tournament '" . htmlspecialchars($title) . "' created & listing push alert broadcasted to all gamers!";

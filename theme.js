@@ -384,11 +384,8 @@ var LiveSyncEngine = (function() {
                     try { localStorage.setItem(alertedKey, "true"); } catch(e) {}
                     var pMsg = "Payout of " + rc.formatted_amount + " completed! Transferred to " + rc.upi_id;
                     showInAppAlert(pMsg, "success");
-                    if (window.BEASTzNative && typeof window.BEASTzNative.postNativeNotification === "function") {
-                        try {
-                            window.BEASTzNative.postNativeNotification("Withdrawal Successful! " + rc.formatted_amount, pMsg, "/?tab=wallet");
-                        } catch(e) {}
-                    }
+                    // Push notification is sent directly by backend server via OneSignal REST API.
+                    // Native postNativeNotification is omitted here so duplicate alerts are avoided upon opening app.
                 }
                 lastCompletedWithdrawalId = rc.id;
             }

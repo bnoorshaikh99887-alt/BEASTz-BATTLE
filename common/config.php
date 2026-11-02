@@ -314,11 +314,11 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
         $logged_uid = (int)($_SESSION["user_id"] ?? 0);
         if ($logged_uid > 0) {
             @$conn->query("INSERT IGNORE INTO user_devices (user_id, player_id) VALUES ({$logged_uid}, '" . $conn->real_escape_string($sync_pid) . "')");
-            @$conn->query("UPDATE users SET player_id = '" . $conn->real_escape_string($sync_pid) . "' WHERE id = {$logged_uid} AND (player_id IS NULL OR player_id = '')");
+            @$conn->query("UPDATE users SET player_id = '" . $conn->real_escape_string($sync_pid) . "' WHERE id = {$logged_uid}");
         }
         $logged_aid = (int)($_SESSION["admin_id"] ?? $_SESSION["worker_id"] ?? 0);
         if ($logged_aid > 0) {
-            @$conn->query("UPDATE admin SET player_id = '" . $conn->real_escape_string($sync_pid) . "' WHERE id = {$logged_aid} AND (player_id IS NULL OR player_id = '')");
+            @$conn->query("UPDATE admin SET player_id = '" . $conn->real_escape_string($sync_pid) . "' WHERE id = {$logged_aid}");
         }
     }
 

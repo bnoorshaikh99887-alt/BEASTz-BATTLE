@@ -141,7 +141,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                     $n_title = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI";
                     $n_body = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_pass;
 
-                    if (!empty($player_ids)) {
+                    if (!empty($player_ids) || !empty($user_ids)) {
                         send_onesignal_push($n_title, $n_body, "/?tab=matches", $player_ids, $user_ids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tid], false);
                         $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($n_title) . "', '" . $conn->real_escape_string($n_body) . "', '/?tab=matches', 'ROOM_IDP')");
                         $feedback_msg = "Room IDP saved and instant push alert dispatched to joined players! (" . count($player_ids) . " devices notified)";
@@ -168,7 +168,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
             $feedback_msg = "Title and message are required for push notification.";
             $feedback_type = "error";
         } else {
-            send_onesignal_push($b_title, $b_message, $target_url, [], [], ["badge_type" => "HOST_ANNOUNCEMENT"]);
+            send_onesignal_push($b_title, $b_message, $target_url, [], [], ["badge_type" => "HOST_ANNOUNCEMENT"], true);
             $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($b_title) . "', '" . $conn->real_escape_string($b_message) . "', '" . $conn->real_escape_string($target_url) . "', 'HOST_ANNOUNCEMENT')");
             $feedback_msg = "Push notification announcement broadcasted to all gamers!";
             $feedback_type = "success";

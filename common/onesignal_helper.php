@@ -43,7 +43,8 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
         "priority" => 10,
         "android_visibility" => 1,
         "content_available" => true,
-        "android_sound" => "notification"
+        "android_sound" => "notification",
+        "small_icon" => "ic_stat_onesignal_default"
     ];
 
     if (!is_array($player_ids)) $player_ids = !empty($player_ids) ? [$player_ids] : [];
@@ -94,6 +95,7 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
     // 2. User ID mapping (External User IDs)
     if (!empty($cleaned_uids)) {
         $payload["include_external_user_ids"] = $cleaned_uids;
+        $payload["channel_for_external_user_ids"] = "push";
         $has_direct_targets = true;
     }
 
@@ -120,7 +122,7 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
     $ch = curl_init("https://onesignal.com/api/v1/notifications");
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json; charset=utf-8",
-        "Authorization: Key " . $api_key
+        "Authorization: Basic " . $api_key
     ]);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -131,6 +133,29 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    // Fallback using stream context if cURL was empty or failed
+    if (empty($response)) {
+        $opts = [
+            "http" => [
+                "method" => "POST",
+                "header" => "Content-Type: application/json; charset=utf-8\r\n" .
+                            "Authorization: Basic " . $api_key . "\r\n",
+                "content" => $json_payload,
+                "timeout" => 12,
+                "ignore_errors" => true
+            ],
+            "ssl" => [
+                "verify_peer" => false,
+                "verify_peer_name" => false
+            ]
+        ];
+        $ctx = stream_context_create($opts);
+        $response = @file_get_contents("https://onesignal.com/api/v1/notifications", false, $ctx);
+        if ($response !== false) {
+            $http_code = 200;
+        }
+    }
 
     $res_data = json_decode($response, true) ?? $response;
 
@@ -146,6 +171,12 @@ function send_onesignal_push($title, $message, $target_url = "/?tab=home", $play
 if (!function_exists("send_player_push_notification")) {
     function send_player_push_notification($player_ids, $title, $message, $target_url = "/?tab=wallet", $extra_data = [], $allow_broadcast = false) {
         return send_onesignal_push($title, $message, $target_url, $player_ids, [], $extra_data, $allow_broadcast);
+    }
+}
+
+if (!function_exists("sendOneSignalNotification")) {
+    function sendOneSignalNotification($title, $message, $target_url = "/?tab=home", $player_ids = [], $user_ids = []) {
+        return send_onesignal_push($title, $message, $target_url, $player_ids, $user_ids, [], false);
     }
 }
 ?>

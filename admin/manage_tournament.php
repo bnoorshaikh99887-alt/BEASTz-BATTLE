@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
                 
                 // Sirf agar joined players ke player_ids milein tabhi push jayega (STRICT: NO BROADCAST TO ALL)
-                if (!empty($target_pids)) {
+                if (!empty($target_pids) || !empty($target_uids)) {
                     $idp_title = "🔥 WAR ZONE TAYAR HAI!";
                     $idp_msg = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
                     sendOneSignalNotification($idp_title, $idp_msg, "/?tab=matches", $target_pids, $target_uids);
@@ -262,6 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
         $results_msg = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
         $participating_pids = [];
+        $participating_uids = [];
         
         // 1. Fetch from users table for participants & user_tournaments
         $q_pids = $conn->query("
@@ -277,6 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         ");
         if ($q_pids) {
             while ($pr = $q_pids->fetch_assoc()) {
+                if (!empty($pr['user_id'])) $participating_uids[] = (int)$pr['user_id'];
                 if (!empty($pr['player_id']) && strlen(trim($pr['player_id'])) > 15) {
                     $participating_pids[] = trim($pr['player_id']);
                 }
@@ -298,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $participating_pids = array_values(array_unique(array_filter($participating_pids)));
         
         // STRICT: Only send if participating player IDs exist - NEVER broadcast to All
-        if (!empty($participating_pids)) {
+        if (!empty($participating_pids) || !empty($participating_uids)) {
             sendOneSignalNotification(
                 $results_title, 
                 $results_msg, 

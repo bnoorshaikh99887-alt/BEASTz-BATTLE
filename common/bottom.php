@@ -34,7 +34,8 @@
                 fetch("/save_player_id.php", {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: "player_id=" + encodeURIComponent(playerId)
+                    credentials: "include",
+                    body: "player_id=" + encodeURIComponent(playerId) + (window.CURRENT_USER_ID ? "&user_id=" + encodeURIComponent(window.CURRENT_USER_ID) : "")
                 }).then(function(res) { return res.json(); })
                   .then(function(data) {
                       console.log("OneSignal player_id synced:", data);
