@@ -25,6 +25,21 @@ if (!$t) {
 
 $per_kill_rate = (float)($t['per_kill'] ?? 0.00);
 
+// FIX: OneSignal notification ab page render hone ke BAAD jaati hai (pehle page freeze hota tha)
+$deferred_push = [];
+register_shutdown_function(function () use (&$deferred_push) {
+    if (empty($deferred_push)) return;
+    ignore_user_abort(true);
+    @set_time_limit(90);
+    while (ob_get_level() > 0) { @ob_end_flush(); }
+    @flush();
+    if (function_exists('fastcgi_finish_request')) { @fastcgi_finish_request(); }
+    foreach ($deferred_push as $dp) {
+        try { sendOneSignalNotification($dp[0], $dp[1], $dp[2], $dp[3], $dp[4]); }
+        catch (Throwable $e) { error_log('push error: ' . $e->getMessage()); }
+    }
+});
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_room') {
     $room_id = sanitize($_POST['room_id'] ?? '');
     $room_password = sanitize($_POST['room_password'] ?? '');
@@ -33,6 +48,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (empty($status)) {
         $status = $t['status'];
     }
+
+    // FIX: status whitelist + purane room values yaad rakho (push sirf tab jab room badla ho)
+    if (!in_array(strtolower($status), ['upcoming', 'live', 'ongoing', 'completed'], true)) {
+        $status = $t['status'];
+    }
+    $old_room_id = (string)($t['room_id'] ?? '');
+    $old_room_pass = (string)($t['room_password'] ?? '');
+    $room_changed = ($room_id !== $old_room_id || $room_password !== $old_room_pass);
 
     $u_stmt = $conn->prepare("UPDATE tournaments SET room_id = ?, room_password = ?, status = ? WHERE id = ?");
     if ($u_stmt) {
@@ -44,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $t['room_password'] = $room_password;
             $t['status'] = $status;
 
-            if (!empty($_POST['send_idp_push']) && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
+            if (!empty($_POST['send_idp_push']) && $room_changed && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
                 $target_pids = [];
                 $target_uids = [];
                 
@@ -79,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if (!empty($target_pids) || !empty($target_uids)) {
                     $idp_title = "🔥 WAR ZONE TAYAR HAI!";
                     $idp_msg = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
-                    sendOneSignalNotification($idp_title, $idp_msg, "/?tab=matches", $target_pids, $target_uids);
+                    $deferred_push[] = [$idp_title, $idp_msg, "/?tab=matches", $target_pids, $target_uids];
                     @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($idp_title) . "', '" . $conn->real_escape_string($idp_msg) . "', '/?tab=matches', 'ROOM_IDP')");
                 }
             }
@@ -95,14 +118,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $kills_arr = $_POST['kills'] ?? [];
     $bonus_arr = $_POST['bonus'] ?? [];
     $rank_arr = $_POST['rank_no'] ?? [];
+    $published_ok = false;
 
     $conn->begin_transaction();
     try {
+        // FIX 1: tournament row lock -> double click / refresh par dobara credit nahi hoga
+        $lk = $conn->prepare("SELECT status FROM tournaments WHERE id = ? FOR UPDATE");
+        $lk->bind_param("i", $tournament_id);
+        $lk->execute();
+        $lk_row = $lk->get_result()->fetch_assoc();
+        $lk->close();
+        if (!$lk_row) throw new Exception("Tournament not found.");
+        if (strtolower($lk_row['status']) === 'completed') {
+            throw new Exception("Results already published for this match. Dobara credit nahi ho sakta. (Galti ho to 'Reclaim Prize' se match Live karke correct karo.)");
+        }
+
         $total_distributed = 0.00;
         $winner_u_id = null;
-        $participating_uids = [];
 
-        $p_query = $conn->prepare("SELECT id, user_id, in_game_name FROM participants WHERE tournament_id = ?");
+        $p_query = $conn->prepare("SELECT id, user_id, prize_won FROM participants WHERE tournament_id = ? FOR UPDATE");
         $p_query->bind_param("i", $tournament_id);
         $p_query->execute();
         $participants_list = $p_query->get_result();
@@ -111,8 +145,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         while ($p_item = $participants_list->fetch_assoc()) {
             $pid = (int)$p_item['id'];
             $p_uid = (int)$p_item['user_id'];
-            $participating_uids[] = $p_uid;
-            
+            $prev_prize = (float)$p_item['prize_won'];
+
             $kills = isset($kills_arr[$pid]) ? max(0, (int)$kills_arr[$pid]) : 0;
             $bonus = isset($bonus_arr[$pid]) ? max(0.0, (float)$bonus_arr[$pid]) : 0.00;
             $rank_no = isset($rank_arr[$pid]) ? max(0, (int)$rank_arr[$pid]) : 0;
@@ -121,16 +155,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $winner_u_id = $p_uid;
             }
 
-            $earned = ($kills * $per_kill_rate) + $bonus;
+            $earned = round(($kills * $per_kill_rate) + $bonus, 2);
+            // FIX 2: sirf farak (delta) credit/debit hota hai, pehle diya hua prize dobara nahi milega
+            $delta = round($earned - $prev_prize, 2);
 
             $upd_p = $conn->prepare("UPDATE participants SET kills = ?, rank_no = ?, prize_won = ? WHERE id = ?");
             $upd_p->bind_param("iidi", $kills, $rank_no, $earned, $pid);
             $upd_p->execute();
             $upd_p->close();
 
-            if ($earned > 0) {
+            if ($delta > 0) {
                 $upd_w = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ?, winning_balance = winning_balance + ? WHERE id = ?");
-                $upd_w->bind_param("ddi", $earned, $earned, $p_uid);
+                $upd_w->bind_param("ddi", $delta, $delta, $p_uid);
                 $upd_w->execute();
                 $upd_w->close();
 
@@ -140,67 +176,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }
                 $desc .= ")";
                 $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'credit', ?)");
-                $tx->bind_param("ids", $p_uid, $earned, $desc);
+                $tx->bind_param("ids", $p_uid, $delta, $desc);
                 $tx->execute();
                 $tx->close();
 
-                $total_distributed += $earned;
+                $total_distributed += $delta;
+            } elseif ($delta < 0) {
+                $abs = abs($delta);
+                $upd_w = $conn->prepare("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - ?), winning_balance = GREATEST(0, winning_balance - ?) WHERE id = ?");
+                $upd_w->bind_param("ddi", $abs, $abs, $p_uid);
+                $upd_w->execute();
+                $upd_w->close();
+
+                $desc = "Match Result Correction: " . $t['title'];
+                $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'debit', ?)");
+                $tx->bind_param("ids", $p_uid, $abs, $desc);
+                $tx->execute();
+                $tx->close();
             }
         }
 
         if ($winner_u_id) {
-            $conn->query("UPDATE tournaments SET status = 'completed', winner_user_id = {$winner_u_id} WHERE id = {$tournament_id}");
+            $st = $conn->prepare("UPDATE tournaments SET status = 'completed', winner_user_id = ? WHERE id = ?");
+            $st->bind_param("ii", $winner_u_id, $tournament_id);
         } else {
-            $conn->query("UPDATE tournaments SET status = 'completed' WHERE id = {$tournament_id}");
+            $st = $conn->prepare("UPDATE tournaments SET status = 'completed' WHERE id = ?");
+            $st->bind_param("i", $tournament_id);
         }
+        $st->execute();
+        $st->close();
 
         $conn->commit();
+        $published_ok = true;
         $msg = "Match results successfully published! Total " . format_inr($total_distributed) . " credited to gamer wallets.";
         $msg_type = "success";
         $t['status'] = 'completed';
-
-        $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
-        $results_msg = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
-        $participating_pids = [];
-        $participating_uids = [];
-        
-        $q_pids = $conn->query("
-            SELECT DISTINCT u.player_id, p.user_id 
-            FROM participants p 
-            JOIN users u ON p.user_id = u.id 
-            WHERE p.tournament_id = {$tournament_id}
-        ");
-        if ($q_pids) {
-            while ($pr = $q_pids->fetch_assoc()) {
-                if (!empty($pr['user_id'])) $participating_uids[] = (int)$pr['user_id'];
-                if (!empty($pr['player_id']) && strlen(trim($pr['player_id'])) > 15) {
-                    $participating_pids[] = trim($pr['player_id']);
-                }
-            }
-        }
-        
-        if (!empty($participating_uids)) {
-            $u_list = implode(',', array_unique(array_map('intval', $participating_uids)));
-            $q_devs = $conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$u_list}) AND player_id IS NOT NULL AND player_id != ''");
-            if ($q_devs) {
-                while ($dr = $q_devs->fetch_assoc()) {
-                    if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 15) {
-                        $participating_pids[] = trim($dr['player_id']);
-                    }
-                }
-            }
-        }
-        $participating_pids = array_values(array_unique(array_filter($participating_pids)));
-        
-        if (!empty($participating_pids) || !empty($participating_uids)) {
-            sendOneSignalNotification($results_title, $results_msg, "/?tab=matches", $participating_pids, $participating_uids);
-            $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($results_title) . "', '" . $conn->real_escape_string($results_msg) . "', '/?tab=matches', 'RESULTS_ANNOUNCED')");
-        }
-
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $conn->rollback();
         $msg = "Distribution Error: " . $e->getMessage();
         $msg_type = "error";
+    }
+
+    // FIX 3: notification commit ke BAAD, alag try me, aur background me (freeze nahi hoga)
+    if ($published_ok) {
+        try {
+            $results_title = "Badhayi ho aap jeet gaye hain 🎉 par kitne? Khud aake dekh lo 🏆";
+            $results_msg = $results_title;
+            $participating_pids = [];
+            $participating_uids = [];
+
+            $q_pids = $conn->query("
+                SELECT DISTINCT u.player_id, p.user_id
+                FROM participants p
+                JOIN users u ON p.user_id = u.id
+                WHERE p.tournament_id = {$tournament_id}
+            ");
+            if ($q_pids) {
+                while ($pr = $q_pids->fetch_assoc()) {
+                    if (!empty($pr['user_id'])) $participating_uids[] = (int)$pr['user_id'];
+                    if (!empty($pr['player_id']) && strlen(trim($pr['player_id'])) > 15) {
+                        $participating_pids[] = trim($pr['player_id']);
+                    }
+                }
+            }
+            if (!empty($participating_uids)) {
+                $u_list = implode(',', array_unique(array_map('intval', $participating_uids)));
+                $q_devs = $conn->query("SELECT player_id FROM user_devices WHERE user_id IN ({$u_list}) AND player_id IS NOT NULL AND player_id != ''");
+                if ($q_devs) {
+                    while ($dr = $q_devs->fetch_assoc()) {
+                        if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 15) {
+                            $participating_pids[] = trim($dr['player_id']);
+                        }
+                    }
+                }
+            }
+            $participating_pids = array_values(array_unique(array_filter($participating_pids)));
+
+            if (!empty($participating_pids) || !empty($participating_uids)) {
+                $deferred_push[] = [$results_title, $results_msg, "/?tab=matches", $participating_pids, $participating_uids];
+                $ins = $conn->prepare("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES (?, ?, '/?tab=matches', 'RESULTS_ANNOUNCED')");
+                if ($ins) { $ins->bind_param("ss", $results_title, $results_msg); $ins->execute(); $ins->close(); }
+            }
+        } catch (Throwable $e) {
+            error_log('results notify error: ' . $e->getMessage());
+        }
     }
 }
 
@@ -208,11 +267,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $participant_id = (int)($_POST['participant_id'] ?? 0);
     $admin_reason = sanitize($_POST['admin_reason'] ?? 'Cheating / Hacker Detected');
 
+    // FIX: row lock transaction ke andar -> double click par prize do baar nahi kategi
+    $conn->begin_transaction();
     $p_stmt = $conn->prepare("
         SELECT p.*, u.username, u.wallet_balance, u.winning_balance 
         FROM participants p 
         INNER JOIN users u ON p.user_id = u.id 
-        WHERE p.id = ? AND p.tournament_id = ?");
+        WHERE p.id = ? AND p.tournament_id = ? FOR UPDATE");
     $p_stmt->bind_param("ii", $participant_id, $tournament_id);
     $p_stmt->execute();
     $p_row = $p_stmt->get_result()->fetch_assoc();
@@ -222,7 +283,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $p_uid = (int)$p_row['user_id'];
         $prize_revoked = (float)$p_row['prize_won'];
 
-        $conn->begin_transaction();
         try {
             if ($prize_revoked > 0) {
                 $ded = $conn->prepare("UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - ?), winning_balance = GREATEST(0, winning_balance - ?) WHERE id = ?");
@@ -250,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $upd_t->close();
 
             $conn->commit();
-            $msg = "Anti-Cheat Action Applied: Revoked " . format_inr($prize_revoked) . " prize from @" . htmlspecialchars($p_row['username']) . "! Match moved to Live with support notice.";
+            $msg = "Anti-Cheat Action Applied: Revoked " . format_inr($prize_revoked) . " prize from @" . $p_row['username'] . "! Match moved to Live with support notice.";
             $msg_type = "success";
             $t['status'] = 'live';
             $t['room_id'] = $notice_room_id;
@@ -260,6 +320,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $msg = "Hacker rollback error: " . $e->getMessage();
             $msg_type = "error";
         }
+    } else {
+        $conn->rollback();
+        $msg = "Participant not found.";
+        $msg_type = "error";
     }
 }
 
@@ -327,7 +391,7 @@ $participants = $conn->query("
 <?php if (!empty($msg)): ?>
     <div class="mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 <?= ($msg_type === 'success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200' ?>">
         <i class="fa-solid <?= ($msg_type === 'success') ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-rose-600' ?>"></i>
-        <span><?= $msg; ?></span>
+        <span><?= htmlspecialchars($msg); ?></span>
     </div>
 <?php endif; ?>
 
@@ -454,6 +518,8 @@ $participants = $conn->query("
                     <?php 
                         $pid = $p['id'];
                         $has_won = ($p['prize_won'] > 0);
+                        // FIX: purana bonus/rank form me prefill, taaki re-publish par prize galti se kam na ho
+                        $pre_bonus = $has_won ? max(0, round((float)$p['prize_won'] - ((int)$p['kills'] * $per_kill_rate), 2)) : 0;
                     ?>
                     <div class="p-3 rounded-xl border <?= $has_won ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200 bg-slate-50' ?> text-xs space-y-2">
                         <div class="flex items-start justify-between">
@@ -485,14 +551,18 @@ $participants = $conn->query("
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60">
+                        <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-200/60">
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Kills (x <?= format_inr($per_kill_rate); ?>)</label>
                                 <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-white border border-slate-300 focus:border-yellow-400 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
                             </div>
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Rank Placement Bonus (₹)</label>
-                                <input type="number" step="0.5" name="bonus[<?= $pid; ?>]" min="0" value="0" class="w-full bg-white border border-slate-300 focus:border-yellow-400 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                                <input type="number" step="0.5" name="bonus[<?= $pid; ?>]" min="0" value="<?= $pre_bonus; ?>" class="w-full bg-white border border-slate-300 focus:border-yellow-400 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Rank (1 = Winner)</label>
+                                <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-white border border-slate-300 focus:border-yellow-400 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
                             </div>
                         </div>
 
@@ -501,7 +571,7 @@ $participants = $conn->query("
                                 <span class="text-[10px] text-rose-700 font-bold flex items-center gap-1">
                                     <i class="fa-solid fa-shield-virus"></i> Suspected Cheating?
                                 </span>
-                                <button type="button" onclick="triggerHackerRevoke(<?= $pid; ?>, '<?= addslashes($p['username']); ?>', <?= (float)$p['prize_won']; ?>)" class="px-2 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded text-[10px] font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer">
+                                <button type="button" onclick="triggerHackerRevoke(<?= (int)$pid; ?>, <?= htmlspecialchars(json_encode($p['username']), ENT_QUOTES); ?>, <?= (float)$p['prize_won']; ?>)" class="px-2 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded text-[10px] font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer">
                                     <i class="fa-solid fa-rotate-left"></i> Reclaim Prize (Hacker)
                                 </button>
                             </div>
@@ -576,6 +646,19 @@ $participants = $conn->query("
     function closeHackerModal() {
         document.getElementById('hackerModal').classList.add('hidden');
     }
+    // FIX: double click / late click par form 2 baar submit nahi hoga
+    document.addEventListener('submit', function (e) {
+        var f = e.target;
+        if (f.dataset.locked === '1') { e.preventDefault(); return; }
+        f.dataset.locked = '1';
+        f.querySelectorAll('button[type=submit]').forEach(function (b) { b.disabled = true; b.style.opacity = '.6'; });
+        setTimeout(function () {
+            f.dataset.locked = '';
+            f.querySelectorAll('button[type=submit]').forEach(function (b) { b.disabled = false; b.style.opacity = ''; });
+        }, 20000);
+    }, true);
+    // FIX: page refresh par POST dobara na jaye
+    if (window.history && history.replaceState) { history.replaceState(null, '', location.href); }
 </script>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>
