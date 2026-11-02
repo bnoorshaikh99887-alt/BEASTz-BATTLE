@@ -24,10 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitize($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    if (empty($username) || empty($password)) {
+    // FIX: brute-force lock (5 galat try = 5 min)
+    $__now = time();
+    if (($_SESSION['adm_lock_until'] ?? 0) > $__now) {
+        $error = "Too many wrong attempts. Please wait " . (int)ceil(($_SESSION['adm_lock_until'] - $__now) / 60) . " min.";
+    } elseif (empty($username) || empty($password)) {
         $error = "Please fill in all admin credentials.";
     } else {
         $adm = null;
+        $adm_from_users = false;
         // 1. Check users table for admin role
         if ($conn && !$conn->connect_error) {
             $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ? AND role = 'admin' LIMIT 1");
@@ -36,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute();
                 $adm = $stmt->get_result()->fetch_assoc();
                 $stmt->close();
+                $adm_from_users = (bool)$adm;
             }
             // 2. Fallback check admin table
             if (!$adm) {
@@ -51,17 +57,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($adm) {
             $is_valid = false;
-            if (password_verify($password, $adm['password'])) {
+            // FIX: 'admin123' / 'admin' backdoor hata diya (koi bhi admin account me ghus sakta tha)
+            if (password_verify($password, (string)$adm['password'])) {
                 $is_valid = true;
-            } elseif ($password === $adm['password'] || $password === 'admin123' || $password === 'admin') {
-                $is_valid = true;
+            } elseif (hash_equals((string)$adm['password'], (string)$password)) {
+                $is_valid = true; // legacy plain-text password
             }
 
             if ($is_valid) {
                 $admin_id = (int)$adm['id'];
                 
-                // Ensure admin status is always active
-                @$conn->query("UPDATE users SET status = 'active' WHERE id = {$admin_id}");
+                // FIX: session fixation se bachav + sahi table ka status update
+                session_regenerate_id(true);
+                unset($_SESSION['adm_fail'], $_SESSION['adm_lock_until']);
+                if ($adm_from_users) {
+                    $up = $conn->prepare("UPDATE users SET status = 'active' WHERE id = ?");
+                    if ($up) { $up->bind_param("i", $admin_id); $up->execute(); $up->close(); }
+                }
 
                 $_SESSION['admin_id'] = $admin_id;
                 $_SESSION['admin_user'] = $adm['username'];
@@ -74,10 +86,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 safe_redirect("index.php");
                 exit;
             } else {
+                $_SESSION['adm_fail'] = (int)($_SESSION['adm_fail'] ?? 0) + 1;
+                if ($_SESSION['adm_fail'] >= 5) { $_SESSION['adm_lock_until'] = time() + 300; $_SESSION['adm_fail'] = 0; }
+                usleep(400000);
                 $error = "Invalid admin password.";
             }
         } else {
-            $error = "Admin account not found.";
+            usleep(400000);
+            $error = "Invalid admin username or password.";
         }
     }
 }
@@ -129,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" action="login.php" class="space-y-4" autocomplete="off">
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Admin Username</label>
-                <input type="text" name="username" required value="admin" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-bold">
+                <input type="text" name="username" required autocomplete="username" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none font-bold">
             </div>
 
             <div>
