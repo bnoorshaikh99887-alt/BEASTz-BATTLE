@@ -318,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
     
-    <!-- GOOGLE AUTH SCRIPT ADDED HERE -->
+    <!-- GOOGLE AUTH SCRIPT -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-[#080a0f] text-slate-100 min-h-screen flex items-center justify-center p-4">
@@ -393,19 +393,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </button>
             </form>
             
-            <!-- GOOGLE LOGIN BUTTON SECTION ADDED HERE -->
+            <!-- GOOGLE LOGIN BUTTON SECTION -->
             <div class="flex items-center my-3">
                 <div class="flex-grow border-t border-slate-700"></div>
                 <span class="px-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">OR</span>
                 <div class="flex-grow border-t border-slate-700"></div>
             </div>
 
-            <!-- Google Setup -->
+            <!-- Google Setup (Redirect Mode For Android App) -->
             <div id="g_id_onload"
                  data-client_id="202554953418-39ib6bd6t6c8uj395lm6m70i05povk1b.apps.googleusercontent.com"
                  data-context="signin"
-                 data-ux_mode="popup"
-                 data-callback="handleGoogleLogin"
+                 data-ux_mode="redirect"
+                 data-login_uri="https://beastz-battle.vercel.app/google_auth.php"
                  data-auto_prompt="false">
             </div>
 
@@ -473,39 +473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     </div>
 
-    <!-- GOOGLE LOGIN JAVASCRIPT HANDLER ADDED HERE -->
-    <script>
-        function handleGoogleLogin(response) {
-            const googleToken = response.credential;
-            const btnContainer = document.querySelector('.g_id_signin');
-            
-            // Loading state (thoda blur kar do taaki click na ho)
-            if(btnContainer) btnContainer.style.opacity = '0.5';
-
-            fetch('google_auth.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ token: googleToken })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) {
-                    window.location.href = data.redirect || 'index.php'; // Login ke baad Arena pe bhejo
-                } else {
-                    alert("Login Failed: " + data.message);
-                    if(btnContainer) btnContainer.style.opacity = '1';
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert("Server error, please try again.");
-                if(btnContainer) btnContainer.style.opacity = '1';
-            });
-        }
-    </script>
-
+    <!-- UI TAB SWITCHER SCRIPT -->
     <script>
         function setAuthTab(tab) {
             var fLog = document.getElementById('formLogin');
