@@ -1,9 +1,11 @@
 <?php
-// Handle AJAX Payout Approval / Rejection request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
-    header('Content-Type: application/json');
+$msg = "";
+$msg_type = "";
+
+// Handle Standard Payout Approval / Rejection
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $w_id = (int)$_POST['withdrawal_id'];
-    $act = $_POST['ajax_action'];
+    $act = $_POST['action'];
 
     $w_stmt = $conn->prepare("SELECT w.*, u.username, u.wallet_balance FROM withdrawals w LEFT JOIN users u ON w.user_id = u.id WHERE w.id = ?");
     $w_stmt->bind_param("i", $w_id);
@@ -21,12 +23,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
         if ($act === 'complete') {
             $conn->begin_transaction();
             try {
+                // 1. Mark withdrawals table as completed
                 $conn->query("UPDATE withdrawals SET status = 'Completed' WHERE id = $w_id");
+                
+                // 2. Update User's Passbook (transactions table)
                 $safe_upi = $conn->real_escape_string($upi_id);
                 $conn->query("UPDATE transactions SET description = 'Withdrawal Processed: Sent to {$safe_upi}' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
+
                 $conn->commit();
                 
-                // Send Push Notification
+                $msg = "Payout of " . format_inr($amount) . " to " . htmlspecialchars($upi_id) . " marked as Completed!";
+                $msg_type = "success";
+
+                // Target Push Notification
                 if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) { 
                     require_once __DIR__ . "/../../common/onesignal_helper.php"; 
                 } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) { 
@@ -46,12 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
                     @send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, [$user_id], ["badge_type" => "PAYOUT_SUCCESS"], false);
                 }
 
-                echo json_encode(['success' => true, 'message' => 'Payout of ' . format_inr($amount) . ' marked as Completed!']);
-                exit;
             } catch (Exception $e) {
                 $conn->rollback();
-                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-                exit;
+                $msg = "Payout processing error: " . $e->getMessage();
+                $msg_type = "error";
             }
         } elseif ($act === 'reject') {
             $conn->begin_transaction();
@@ -63,24 +70,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
                     $ref->bind_param("di", $amount, $user_id);
                     $ref->execute();
                     $ref->close();
+
                     $conn->query("UPDATE transactions SET description = 'Withdrawal Request (Rejected)' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
+
+                    $desc = "Withdrawal Rejected Refund (Ref #" . $w_id . ")";
+                    $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'credit', ?)");
+                    $tx->bind_param("ids", $user_id, $amount, $desc);
+                    $tx->execute();
+                    $tx->close();
                 }
+
                 $conn->query("UPDATE withdrawals SET status = 'Rejected' WHERE id = $w_id");
                 $conn->commit();
-                echo json_encode(['success' => true, 'message' => 'Withdrawal request rejected.']);
-                exit;
+                $msg = "Withdrawal request rejected and " . format_inr($amount) . " refunded.";
+                $msg_type = "success";
             } catch (Exception $e) {
                 $conn->rollback();
-                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-                exit;
+                $msg = "Rejection error: " . $e->getMessage();
+                $msg_type = "error";
             }
         }
     }
-    echo json_encode(['success' => false, 'message' => 'Invalid request']);
-    exit;
 }
 
-// Fetch Withdrawals (Pending first, then history)
+// Fetch Withdrawals (Pending first, then history sorted by ID desc)
 $withdrawals = $conn->query("
     SELECT w.*, COALESCE(u.username, 'Host Admin') as username, COALESCE(u.wallet_balance, 0.00) as wallet_balance 
     FROM withdrawals w 
@@ -108,10 +121,14 @@ $withdrawals = $conn->query("
     </div>
 </div>
 
-<!-- AJAX Success / Error Banner -->
-<div id="payout-alert-box" class="hidden mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all"></div>
+<?php if (!empty($msg)): ?>
+    <div class="mb-5 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 <?= ($msg_type === 'success') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30' ?>">
+        <i class="fa-solid <?= ($msg_type === 'success') ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-rose-400' ?> text-sm"></i>
+        <span><?= htmlspecialchars($msg); ?></span>
+    </div>
+<?php endif; ?>
 
-<div id="admin-payouts-cards-container" class="space-y-3">
+<div class="space-y-3">
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
         <?php while ($w = $withdrawals->fetch_assoc()): ?>
             <?php 
@@ -119,7 +136,7 @@ $withdrawals = $conn->query("
                 $is_completed = (strtolower($w['status']) === 'completed');
                 $is_host_req = ((int)($w['is_admin_request'] ?? 0) === 1);
             ?>
-            <div id="payout-card-<?= $w['id']; ?>" class="bg-white dark:bg-[#131b2e] border <?= $is_host_req ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.25)] ring-2 ring-yellow-400/30' : ($is_pending ? 'border-amber-400/60 ring-1 ring-amber-400/20' : 'border-slate-200 dark:border-slate-800') ?> rounded-2xl p-4 shadow-sm space-y-3 transition">
+            <div class="bg-white dark:bg-[#131b2e] border <?= $is_host_req ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.25)] ring-2 ring-yellow-400/30' : ($is_pending ? 'border-amber-400/60 ring-1 ring-amber-400/20' : 'border-slate-200 dark:border-slate-800') ?> rounded-2xl p-4 shadow-sm space-y-3 transition">
                 
                 <div class="flex items-start justify-between">
                     <div>
@@ -133,21 +150,19 @@ $withdrawals = $conn->query("
                                 </span>
                             <?php endif; ?>
 
-                            <div id="badge-container-<?= $w['id']; ?>">
-                                <?php if ($is_pending): ?>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/10 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-400/35">
-                                        Pending Payment
-                                    </span>
-                                <?php elseif ($is_completed): ?>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-400/10 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-400/30">
-                                        Paid & Notified
-                                    </span>
-                                <?php else: ?>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-400/10 text-rose-800 dark:text-rose-400 border border-rose-300 dark:border-rose-400/30">
-                                        Rejected / Refunded
-                                    </span>
-                                <?php endif; ?>
-                            </div>
+                            <?php if ($is_pending): ?>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/10 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-400/35">
+                                    Pending Payment
+                                </span>
+                            <?php elseif ($is_completed): ?>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-400/10 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-400/30">
+                                    Paid & Notified
+                                </span>
+                            <?php else: ?>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-400/10 text-rose-800 dark:text-rose-400 border border-rose-300 dark:border-rose-400/30">
+                                    Rejected / Refunded
+                                </span>
+                            <?php endif; ?>
                         </div>
                         <span class="text-[11px] text-slate-500 block mt-0.5">
                             <?= date("d M Y, h:i A", strtotime($w['created_at'])); ?> &bull; Ref #<?= $w['id']; ?>
@@ -180,21 +195,27 @@ $withdrawals = $conn->query("
                     </div>
                 </div>
 
-                <!-- Approval / Rejection Actions container -->
-                <div id="actions-container-<?= $w['id']; ?>">
-                    <?php if ($is_pending): ?>
-                        <div class="flex items-center gap-2 pt-1">
-                            <button type="button" onclick="processPayout(<?= $w['id']; ?>, 'complete')" class="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <!-- Approval / Rejection Form Actions -->
+                <?php if ($is_pending): ?>
+                    <div class="flex items-center gap-2 pt-1">
+                        <form method="POST" action="index.php?tab=payouts" class="flex-1" onsubmit="return confirm('Approve and send targeted Push Notification?');">
+                            <input type="hidden" name="action" value="complete">
+                            <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
+                            <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
                                 <i class="fa-solid fa-circle-check"></i>
                                 <span>Approve & Send Push Alert</span>
                             </button>
+                        </form>
 
-                            <button type="button" onclick="processPayout(<?= $w['id']; ?>, 'reject')" class="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 font-bold rounded-xl text-xs transition active:scale-95 border border-slate-200 dark:border-slate-700 cursor-pointer">
+                        <form method="POST" action="index.php?tab=payouts" onsubmit="return confirm('Are you sure you want to reject this request?');">
+                            <input type="hidden" name="action" value="reject">
+                            <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
+                            <button type="submit" class="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 font-bold rounded-xl text-xs transition active:scale-95 border border-slate-200 dark:border-slate-700 cursor-pointer">
                                 Reject
                             </button>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                        </form>
+                    </div>
+                <?php endif; ?>
 
             </div>
         <?php endwhile; ?>
@@ -205,61 +226,3 @@ $withdrawals = $conn->query("
         </div>
     <?php endif; ?>
 </div>
-
-<!-- STABLE AJAX SCRIPT WITHOUT AUTO-POLLING GLITCHES -->
-<script>
-function processPayout(withdrawalId, actionType) {
-    var confirmMsg = actionType === 'complete' ? "Approve and send targeted Push Notification?" : "Are you sure you want to reject this request?";
-    if (!confirm(confirmMsg)) return;
-
-    var card = document.getElementById('payout-card-' + withdrawalId);
-    var actionsContainer = document.getElementById('actions-container-' + withdrawalId);
-    if (actionsContainer) {
-        actionsContainer.innerHTML = '<div class="text-center py-2 text-xs font-bold text-yellow-500"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Processing payout...</div>';
-    }
-
-    var formData = new URLSearchParams();
-    formData.append('withdrawal_id', withdrawalId);
-    formData.append('ajax_action', actionType);
-
-    fetch('index.php?tab=payouts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formData.toString()
-    })
-    .then(res => res.json())
-    .then(data => {
-        var alertBox = document.getElementById('payout-alert-box');
-        alertBox.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/30', 'bg-rose-500/10', 'text-rose-400', 'border-rose-500/30');
-
-        if (data.success) {
-            alertBox.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/30');
-            alertBox.innerHTML = '<i class="fa-solid fa-circle-check text-sm"></i> <span>' + data.message + '</span>';
-            
-            var badgeContainer = document.getElementById('badge-container-' + withdrawalId);
-            if (badgeContainer) {
-                if (actionType === 'complete') {
-                    badgeContainer.innerHTML = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-400/10 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-400/30">Paid & Notified</span>';
-                } else {
-                    badgeContainer.innerHTML = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-400/10 text-rose-800 dark:text-rose-400 border border-rose-300 dark:border-rose-400/30">Rejected / Refunded</span>';
-                }
-            }
-            if (actionsContainer) actionsContainer.innerHTML = '';
-
-            var container = document.getElementById('admin-payouts-cards-container');
-            if (container && card) {
-                container.appendChild(card); // Move to bottom history list smoothly
-            }
-        } else {
-            alertBox.classList.add('bg-rose-500/10', 'text-rose-400', 'border', 'border-rose-500/30');
-            alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation text-sm"></i> <span>Error: ' + data.message + '</span>';
-            if (actionsContainer) location.reload();
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Network error occurred.");
-        location.reload();
-    });
-}
-</script>
