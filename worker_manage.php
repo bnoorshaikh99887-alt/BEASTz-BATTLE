@@ -112,38 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // -------------------------------------------------------------
-// POST ACTION: 2. REVOKE INDIVIDUAL PARTICIPANT WITH REFUND
-// -------------------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'kick_participant') {
-    $participant_id = (int)($_POST['participant_id'] ?? 0);
-    $part_row = $conn->query("SELECT p.*, t.entry_fee, t.title FROM participants p JOIN tournaments t ON p.tournament_id = t.id WHERE p.id = {$participant_id}")->fetch_assoc();
-    
-    if ($part_row) {
-        $p_uid = (int)$part_row['user_id'];
-        $refund_fee = (float)($part_row['entry_fee'] ?? 0);
-        $t_name = $part_row['title'] ?? 'Match';
-
-        $conn->begin_transaction();
-        try {
-            if ($refund_fee > 0) {
-                $conn->query("UPDATE users SET wallet_balance = wallet_balance + {$refund_fee} WHERE id = {$p_uid}");
-                $conn->query("INSERT INTO transactions (user_id, amount, type, description) VALUES ({$p_uid}, {$refund_fee}, 'credit', 'Refund: Slot Cancelled in {$t_name}')");
-            }
-            $conn->query("DELETE FROM participants WHERE id = {$participant_id}");
-            $conn->query("UPDATE tournaments SET joined_slots = GREATEST(0, joined_slots - 1) WHERE id = {$tournament_id}");
-            $conn->commit();
-            $msg = "Participant slot removed and entry fee ₹" . number_format($refund_fee, 2) . " refunded to player wallet.";
-            $msg_type = "success";
-        } catch (Exception $e) {
-            $conn->rollback();
-            $msg = "Refund error: " . $e->getMessage();
-            $msg_type = "error";
-        }
-    }
-}
-
-// -------------------------------------------------------------
-// POST ACTION: 3. DECLARE RESULTS & DISTRIBUTE WINNINGS
+// POST ACTION: 2. DECLARE RESULTS & DISTRIBUTE WINNINGS
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'distribute_winnings') {
     $kills_arr = $_POST['kills'] ?? [];
@@ -434,7 +403,6 @@ if ($p_res) {
                                     <th class="py-2 px-2">Kills</th>
                                     <th class="py-2 px-2">Rank</th>
                                     <th class="py-2 px-2">Bonus ₹</th>
-                                    <th class="py-2 px-2 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800">
@@ -453,15 +421,6 @@ if ($p_res) {
                                         </td>
                                         <td class="py-2.5 px-2">
                                             <input type="number" step="1" name="bonus[<?= $p['id']; ?>]" value="<?= $p['prize_won'] ?? 0; ?>" min="0" placeholder="0" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono font-bold text-emerald-400 focus:border-yellow-400">
-                                        </td>
-                                        <td class="py-2.5 px-2 text-right">
-                                            <form method="POST" action="worker_manage.php?id=<?= $t['id']; ?>" class="inline" onsubmit="return confirm('Remove slot and refund fee?');">
-                                                <input type="hidden" name="action" value="kick_participant">
-                                                <input type="hidden" name="participant_id" value="<?= $p['id']; ?>">
-                                                <button type="submit" class="p-1.5 text-rose-400 hover:text-rose-300 rounded-lg text-xs" title="Refund & Kick">
-                                                    <i class="fa-solid fa-user-minus"></i>
-                                                </button>
-                                            </form>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
