@@ -36,9 +36,6 @@ $tournament_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $msg = "";
 $msg_type = "";
 
-// -------------------------------------------------------------
-// POST ACTION: 1. SAVE ROOM IDP CREDENTIALS & BROADCAST PUSH
-// -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_room') {
     $room_id = sanitize($_POST['room_id'] ?? '');
     $room_password = sanitize($_POST['room_password'] ?? '');
@@ -103,9 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// -------------------------------------------------------------
-// POST ACTION: 2. DECLARE RESULTS & DISTRIBUTE WINNINGS
-// -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'distribute_winnings') {
     $kills_arr = $_POST['kills'] ?? [];
     $bonus_arr = $_POST['bonus'] ?? [];
@@ -204,9 +198,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// -------------------------------------------------------------
-// 3. Handle Anti-Cheat Hacker Rollback (Revoke PP, Live Status, Support Notice, Keep Kills)
-// -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'rollback_hacker_prize') {
     $participant_id = (int)($_POST['participant_id'] ?? 0);
     $admin_reason = sanitize($_POST['admin_reason'] ?? 'Cheating / Hacker Detected');
@@ -240,13 +231,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $tx->close();
             }
 
-            // Reset only prize_won to 0.00; keep kills and ranks completely safe!
             $rst = $conn->prepare("UPDATE participants SET prize_won = 0.00 WHERE id = ?");
             $rst->bind_param("i", $participant_id);
             $rst->execute();
             $rst->close();
 
-            // Set status to live and show support notice, but keep original room_id and room_password safe in database
             $notice_room_id = "MATCH UNDER REVIEW";
             $notice_pass = "Contact Customer Support within 1 hr";
             $upd_t = $conn->prepare("UPDATE tournaments SET status = 'live', room_id = ?, room_password = ?, winner_user_id = NULL WHERE id = ?");
@@ -268,7 +257,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Fetch Tournament Details
 $t_res = $conn->query("
     SELECT t.*, 
     COALESCE(t.game_name, t.game, 'Free Fire') as display_game,
@@ -283,10 +271,9 @@ if (!$t) {
     exit;
 }
 
-// Fetch Enrolled Participants
 $participants = [];
 $p_res = $conn->query("
-    SELECT p.*, u.username, u.wallet_balance, u.player_id
+    SELECT p.*, u.username, u.wallet_balance, u.player_id, u.game_id as user_game_id
     FROM participants p
     JOIN users u ON p.user_id = u.id
     WHERE p.tournament_id = {$tournament_id}
@@ -421,6 +408,43 @@ if ($p_res) {
                     <span>Save Credentials & Dispatch IDP Push</span>
                 </button>
             </form>
+        </div>
+
+        <!-- SECTION 1.5: COMPACT ENROLLED SLOT LIST (NEW) -->
+        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h3 class="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+                    <i class="fa-solid fa-users-viewfinder text-blue-400"></i> Enrolled Slot List (<?= count($participants); ?>)
+                </h3>
+                <span class="text-[10px] text-slate-400 font-bold">Slot, Name & UID</span>
+            </div>
+
+            <?php if (!empty($participants)): ?>
+                <div class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+                    <?php foreach ($participants as $ps): ?>
+                        <div class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-[11px] flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-0.5">
+                                <span class="px-1.5 py-0.2 bg-yellow-400 text-slate-950 font-black rounded text-[9px]">
+                                    Slot #<?= $ps['slot_no'] ?: 'A'; ?>
+                                </span>
+                                <span class="font-extrabold text-white truncate max-w-[90px]" title="@<?= htmlspecialchars($ps['username']); ?>">
+                                    @<?= htmlspecialchars($ps['username']); ?>
+                                </span>
+                            </div>
+                            <div class="text-[10px] text-slate-300 truncate">
+                                IGN: <strong class="text-slate-100"><?= htmlspecialchars($ps['in_game_name'] ?: 'N/A'); ?></strong>
+                            </div>
+                            <div class="text-[9px] text-slate-400 font-mono truncate">
+                                UID: <?= htmlspecialchars($ps['user_game_id'] ?: 'N/A'); ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="p-4 text-center text-slate-400 text-xs">
+                    No slots booked yet.
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- 2. DECLARE RESULTS & DISTRIBUTE WINNINGS -->
