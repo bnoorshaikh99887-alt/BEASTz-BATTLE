@@ -1,3 +1,10 @@
+<?php
+// Ensure transactions are fetched if not already provided by controller
+if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
+    $current_uid = (int)$me['id'];
+    $tx_res = $conn->query("SELECT * FROM transactions WHERE user_id = $current_uid ORDER BY id DESC LIMIT 15");
+}
+?>
 <!-- Alert Feedback -->
 <?php if (!empty($msg)): ?>
     <div class="mb-4 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 <?= ($msg_type === 'success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'; ?>">
