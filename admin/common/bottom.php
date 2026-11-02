@@ -46,11 +46,16 @@ if (
         </nav>
     </div>
 
-    <!-- GLOBAL BUTTON CLICK FREEZE & LOADING FIX -->
+    <!-- GLOBAL BUTTON CLICK FREEZE & LOADING FIX (SAFE FOR ONCLICK & AJAX) -->
     <script>
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('button, .btn, form button[type="submit"]');
         if (!btn) return;
+
+        // Payout / Approve buttons jinpe apna onclick laga hai, unko mat roko
+        if (btn.hasAttribute('onclick') || btn.onclick) {
+            return;
+        }
 
         // Agar button pehle se disabled hai toh double trigger roko
         if (btn.classList.contains('is-loading') || btn.disabled) {
@@ -64,20 +69,19 @@ if (
             return; 
         }
 
-        // Agar button AJAX action wala hai ya submit form hai toh loading state do
-        if (btn.dataset.action || btn.type === 'submit' || btn.classList.contains('ajax-btn')) {
+        // Sirf standard submit buttons ya explicit ajax buttons ke liye loading do
+        if (btn.type === 'submit' || btn.classList.contains('ajax-btn')) {
             btn.classList.add('is-loading');
             btn.disabled = true;
             
             var originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
 
-            // Safety timeout: 8 second mein agar response na aaye toh button wapas enable kar do
             setTimeout(function() {
                 btn.classList.remove('is-loading');
                 btn.disabled = false;
                 btn.innerHTML = originalText;
-            }, 8000);
+            }, 6000);
         }
     });
     </script>
