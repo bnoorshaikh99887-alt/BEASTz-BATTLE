@@ -100,6 +100,10 @@ $withdrawals = $conn->query("
     LEFT JOIN users u ON w.user_id = u.id 
     ORDER BY CASE WHEN LOWER(w.status) = 'pending' THEN 0 ELSE 1 END, w.id DESC
 ");
+
+// Count total pending withdrawals for smart notification
+$pending_count_res = $conn->query("SELECT COUNT(*) as cnt FROM withdrawals WHERE LOWER(status) = 'pending'");
+$initial_pending_count = ($pending_count_res) ? $pending_count_res->fetch_assoc()['cnt'] : 0;
 ?>
 
 <div class="mb-5 flex items-center justify-between">
@@ -122,8 +126,13 @@ $withdrawals = $conn->query("
     </div>
 <?php endif; ?>
 
-<!-- Container with ID for live auto-refresh background sync -->
-<div id="admin-payouts-cards-container" class="space-y-3">
+<!-- Floating Alert Banner for New Withdrawals (Appears smoothly when new withdrawal arrives) -->
+<div id="new-withdrawal-alert" class="hidden mb-4 p-3 bg-yellow-400 text-slate-950 rounded-2xl text-xs font-black flex items-center justify-between shadow-lg animate-bounce cursor-pointer" onclick="location.reload();">
+    <span><i class="fa-solid fa-bell mr-1.5"></i> New Withdrawal Request Received! Tap here to refresh.</span>
+    <i class="fa-solid fa-rotate text-sm"></i>
+</div>
+
+<div class="space-y-3">
     <?php if ($withdrawals && $withdrawals->num_rows > 0): ?>
         <?php while ($w = $withdrawals->fetch_assoc()): ?>
             <?php 
@@ -193,7 +202,7 @@ $withdrawals = $conn->query("
                 <!-- Approval / Rejection Form Actions -->
                 <?php if ($is_pending): ?>
                     <div class="flex items-center gap-2 pt-1">
-                        <form method="POST" action="index.php?tab=payouts" class="flex-1">
+                        <form method="POST" action="index.php?tab=payouts" class="flex-1" onsubmit="return confirm('Approve and send targeted Push Notification?');">
                             <input type="hidden" name="action" value="complete">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
@@ -202,7 +211,7 @@ $withdrawals = $conn->query("
                             </button>
                         </form>
 
-                        <form method="POST" action="index.php?tab=payouts">
+                        <form method="POST" action="index.php?tab=payouts" onsubmit="return confirm('Are you sure you want to reject this request?');">
                             <input type="hidden" name="action" value="reject">
                             <input type="hidden" name="withdrawal_id" value="<?= $w['id']; ?>">
                             <button type="submit" class="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 font-bold rounded-xl text-xs transition active:scale-95 border border-slate-200 dark:border-slate-700 cursor-pointer">
@@ -222,26 +231,34 @@ $withdrawals = $conn->query("
     <?php endif; ?>
 </div>
 
-<!-- AUTO-REFRESH / LIVE POLLING SCRIPT (No app restart needed for new payouts) -->
+<!-- SAFE BACKGROUND CHECKER (Shows a yellow notification banner if new withdrawal arrives without breaking buttons) -->
 <script>
+let knownPendingCount = <?= $initial_pending_count; ?>;
+
 setInterval(function() {
-    // Agar user ne kisi form par focus kiya hua hai ya typing kar raha hai toh polling skip karo
+    // Agar user approval button dabane wala hai ya typing kar raha hai toh check mat karo
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
     fetch(window.location.href)
-        .then(response => response.text())
+        .then(res => res.text())
         .then(html => {
             var parser = new DOMParser();
             var doc = parser.parseFromString(html, 'text/html');
-            var newContainer = doc.getElementById('admin-payouts-cards-container');
-            var currentContainer = document.getElementById('admin-payouts-cards-container');
             
-            if (newContainer && currentContainer) {
-                if (newContainer.innerHTML.trim() !== currentContainer.innerHTML.trim()) {
-                    currentContainer.innerHTML = newContainer.innerHTML;
+            // Server se check karo ki abhi kitne pending hain
+            var cards = doc.querySelectorAll('.border-amber-400\\/60');
+            // Alternatively, hum ek simple endpoint ya count check kar sakte hain. 
+            // Yahan hum simply check karte hain ki naye withdrawal cards aaye hain ya nahi.
+            var newCardsCount = doc.querySelectorAll('form input[name="action"][value="complete"]').length;
+            
+            if (newCardsCount > knownPendingCount) {
+                // Naya withdrawal aa gaya! Screen par pyara sa notification banner dikha do
+                var alertBanner = document.getElementById('new-withdrawal-alert');
+                if (alertBanner) {
+                    alertBanner.classList.remove('hidden');
                 }
             }
         })
         .catch(err => {});
-}, 6000); // Har 6 second mein automatic naye withdrawals check karega
+}, 7000); // Har 7 second mein safe check karega
 </script>
