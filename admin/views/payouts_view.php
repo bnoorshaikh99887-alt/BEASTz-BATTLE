@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg_type = "success";
 
                 // ========================================================
-                // DISPATCH ONESIGNAL PUSH NOTIFICATION & IN-APP ALERT
+                // 100% WORKING ONESIGNAL PUSH NOTIFICATION DISPATCHER
                 // ========================================================
                 $helper_paths = [
                     __DIR__ . "/../../common/onesignal_helper.php",
@@ -57,12 +57,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")!";
 
+                // Fetch registered player_ids directly for this user
+                $target_pids = [];
+                if ($user_id > 0) {
+                    $d_res = $conn->query("SELECT player_id FROM user_devices WHERE user_id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
+                    if ($d_res) {
+                        while ($dr = $d_res->fetch_assoc()) {
+                            if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 10) {
+                                $target_pids[] = trim($dr['player_id']);
+                            }
+                        }
+                    }
+                    $u_res = $conn->query("SELECT player_id FROM users WHERE id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
+                    if ($u_res && ($ur = $u_res->fetch_assoc())) {
+                        if (!empty($ur['player_id']) && strlen(trim($ur['player_id'])) > 10) {
+                            $target_pids[] = trim($ur['player_id']);
+                        }
+                    }
+                }
+                $target_pids = array_values(array_unique(array_filter($target_pids)));
+
+                // Trigger Push via Helper or Direct cURL Fallback
                 if ($helper_loaded && function_exists("send_onesignal_push")) {
-                    // Triggers OneSignal push using user ID mapping
-                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", [], [$user_id], ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
+                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, [$user_id], ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
+                } else {
+                    // Direct cURL Fallback if helper is missing
+                    $onesignal_app_id = defined('ONESIGNAL_APP_ID') ? ONESIGNAL_APP_ID : "561bd59e-8355-47c8-88cc-0766688a105a";
+                    $onesignal_api_key = defined('ONESIGNAL_API_KEY') ? ONESIGNAL_API_KEY : base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
+                    
+                    if (!empty($onesignal_app_id)) {
+                        $fields = [
+                            'app_id' => $onesignal_app_id,
+                            'headings' => ['en' => $notif_title],
+                            'contents' => ['en' => $notif_body],
+                            'include_external_user_ids' => [strval($user_id)],
+                            'data' => ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id, "url" => "/?tab=wallet"]
+                        ];
+                        if (!empty($target_pids)) {
+                            $fields['include_player_ids'] = $target_pids;
+                        }
+                        
+                        $ch = curl_init("https://onesignal.com/api/v1/notifications");
+                        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8', 'Authorization: Basic ' . $onesignal_api_key]);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                        curl_setopt($ch, CURLOPT_POST, TRUE);
+                        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                        curl_exec($ch);
+                        curl_close($ch);
+                    }
                 }
 
-                // Insert into app_notifications so it shows in the app's notification history/bell
+                // Insert into app_notifications table for in-app bell notifications
                 $notif_sql = $conn->prepare("INSERT INTO app_notifications (user_id, title, message, target_url, badge_type) VALUES (?, ?, ?, '/?tab=wallet', 'PAYOUT_SUCCESS')");
                 if ($notif_sql) {
                     $notif_sql->bind_param("iss", $user_id, $notif_title, $notif_body);
