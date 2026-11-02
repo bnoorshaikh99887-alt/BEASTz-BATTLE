@@ -177,7 +177,7 @@ $withdrawals = $conn->query("
                     </div>
                 </div>
 
-                <!-- UPI Details Box -->
+                <!-- UPI Details Box (Cleaned: No Complete/Pay UPI button inside) -->
                 <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex justify-between items-center">
                     <div>
                         <span class="text-[10px] text-slate-400 block">Payout Destination UPI:</span>
@@ -185,13 +185,10 @@ $withdrawals = $conn->query("
                             <?= htmlspecialchars($w['upi_id']); ?>
                         </span>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($w['upi_id']); ?>'); alert('UPI ID copied!');" class="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-yellow-400 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                            Copy UPI
+                    <div>
+                        <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($w['upi_id']); ?>'); alert('UPI ID copied!');" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-yellow-400 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <i class="fa-solid fa-copy mr-1"></i> Copy UPI
                         </button>
-                        <a href="upi://pay?pa=<?= urlencode($w['upi_id']); ?>&am=<?= $w['amount']; ?>&cu=INR" class="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-lg text-[10px] font-black">
-                            Pay UPI
-                        </a>
                     </div>
                 </div>
 
@@ -218,7 +215,7 @@ $withdrawals = $conn->query("
                 <?php endif; ?>
 
             </div>
-        <?php endwhile; ?>
+        <?endwhile; ?>
     <?php else: ?>
         <div class="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-500 shadow-sm">
             <i class="fa-solid fa-money-bill-transfer text-3xl text-slate-300 dark:text-slate-700 mb-2 block"></i>
