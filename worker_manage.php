@@ -205,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // -------------------------------------------------------------
-// 3. Handle Anti-Cheat Hacker Rollback (Worker Panel)
+// 3. Handle Anti-Cheat Hacker Rollback (Revoke PP, Live Status, Support Notice, Keep Kills)
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'rollback_hacker_prize') {
     $participant_id = (int)($_POST['participant_id'] ?? 0);
@@ -240,11 +240,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $tx->close();
             }
 
-            $rst = $conn->prepare("UPDATE participants SET prize_won = 0.00, rank_no = 0, kills = 0 WHERE id = ?");
+            // Reset only prize_won to 0.00; keep kills and ranks completely safe!
+            $rst = $conn->prepare("UPDATE participants SET prize_won = 0.00 WHERE id = ?");
             $rst->bind_param("i", $participant_id);
             $rst->execute();
             $rst->close();
 
+            // Set status to live and show support notice, but keep original room_id and room_password safe in database
             $notice_room_id = "MATCH UNDER REVIEW";
             $notice_pass = "Contact Customer Support within 1 hr";
             $upd_t = $conn->prepare("UPDATE tournaments SET status = 'live', room_id = ?, room_password = ?, winner_user_id = NULL WHERE id = ?");
@@ -253,7 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $upd_t->close();
 
             $conn->commit();
-            $msg = "Anti-Cheat Action Applied: Revoked " . number_format($prize_revoked, 2) . " prize from @" . htmlspecialchars($p_row['username']) . "!";
+            $msg = "Anti-Cheat Action Applied: Revoked " . number_format($prize_revoked, 2) . " prize from @" . htmlspecialchars($p_row['username']) . "! Match moved to Live with support notice, kill data preserved.";
             $msg_type = "success";
             $t['status'] = 'live';
             $t['room_id'] = $notice_room_id;
@@ -487,7 +489,7 @@ if ($p_res) {
                                     </div>
                                 </div>
 
-                                <?php if ($has_won): ?>
+                                <?php if ($has_won || $p['kills'] > 0 || $p['rank_no'] > 0): ?>
                                     <div class="pt-1.5 border-t border-amber-500/30 flex items-center justify-between">
                                         <span class="text-[10px] text-rose-400 font-bold flex items-center gap-1">
                                             <i class="fa-solid fa-shield-virus"></i> Suspected Cheating?
