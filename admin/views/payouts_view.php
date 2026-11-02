@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg_type = "success";
 
                 // ========================================================
-                // LOAD ONESIGNAL HELPER AND DISPATCH PUSH
+                // DISPATCH ONESIGNAL PUSH NOTIFICATION & IN-APP ALERT
                 // ========================================================
                 $helper_paths = [
                     __DIR__ . "/../../common/onesignal_helper.php",
@@ -58,12 +58,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")!";
 
                 if ($helper_loaded && function_exists("send_onesignal_push")) {
-                    // Helper function automatically checks user_devices & users table using [$user_id]
+                    // Triggers OneSignal push using user ID mapping
                     send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", [], [$user_id], ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
                 }
 
-                // Store in app_notifications table for in-app bell notification
-                $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
+                // Insert into app_notifications so it shows in the app's notification history/bell
+                $notif_sql = $conn->prepare("INSERT INTO app_notifications (user_id, title, message, target_url, badge_type) VALUES (?, ?, ?, '/?tab=wallet', 'PAYOUT_SUCCESS')");
+                if ($notif_sql) {
+                    $notif_sql->bind_param("iss", $user_id, $notif_title, $notif_body);
+                    $notif_sql->execute();
+                    $notif_sql->close();
+                } else {
+                    $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
+                }
 
             } catch (Exception $e) {
                 $conn->rollback();
