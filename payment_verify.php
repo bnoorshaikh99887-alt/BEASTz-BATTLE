@@ -91,6 +91,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return_response(false, "Payment was cancelled or invalid response received.");
     }
 
+    // SECURITY FIX: never trust amount / payment id sent by the browser.
+    // Verify the payment with Razorpay's API and use the amount Razorpay reports.
+    $rzp_key    = defined('RAZORPAY_KEY_ID') ? RAZORPAY_KEY_ID : (getenv('RAZORPAY_KEY_ID') ?: '');
+    $rzp_secret = defined('RAZORPAY_KEY_SECRET') ? RAZORPAY_KEY_SECRET : (getenv('RAZORPAY_KEY_SECRET') ?: '');
+    if ($rzp_key === '' || $rzp_secret === '') {
+        return_response(false, "Instant gateway is not configured. Please use manual UPI deposit (UTR).");
+    }
+    $ch = curl_init('https://api.razorpay.com/v1/payments/' . rawurlencode($razorpay_payment_id));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_USERPWD        => $rzp_key . ':' . $rzp_secret,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
+    ]);
+    $rzp_raw  = curl_exec($ch);
+    $rzp_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $rzp = json_decode((string)$rzp_raw, true);
+    if ($rzp_code !== 200 || !is_array($rzp) || !in_array(($rzp['status'] ?? ''), ['captured', 'authorized'], true)) {
+        return_response(false, "Payment could not be verified. If money was deducted it will be reviewed by admin.");
+    }
+    $deposit_amount = round(((float)($rzp['amount'] ?? 0)) / 100, 2); // paise -> rupees (trusted value)
+    if ($deposit_amount <= 0) {
+        return_response(false, "Invalid verified payment amount.");
+    }
+
     try {
         $chk = $conn->prepare("SELECT id FROM transactions WHERE description LIKE ?");
         $search_pattern = "%" . $razorpay_payment_id . "%";
