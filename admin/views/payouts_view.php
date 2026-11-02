@@ -35,25 +35,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg = "Payout of " . format_inr($amount) . " to " . htmlspecialchars($upi_id) . " marked as Completed!";
                 $msg_type = "success";
 
-                // Target Push Notification
-                if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) { 
-                    require_once __DIR__ . "/../../common/onesignal_helper.php"; 
-                } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) { 
-                    require_once __DIR__ . "/../common/onesignal_helper.php"; 
+                // ========================================================
+                // ROBUST ONESIGNAL TARGETED PUSH NOTIFICATION
+                // ========================================================
+                $helper_paths = [
+                    __DIR__ . "/../../common/onesignal_helper.php",
+                    __DIR__ . "/../common/onesignal_helper.php",
+                    __DIR__ . "/common/onesignal_helper.php"
+                ];
+                
+                foreach ($helper_paths as $path) {
+                    if (file_exists($path)) {
+                        require_once $path;
+                        break;
+                    }
                 }
                 
                 $notif_title = "✅ Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")!";
                 $target_pids = [];
-                if (!empty($w['player_id']) && strlen(trim($w['player_id'])) > 15) { $target_pids[] = trim($w['player_id']); }
+                
+                // Fetch player_id from users table
                 if ($user_id > 0) {
+                    $u_res = $conn->query("SELECT player_id FROM users WHERE id = {$user_id}");
+                    if ($u_res && ($ur = $u_res->fetch_assoc())) {
+                        if (!empty($ur['player_id']) && strlen(trim($ur['player_id'])) > 10) {
+                            $target_pids[] = trim($ur['player_id']);
+                        }
+                    }
+                    
+                    // Fetch player_ids from user_devices table
                     $d_res = $conn->query("SELECT player_id FROM user_devices WHERE user_id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
-                    if ($d_res) { while ($dr = $d_res->fetch_assoc()) { if (!empty($dr['player_id'])) $target_pids[] = trim($dr['player_id']); } }
+                    if ($d_res) {
+                        while ($dr = $d_res->fetch_assoc()) {
+                            if (!empty($dr['player_id']) && strlen(trim($dr['player_id'])) > 10) {
+                                $target_pids[] = trim($dr['player_id']);
+                            }
+                        }
+                    }
                 }
+                
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
-                if (!empty($target_pids) && function_exists("send_onesignal_push")) {
-                    @send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, [$user_id], ["badge_type" => "PAYOUT_SUCCESS"], false);
+                $target_uids = $user_id > 0 ? [$user_id] : [];
+                
+                if (!empty($target_pids) || !empty($target_uids)) {
+                    if (function_exists("send_onesignal_push")) {
+                        send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, $target_uids, ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
+                    }
                 }
+
+                // Store in app_notifications table for in-app bell notification
+                $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 
             } catch (Exception $e) {
                 $conn->rollback();
@@ -177,7 +209,7 @@ $withdrawals = $conn->query("
                     </div>
                 </div>
 
-                <!-- UPI Details Box (Cleaned: No Complete/Pay UPI button inside) -->
+                <!-- UPI Details Box -->
                 <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex justify-between items-center">
                     <div>
                         <span class="text-[10px] text-slate-400 block">Payout Destination UPI:</span>
@@ -215,7 +247,7 @@ $withdrawals = $conn->query("
                 <?php endif; ?>
 
             </div>
-        <?endwhile; ?>
+        <?php endwhile; ?>
     <?php else: ?>
         <div class="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-500 shadow-sm">
             <i class="fa-solid fa-money-bill-transfer text-3xl text-slate-300 dark:text-slate-700 mb-2 block"></i>
