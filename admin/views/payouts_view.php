@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($act === 'complete') {
             $conn->begin_transaction();
             try {
-                // 1. Mark withdrawals table as completed
+                // 1. Mark withdrawals table as completed instantly
                 $conn->query("UPDATE withdrawals SET status = 'Completed' WHERE id = $w_id");
                 
                 // 2. Update User's Passbook (transactions table)
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg = "Payout of " . format_inr($amount) . " to " . htmlspecialchars($upi_id) . " marked as Completed!";
                 $msg_type = "success";
 
-                // Target Push Notification
+                // Target Push Notification (Lightning Fast & Non-Blocking)
                 if (file_exists(__DIR__ . "/../../common/onesignal_helper.php")) { 
                     require_once __DIR__ . "/../../common/onesignal_helper.php"; 
                 } elseif (file_exists(__DIR__ . "/../common/onesignal_helper.php")) { 
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
                 if (!empty($target_pids) && function_exists("send_onesignal_push")) {
-                    send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, [$user_id], ["badge_type" => "PAYOUT_SUCCESS"], false);
+                    @send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, [$user_id], ["badge_type" => "PAYOUT_SUCCESS"], false);
                 }
 
             } catch (Exception $e) {
