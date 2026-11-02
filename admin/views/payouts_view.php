@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $msg_type = "success";
 
                 // ========================================================
-                // 100% WORKING ONESIGNAL PUSH NOTIFICATION DISPATCHER
+                // ONESIGNAL PUSH NOTIFICATION DISPATCHER
                 // ========================================================
                 $helper_paths = [
                     __DIR__ . "/../../common/onesignal_helper.php",
@@ -81,7 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if ($helper_loaded && function_exists("send_onesignal_push")) {
                     send_onesignal_push($notif_title, $notif_body, "/?tab=wallet", $target_pids, [$user_id], ["badge_type" => "PAYOUT_SUCCESS", "withdrawal_id" => $w_id], false);
                 } else {
-                    // Direct cURL Fallback if helper is missing
                     $onesignal_app_id = defined('ONESIGNAL_APP_ID') ? ONESIGNAL_APP_ID : "561bd59e-8355-47c8-88cc-0766688a105a";
                     $onesignal_api_key = defined('ONESIGNAL_API_KEY') ? ONESIGNAL_API_KEY : base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
                     
@@ -109,15 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
                 }
 
-                // Insert into app_notifications table for in-app bell notifications
-                $notif_sql = $conn->prepare("INSERT INTO app_notifications (user_id, title, message, target_url, badge_type) VALUES (?, ?, ?, '/?tab=wallet', 'PAYOUT_SUCCESS')");
-                if ($notif_sql) {
-                    $notif_sql->bind_param("iss", $user_id, $notif_title, $notif_body);
-                    $notif_sql->execute();
-                    $notif_sql->close();
-                } else {
-                    $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
-                }
+                // Insert into app_notifications table (Fixed: removed user_id column)
+                $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 
             } catch (Exception $e) {
                 $conn->rollback();
