@@ -66,11 +66,11 @@ $users = $conn->query("
 <div class="mb-5 flex items-center justify-between">
     <div>
         <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-            <i class="fa-solid fa-users-gear text-yellow-500"></i> User Management
+            <i class="fa-solid fa-users-gear text-blue-400"></i> User Management
         </h2>
         <p class="text-xs text-slate-500">Registered platform gamers, balances, and access control</p>
     </div>
-    <span class="text-xs font-bold px-3 py-1 bg-yellow-100 text-yellow-900 border border-yellow-300 rounded-full">
+    <span class="text-xs font-bold px-3 py-1 bg-blue-950/60 text-yellow-900 border border-blue-600/40 rounded-full">
         Total: <?= ($users ? $users->num_rows : 0); ?>
     </span>
 </div>
@@ -89,13 +89,13 @@ $users = $conn->query("
                 $is_admin_user = (($u['role'] ?? '') === 'admin');
                 $is_blocked = (($u['status'] ?? 'active') === 'blocked');
             ?>
-            <div class="bg-white border <?= $is_admin_user ? 'border-yellow-400 bg-yellow-50/20' : ($is_blocked ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200') ?> rounded-2xl p-4 shadow-xs space-y-3 transition">
+            <div class="bg-white border <?= $is_admin_user ? 'border-blue-500 bg-blue-950/40/20' : ($is_blocked ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200') ?> rounded-2xl p-4 shadow-xs space-y-3 transition">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-extrabold text-slate-900">@<?= htmlspecialchars($u['username']); ?></span>
                             <?php if ($is_admin_user): ?>
-                                <span class="text-[10px] bg-yellow-400 text-black px-2 py-0.5 rounded-full font-black shadow-xs flex items-center gap-1">
+                                <span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-black shadow-xs flex items-center gap-1">
                                     <i class="fa-solid fa-crown text-[9px]"></i> SUPER ADMIN (IMMUNE)
                                 </span>
                             <?php elseif ($is_blocked): ?>
@@ -134,7 +134,7 @@ $users = $conn->query("
                 <?php if ($is_admin_user): ?>
                     <div class="pt-1 text-center">
                         <span class="text-[11px] text-slate-500 font-medium">
-                            <i class="fa-solid fa-shield text-yellow-600 mr-1"></i> Super Admin account is permanently active and cannot be suspended.
+                            <i class="fa-solid fa-shield text-sky-300 mr-1"></i> Super Admin account is permanently active and cannot be suspended.
                         </span>
                     </div>
                 <?php else: ?>

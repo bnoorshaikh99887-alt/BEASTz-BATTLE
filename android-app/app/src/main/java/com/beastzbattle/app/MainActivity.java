@@ -29,6 +29,9 @@ import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.view.ViewGroup;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -46,13 +49,17 @@ import org.json.JSONObject;
 public class MainActivity extends Activity {
 
     private WebView webView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private FrameLayout splashLayout;
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 101;
     private final static int PERMISSION_REQUEST_NOTIFICATIONS = 102;
     private static final String APP_URL = "https://beastz-battle.vercel.app";
     public static final String CHANNEL_ID = "beastz_push_alerts";
+    private static final int CURRENT_APP_VERSION = 20; // v2.0.0
     private boolean isPageLoaded = false;
+    private static int rendererCrashes = 0;
+    private boolean offlinePageShown = false;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -92,7 +99,7 @@ public class MainActivity extends Activity {
             e.printStackTrace();
         }
 
-        // 2. Hardware acceleration & status bar styling
+        // 2. Hardware acceleration & status bar styling (Deep Slate / Dark Blue)
         Window window = getWindow();
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
@@ -105,15 +112,59 @@ public class MainActivity extends Activity {
         FrameLayout rootLayout = new FrameLayout(this);
         rootLayout.setBackgroundColor(0xFF080A0F);
 
-        // 4. Create WebView with Hardware Acceleration
+        // 4. Create WebView & SwipeRefreshLayout (Pull-to-Refresh)
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF080A0F);
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setLayerType(View.LAYER_TYPE_NONE, null);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
 
-        rootLayout.addView(webView, new FrameLayout.LayoutParams(
+        // Native SwipeRefreshLayout with vibrant Blue Gaming Theme colors
+        swipeRefreshLayout = new SwipeRefreshLayout(this);
+        swipeRefreshLayout.setColorSchemeColors(0xFF2563EB, 0xFF38BDF8, 0xFF60A5FA);
+        swipeRefreshLayout.setProgressBackgroundColorSchemeColor(0xFF0F172A);
+        swipeRefreshLayout.addView(webView, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
+        // Pull down to reload current page with fresh server assets
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            if (webView != null) {
+                try {
+                    webView.clearCache(false);
+                } catch (Exception ignored) {}
+                webView.reload();
+
+                // Safety timeout to prevent indefinite spinner
+                swipeRefreshLayout.postDelayed(() -> {
+                    if (swipeRefreshLayout != null && swipeRefreshLayout.isRefreshing()) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                }, 6000);
+            } else {
+                swipeRefreshLayout.setRefreshing(false);
+            }
+        });
+
+        // Strict Top-Only Pull-to-Refresh:
+        swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> {
+            if (webView == null) return false;
+            return webView.canScrollVertically(-1);
+        });
+
+        // Dynamic scroll listener: Disable SwipeRefreshLayout immediately when scrolled down
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+                if (swipeRefreshLayout != null) {
+                    boolean atTop = !webView.canScrollVertically(-1);
+                    swipeRefreshLayout.setEnabled(atTop);
+                }
+            });
+        }
+
+        rootLayout.addView(swipeRefreshLayout, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
@@ -134,7 +185,7 @@ public class MainActivity extends Activity {
 
         TextView titleView = new TextView(this);
         titleView.setText("BEASTz BATTLE");
-        titleView.setTextColor(0xFFFACC15);
+        titleView.setTextColor(0xFF38BDF8);
         titleView.setTextSize(22);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setGravity(Gravity.CENTER);
@@ -164,6 +215,7 @@ public class MainActivity extends Activity {
                 Gravity.CENTER
         );
         splashLayout.addView(splashContent, centerParams);
+
         rootLayout.addView(splashLayout, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -187,11 +239,10 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " BEASTzNativeApp/1.3.0 Android");
+        settings.setUserAgentString(settings.getUserAgentString() + " BEASTzNativeApp/2.0.0 Android");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -199,8 +250,29 @@ public class MainActivity extends Activity {
             cookieManager.setAcceptThirdPartyCookies(webView, true);
         }
 
+        // Version upgrade cache buster:
+        // When upgrading from older version (e.g. v1.0), purge stale HTTP cache and reload from clean state
+        SharedPreferences prefs = getSharedPreferences("beastz_prefs", Context.MODE_PRIVATE);
+        int savedVer = prefs.getInt("beastz_app_version", 0);
+        if (savedVer < CURRENT_APP_VERSION) {
+            try {
+                webView.clearCache(true);
+            } catch (Exception ignored) {}
+            prefs.edit().putInt("beastz_app_version", CURRENT_APP_VERSION).remove("last_url").apply();
+        }
+
         // Native JS Bridge for Direct Web-to-Native Notification Call & Device Sync
         webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void onScroll(final int scrollY) {
+                runOnUiThread(() -> {
+                    if (swipeRefreshLayout != null && webView != null) {
+                        boolean atTop = (scrollY <= 0) && !webView.canScrollVertically(-1);
+                        swipeRefreshLayout.setEnabled(atTop);
+                    }
+                });
+            }
+
             @JavascriptInterface
             public void postNativeNotification(String title, String message, String actionUrl) {
                 runOnUiThread(new Runnable() {
@@ -257,21 +329,30 @@ public class MainActivity extends Activity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
+                if (url != null && url.startsWith("http")) {
+                    offlinePageShown = false;
+                }
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 hideSplashScreen();
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
+
                 if (url != null && !url.contains("cashfree") && !url.contains("return") && !url.contains("error")) {
                     getSharedPreferences("beastz_prefs", Context.MODE_PRIVATE)
                             .edit()
                             .putString("last_url", url)
                             .apply();
                 }
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     CookieManager.getInstance().flush();
                 }
+
                 try {
                     OSDeviceState deviceState = OneSignal.getDeviceState();
                     if (deviceState != null && deviceState.getUserId() != null) {
@@ -286,6 +367,7 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url == null) return false;
 
+                // Support UPI and direct wallet intent links (PhonePe, Paytm, GPay, WhatsApp Pay)
                 if (url.startsWith("upi://") || url.startsWith("intent://") || 
                     url.startsWith("whatsapp://") || url.startsWith("phonepe://") || 
                     url.startsWith("paytmmp://") || url.startsWith("tez://")) {
@@ -324,26 +406,52 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
                 hideSplashScreen();
-
-                if (request != null && request.isForMainFrame()) {
-                    String curUrl = view.getUrl();
-                    if (curUrl != null && (curUrl.contains("cashfree") || curUrl.contains("return"))) {
-                        view.loadUrl(APP_URL + "?tab=wallet");
-                        return;
-                    }
-                    String errorHtml = "<html><body style='background-color:#080a0f;color:#ffffff;font-family:sans-serif;text-align:center;padding:60px 20px;'>"
-                            + "<div style='width:64px;height:64px;margin:0 auto 16px;background:rgba(250,204,21,0.15);border:1px solid #facc15;border-radius:20px;display:flex;align-items:center;justify-content:center;'><span style='font-size:30px;'>&#9889;</span></div>"
-                            + "<h2 style='color:#facc15;margin:0 0 8px;font-size:20px;font-weight:900;'>Connection Error</h2>"
-                            + "<p style='color:#94a3b8;font-size:13px;line-height:1.5;margin:0 0 24px;'>Please check your internet connection.</p>"
-                            + "<button onclick='location.reload()' style='background:#facc15;color:#080a0f;border:none;padding:12px 30px;border-radius:12px;font-weight:900;font-size:13px;cursor:pointer;'>RELOAD</button>"
-                            + "</body></html>";
-                    view.loadDataWithBaseURL(null, errorHtml, "text/html", "UTF-8", null);
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
                 }
+
+                if (request == null || !request.isForMainFrame() || offlinePageShown) return;
+
+                String curUrl = view.getUrl();
+                if (curUrl != null && (curUrl.contains("cashfree") || curUrl.contains("return"))) {
+                    view.loadUrl(APP_URL + "/?tab=wallet");
+                    return;
+                }
+
+                offlinePageShown = true;
+                String errorHtml = "<html><body style='background-color:#080a0f;color:#ffffff;font-family:sans-serif;text-align:center;padding:60px 20px;'>"
+                        + "<div style='width:64px;height:64px;margin:0 auto 16px;background:rgba(37,99,235,0.15);border:1px solid #3b82f6;border-radius:20px;display:flex;align-items:center;justify-content:center;'><span style='font-size:30px;'>&#9889;</span></div>"
+                        + "<h2 style='color:#38bdf8;margin:0 0 8px;font-size:20px;font-weight:900;'>Connection Error</h2>"
+                        + "<p style='color:#94a3b8;font-size:13px;line-height:1.5;margin:0 0 24px;'>Please check your internet connection.</p>"
+                        + "<button onclick=\"location.replace('" + APP_URL + "')\" style='background:#2563eb;color:#ffffff;border:none;padding:12px 30px;border-radius:12px;font-weight:900;font-size:13px;cursor:pointer;'>RELOAD</button>"
+                        + "</body></html>";
+                view.loadDataWithBaseURL(APP_URL, errorHtml, "text/html", "UTF-8", null);
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                rendererCrashes++;
+                hideSplashScreen();
+                if (rendererCrashes <= 2) {
+                    recreate();
+                }
+                return true;
             }
         });
 
-        // 9. File Chooser & Dialog Engine
+        // 9. File Chooser & Dialog Engine & Progress Listener
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                super.onProgressChanged(view, newProgress);
+                if (newProgress >= 90) {
+                    hideSplashScreen();
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                }
+            }
+
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, final JsResult result) {
                 try {
@@ -400,12 +508,26 @@ public class MainActivity extends Activity {
         });
 
         // 10. Load App
-        SharedPreferences prefs = getSharedPreferences("beastz_prefs", Context.MODE_PRIVATE);
         String lastUrl = prefs.getString("last_url", APP_URL);
-        if (lastUrl == null || lastUrl.isEmpty() || !lastUrl.startsWith("http")) {
+        if (lastUrl == null || !lastUrl.startsWith("https://beastz-battle.vercel.app")
+                || lastUrl.contains("install.php") || lastUrl.contains("cashfree")
+                || lastUrl.contains("logout") || lastUrl.contains("about:")) {
             lastUrl = APP_URL;
         }
-        webView.loadUrl(lastUrl);
+
+        final String startUrl = lastUrl;
+        webView.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!isPageLoaded && webView != null) {
+                    hideSplashScreen();
+                    try { webView.stopLoading(); } catch (Exception ignored) {}
+                    webView.loadUrl(APP_URL);
+                }
+            }
+        }, 10000);
+
+        webView.loadUrl(startUrl);
     }
 
     public void showSystemNotification(String title, String message, String actionUrl) {
@@ -419,6 +541,7 @@ public class MainActivity extends Activity {
                     intent.setData(Uri.parse(APP_URL + (actionUrl.startsWith("/") ? "" : "/") + actionUrl));
                 }
             }
+
             PendingIntent pendingIntent = PendingIntent.getActivity(
                     this, 
                     (int) System.currentTimeMillis(), 
@@ -520,6 +643,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        if (webView != null) {
+            webView.onPause();
+        }
         super.onPause();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             CookieManager.getInstance().flush();
@@ -527,18 +653,46 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    public void onBackPressed() {
+    protected void onResume() {
+        super.onResume();
         if (webView != null) {
-            String currentUrl = webView.getUrl();
-            if (currentUrl != null && (currentUrl.contains("cashfree.com") || currentUrl.contains("cashfree") || currentUrl.contains("cashfree_return") || currentUrl.contains("payment"))) {
-                webView.loadUrl(APP_URL + "?tab=wallet");
-                return;
-            }
-            if (webView.canGoBack()) {
-                webView.goBack();
-                return;
-            }
+            webView.onResume();
+            webView.resumeTimers();
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView == null) {
+            super.onBackPressed();
+            return;
+        }
+
+        String currentUrl = webView.getUrl();
+        if (currentUrl != null && (currentUrl.contains("cashfree.com") || currentUrl.contains("cashfree") || currentUrl.contains("cashfree_return") || currentUrl.contains("payment"))) {
+            webView.loadUrl(APP_URL + "/?tab=wallet");
+            return;
+        }
+
+        if (currentUrl != null && currentUrl.contains("beastz-battle.vercel.app")) {
+            webView.evaluateJavascript(
+                    "(function(){try{var v=document.querySelector('.spa-tab-view:not(.hidden)');if(v&&v.id&&v.id!=='spa-tab-home'&&typeof switchAppTab==='function'){switchAppTab('home');return 'tab';}}catch(e){}return 'exit';})()",
+                    new ValueCallback<String>() {
+                        @Override
+                        public void onReceiveValue(String value) {
+                            if (value != null && value.contains("tab")) return;
+                            finish();
+                        }
+                    }
+            );
+            return;
+        }
+
+        if (webView.canGoBack()) {
+            webView.goBack();
+            return;
+        }
+
         super.onBackPressed();
     }
 }

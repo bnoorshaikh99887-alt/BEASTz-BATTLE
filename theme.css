@@ -13,29 +13,29 @@ body {
     border: 1px solid transparent;
 }
 .nav-app-tab.active-tab {
-    background: rgba(250, 204, 21, 0.15) !important;
-    border-color: rgba(250, 204, 21, 0.35) !important;
-    box-shadow: 0 4px 15px -2px rgba(250, 204, 21, 0.25) !important;
-    color: #eab308 !important;
+    background: rgba(56, 189, 248, 0.15) !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
+    box-shadow: 0 4px 15px -2px rgba(56, 189, 248, 0.25) !important;
+    color: #2563eb !important;
 }
 html.dark .nav-app-tab.active-tab {
     background: rgba(15, 23, 42, 0.95) !important;
-    border-color: rgba(250, 204, 21, 0.45) !important;
-    box-shadow: 0 0 16px 2px rgba(0, 0, 0, 0.85), inset 0 0 10px rgba(250, 204, 21, 0.1) !important;
-    color: #facc15 !important;
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    box-shadow: 0 0 16px 2px rgba(0, 0, 0, 0.85), inset 0 0 10px rgba(56, 189, 248, 0.1) !important;
+    color: #38bdf8 !important;
 }
 
 /* ============================================================ */
 /* CRITICAL BADGE TEXT CONTRAST (Never Yellow on Yellow) */
 /* ============================================================ */
-.bg-yellow-400,
-html.dark .bg-yellow-400,
-[class*="bg-yellow-400"] {
-    background-color: #facc15 !important;
+.bg-blue-600,
+html.dark .bg-blue-600,
+[class*="bg-blue-600"] {
+    background-color: #38bdf8 !important;
     color: #020617 !important;
 }
-.bg-yellow-400 *,
-html.dark .bg-yellow-400 * {
+.bg-blue-600 *,
+html.dark .bg-blue-600 * {
     color: #020617 !important;
 }
 
@@ -129,8 +129,8 @@ html.dark textarea::placeholder {
 html.dark input:focus,
 html.dark select:focus,
 html.dark textarea:focus {
-    border-color: #eab308 !important;
-    box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.25) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
 }
 
 /* Tournament Cards */
@@ -140,17 +140,17 @@ html.dark .tournament-card {
     box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.4) !important;
 }
 html.dark .tournament-card:hover {
-    border-color: #eab308 !important;
-    box-shadow: 0 6px 22px -3px rgba(234, 179, 8, 0.18) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 6px 22px -3px rgba(37, 99, 235, 0.18) !important;
 }
 
 /* Category Filter Tabs */
-html.dark .category-tab:not(.bg-yellow-400) {
+html.dark .category-tab:not(.bg-blue-600) {
     background-color: #131b2e !important;
     color: #94a3b8 !important;
     border-color: #1e293b !important;
 }
-html.dark .category-tab:not(.bg-yellow-400):hover {
+html.dark .category-tab:not(.bg-blue-600):hover {
     background-color: #1e293b !important;
     color: #f8fafc !important;
     border-color: #334155 !important;
@@ -158,11 +158,11 @@ html.dark .category-tab:not(.bg-yellow-400):hover {
 
 /* Match Navigation Subtabs in My Matches */
 html.dark .match-tab.text-slate-950,
-html.dark .match-tab.border-yellow-400 {
-    color: #facc15 !important;
-    border-color: #facc15 !important;
+html.dark .match-tab.border-blue-500 {
+    color: #38bdf8 !important;
+    border-color: #38bdf8 !important;
 }
-html.dark .match-tab:not(.border-yellow-400) {
+html.dark .match-tab:not(.border-blue-500) {
     color: #94a3b8 !important;
 }
 
@@ -176,14 +176,14 @@ html.dark [id$="modal"] .bg-white {
 }
 
 /* Color Accent Badges in Dark Mode */
-html.dark .bg-yellow-50 {
-    background-color: rgba(234, 179, 8, 0.15) !important;
-    border-color: rgba(234, 179, 8, 0.35) !important;
-    color: #fef08a !important;
+html.dark .bg-blue-950/40 {
+    background-color: rgba(37, 99, 235, 0.15) !important;
+    border-color: rgba(37, 99, 235, 0.35) !important;
+    color: #bae6fd !important;
 }
-html.dark .bg-yellow-100 {
-    background-color: rgba(234, 179, 8, 0.22) !important;
-    color: #fef08a !important;
+html.dark .bg-blue-950/60 {
+    background-color: rgba(37, 99, 235, 0.22) !important;
+    color: #bae6fd !important;
 }
 
 html.dark .bg-emerald-50 {
@@ -221,8 +221,8 @@ html.dark .bg-blue-50 {
 }
 
 html.dark .bg-amber-50 {
-    background-color: rgba(245, 158, 11, 0.15) !important;
-    border-color: rgba(245, 158, 11, 0.35) !important;
+    background-color: rgba(37, 99, 235, 0.15) !important;
+    border-color: rgba(37, 99, 235, 0.35) !important;
     color: #fde68a !important;
 }
 
@@ -249,24 +249,24 @@ html.dark .slot-btn-taken {
 /* ============================================================ */
 html.dark .bg-slate-900 {
     background-color: #0b0f19 !important;
-    border-color: rgba(250, 204, 21, 0.45) !important;
+    border-color: rgba(56, 189, 248, 0.45) !important;
 }
 html.dark .bg-slate-900 * {
     color: #f8fafc !important;
 }
-html.dark .bg-slate-900 .text-yellow-400,
-html.dark .bg-slate-900 strong.text-yellow-400,
-html.dark .bg-slate-900 span.text-yellow-400,
-html.dark .bg-slate-900 i.text-yellow-400 {
-    color: #facc15 !important;
+html.dark .bg-slate-900 .text-sky-400,
+html.dark .bg-slate-900 strong.text-sky-400,
+html.dark .bg-slate-900 span.text-sky-400,
+html.dark .bg-slate-900 i.text-sky-400 {
+    color: #38bdf8 !important;
 }
 html.dark .bg-slate-900 .text-slate-300,
 html.dark .bg-slate-900 .text-slate-200 {
     color: #cbd5e1 !important;
 }
-html.dark .bg-slate-900 .bg-yellow-400,
-html.dark .bg-slate-900 .bg-yellow-400 * {
-    background-color: #facc15 !important;
+html.dark .bg-slate-900 .bg-blue-600,
+html.dark .bg-slate-900 .bg-blue-600 * {
+    background-color: #38bdf8 !important;
     color: #020617 !important;
 }
 
@@ -274,26 +274,26 @@ html.dark .bg-slate-900 .bg-yellow-400 * {
 /* ============================================================ */
 /* SOLID FULL-COVER YELLOW CAPSULE SYSTEM (Dark & Light Mode) */
 /* ============================================================ */
-.category-tab.bg-yellow-400,
-html.dark .category-tab.bg-yellow-400,
-.match-tab.bg-yellow-400,
-html.dark .match-tab.bg-yellow-400,
-.admin-tab-btn.bg-yellow-400,
-html.dark .admin-tab-btn.bg-yellow-400,
+.category-tab.bg-blue-600,
+html.dark .category-tab.bg-blue-600,
+.match-tab.bg-blue-600,
+html.dark .match-tab.bg-blue-600,
+.admin-tab-btn.bg-blue-600,
+html.dark .admin-tab-btn.bg-blue-600,
 .yellow-capsule-active {
-    background-color: #facc15 !important;
+    background-color: #38bdf8 !important;
     color: #020617 !important;
     font-weight: 900 !important;
-    border-color: #facc15 !important;
-    box-shadow: 0 2px 10px rgba(250, 204, 21, 0.45) !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 2px 10px rgba(56, 189, 248, 0.45) !important;
 }
 
-.category-tab.bg-yellow-400 *,
-html.dark .category-tab.bg-yellow-400 *,
-.match-tab.bg-yellow-400 *,
-html.dark .match-tab.bg-yellow-400 *,
-.admin-tab-btn.bg-yellow-400 *,
-html.dark .admin-tab-btn.bg-yellow-400 * {
+.category-tab.bg-blue-600 *,
+html.dark .category-tab.bg-blue-600 *,
+.match-tab.bg-blue-600 *,
+html.dark .match-tab.bg-blue-600 *,
+.admin-tab-btn.bg-blue-600 *,
+html.dark .admin-tab-btn.bg-blue-600 * {
     color: #020617 !important;
 }
 
@@ -332,8 +332,8 @@ html.dark .admin-tab-btn.bg-yellow-400 * {
 .custom-select-trigger:hover,
 .custom-select-trigger:focus,
 .custom-select-wrapper.is-open .custom-select-trigger {
-    border-color: #facc15 !important;
-    box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.5);
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
     outline: none;
 }
 .custom-select-chevron {
@@ -344,7 +344,7 @@ html.dark .admin-tab-btn.bg-yellow-400 * {
 }
 .custom-select-wrapper.is-open .custom-select-chevron {
     transform: rotate(180deg);
-    color: #facc15;
+    color: #38bdf8;
 }
 .custom-select-menu {
     position: absolute;
@@ -387,11 +387,11 @@ html.dark .admin-tab-btn.bg-yellow-400 * {
 .custom-select-option:hover,
 .custom-select-option:focus {
     background-color: #1e293b;
-    color: #facc15;
+    color: #38bdf8;
     outline: none;
 }
 .custom-select-option.is-selected {
-    background-color: #facc15 !important;
+    background-color: #38bdf8 !important;
     color: #020617 !important;
     font-weight: 900 !important;
 }
@@ -399,9 +399,176 @@ html.dark .admin-tab-btn.bg-yellow-400 * {
     width: 5px;
 }
 .custom-select-menu::-webkit-scrollbar-thumb {
-    background-color: #facc15;
+    background-color: #38bdf8;
     border-radius: 5px;
 }
 .custom-select-menu::-webkit-scrollbar-track {
     background-color: #0b0f19;
+}
+
+/* ============================================================ */
+
+/* ============================================================ */
+
+/* ============================================================ */
+/* LIGHT MODE TEXT VISIBILITY & CONTRAST ENGINE                 */
+/* ============================================================ */
+
+/* Default text and background in Light Mode */
+html:not(.dark),
+html:not(.dark) body {
+    color: #0f172a !important;
+    background-color: #f8fafc !important;
+}
+
+/* All headings in Light Mode (except elements explicitly marked text-white or inside dark cards) */
+html:not(.dark) h1:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
+html:not(.dark) h2:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
+html:not(.dark) h3:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
+html:not(.dark) h4:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
+html:not(.dark) h5:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
+html:not(.dark) h6:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
+html:not(.dark) .font-display:not(.keep-white):not(.text-white) {
+    color: #0f172a !important;
+}
+
+/* Form labels, inputs and selects in Light Mode */
+html:not(.dark) label:not(.keep-white) {
+    color: #334155 !important;
+}
+
+html:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+html:not(.dark) textarea,
+html:not(.dark) select {
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+/* Light Mode Card Text Overrides (Fix white-on-white inside cards) */
+html:not(.dark) .bg-white h1,
+html:not(.dark) .bg-white h2,
+html:not(.dark) .bg-white h3,
+html:not(.dark) .bg-white h4,
+html:not(.dark) .bg-white h5,
+html:not(.dark) .bg-white h6,
+html:not(.dark) .bg-slate-50 h1,
+html:not(.dark) .bg-slate-50 h2,
+html:not(.dark) .bg-slate-50 h3,
+html:not(.dark) .bg-slate-50 h4,
+html:not(.dark) .bg-slate-100 h1,
+html:not(.dark) .bg-slate-100 h2,
+html:not(.dark) .bg-slate-100 h3 {
+    color: #0f172a !important;
+}
+
+/* Category & Action tabs */
+html:not(.dark) .category-tab:not(.active) {
+    color: #334155 !important;
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+}
+html:not(.dark) .category-tab.active {
+    color: #ffffff !important;
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+/* Primary Blue Buttons & Badges: Always Crisp White */
+.bg-blue-600,
+.bg-blue-600 *,
+.bg-blue-700,
+.bg-blue-700 *,
+.btn-primary,
+.btn-primary * {
+    color: #ffffff !important;
+}
+
+/* Dedicated Permanent Dark Containers */
+/* Dedicated Permanent Dark Containers & Cards */
+.bg-slate-950,
+.bg-slate-900,
+.bg-black,
+[class*="from-blue-950"],
+[class*="from-slate-900"],
+[class*="bg-[#131b2e]"],
+html.dark [class*="dark:bg-[#131b2e]"],
+html.dark .bg-white {
+    color: #ffffff;
+}
+
+.bg-slate-950 h1, .bg-slate-950 h2, .bg-slate-950 h3, .bg-slate-950 h4,
+.bg-slate-900 h1, .bg-slate-900 h2, .bg-slate-900 h3, .bg-slate-900 h4,
+[class*="from-blue-950"] h1, [class*="from-blue-950"] h2, [class*="from-blue-950"] h3,
+[class*="from-slate-900"] h1, [class*="from-slate-900"] h2, [class*="from-slate-900"] h3,
+[class*="bg-[#131b2e]"] h1, [class*="bg-[#131b2e]"] h2, [class*="bg-[#131b2e]"] h3, [class*="bg-[#131b2e]"] h4,
+html.dark [class*="dark:bg-[#131b2e]"] h1,
+html.dark [class*="dark:bg-[#131b2e]"] h2,
+html.dark [class*="dark:bg-[#131b2e]"] h3,
+html.dark [class*="dark:bg-[#131b2e]"] h4,
+html.dark .bg-white h1,
+html.dark .bg-white h2,
+html.dark .bg-white h3,
+html.dark .bg-white h4,
+.text-white,
+h1.text-white, h2.text-white, h3.text-white, h4.text-white {
+    color: #ffffff !important;
+}
+
+[class*="bg-[#131b2e]"] label,
+html.dark [class*="dark:bg-[#131b2e]"] label,
+.bg-slate-900 label {
+    color: #cbd5e1 !important;
+}
+
+[class*="bg-[#131b2e]"] .text-slate-500,
+html.dark [class*="dark:bg-[#131b2e]"] .text-slate-500,
+.bg-slate-900 .text-slate-500 {
+    color: #94a3b8 !important;
+}
+
+/* Custom Slot Picker Buttons */
+.slot-btn {
+    color: #ffffff !important;
+}
+.slot-btn:not(.bg-blue-600) {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+.slot-btn.bg-blue-600 {
+    background-color: #2563eb !important;
+    border-color: #38bdf8 !important;
+}
+
+/* DARK MODE RULES */
+html.dark,
+html.dark body {
+    color: #f8fafc !important;
+    background-color: #0b0f19 !important;
+}
+
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+    color: #f8fafc !important;
+}
+
+html.dark label {
+    color: #cbd5e1 !important;
+}
+
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+html.dark textarea,
+html.dark select {
+    color: #ffffff !important;
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
 }

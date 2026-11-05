@@ -1,47 +1,87 @@
 <?php
+// Strict Admin Access Guard: Prevent normal players from accessing or approving payouts
+$is_payout_admin = !empty($_SESSION['admin_id']) || 
+                   ((isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) || 
+                   !empty($_SESSION['is_super_admin']) || 
+                   !empty($_SESSION['admin_role']);
+
+if (!$is_payout_admin) {
+    if (!empty($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json')) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Unauthorized admin access required.']);
+        exit;
+    }
+    safe_redirect("../login.php");
+    exit;
+}
+
 $msg = "";
 $msg_type = "";
+
 
 // Handle Standard Payout Approval / Rejection
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $w_id = (int)$_POST['withdrawal_id'];
     $act = $_POST['action'];
 
-    $w_stmt = $conn->prepare("SELECT w.*, u.username, u.wallet_balance FROM withdrawals w LEFT JOIN users u ON w.user_id = u.id WHERE w.id = ?");
-    $w_stmt->bind_param("i", $w_id);
-    $w_stmt->execute();
-    $w = $w_stmt->get_result()->fetch_assoc();
-    $w_stmt->close();
+    if ($w_id > 0 && in_array($act, ['complete', 'reject'], true)) {
+        $conn->begin_transaction();
+        try {
+            // 1. Lock withdrawal row to prevent race conditions & double processing
+            $w_stmt = $conn->prepare("
+                SELECT w.*, u.username, u.wallet_balance 
+                FROM withdrawals w 
+                LEFT JOIN users u ON w.user_id = u.id 
+                WHERE w.id = ? FOR UPDATE
+            ");
+            $w_stmt->bind_param("i", $w_id);
+            $w_stmt->execute();
+            $w = $w_stmt->get_result()->fetch_assoc();
+            $w_stmt->close();
 
-    if ($w && (strtolower($w['status']) === 'pending')) {
-        $user_id = (int)$w['user_id'];
-        $amount = (float)$w['amount'];
-        $upi_id = $w['upi_id'] ?? '';
-        $is_host_request = (int)($w['is_admin_request'] ?? 0);
-        $host_admin_id = (int)($w['admin_id'] ?? 0);
+            if (!$w) {
+                throw new Exception("Withdrawal record not found.");
+            }
+            if (strtolower($w['status']) !== 'pending') {
+                throw new Exception("This payout request has already been processed or changed.");
+            }
 
-        if ($act === 'complete') {
-            $conn->begin_transaction();
-            try {
-                // 1. Mark withdrawals table as completed
-                $conn->query("UPDATE withdrawals SET status = 'Completed' WHERE id = $w_id");
-                
-                // 2. Update User's Passbook (transactions table)
+            $user_id = (int)$w['user_id'];
+            $amount = (float)$w['amount'];
+            $upi_id = $w['upi_id'] ?? '';
+            $is_host_request = (int)($w['is_admin_request'] ?? 0);
+            $host_admin_id = (int)($w['admin_id'] ?? 0);
+            $new_status = ($act === 'complete') ? 'Completed' : 'Rejected';
+
+            // 2. ATOMIC STATUS FLIP: Guarantee affected_rows is exactly 1
+            $up = $conn->prepare("UPDATE withdrawals SET status = ? WHERE id = ? AND LOWER(status) = 'pending'");
+            $up->bind_param("si", $new_status, $w_id);
+            $up->execute();
+            $flipped = ($up->affected_rows === 1);
+            $up->close();
+
+            if (!$flipped) {
+                throw new Exception("Atomic status update failed: request was already processed.");
+            }
+
+            // 3. Process Balance or Passbook based on action
+            if ($act === 'complete') {
+                // Update User's Passbook (transactions table)
                 $safe_upi = $conn->real_escape_string($upi_id);
                 $conn->query("UPDATE transactions SET description = 'Withdrawal Processed: Sent to {$safe_upi}' WHERE user_id = {$user_id} AND description LIKE 'Withdrawal Request (Pending%' AND amount = {$amount}");
 
                 $conn->commit();
-                
+
                 $msg = "Payout of " . format_inr($amount) . " to " . htmlspecialchars($upi_id) . " marked as Completed!";
                 $msg_type = "success";
 
                 // ========================================================
-                // BULLETPROOF ONESIGNAL PUSH DISPATCHER (DIRECT REST API)
+                // ONESIGNAL PUSH DISPATCHER (DIRECT REST API)
                 // ========================================================
-                $notif_title = "✅ Withdrawal Successfully Completed!";
+                $notif_title = "Withdrawal Successfully Completed!";
                 $notif_body = "₹" . number_format($amount, 2) . " has been successfully transferred to your UPI ID (" . $upi_id . ")!";
 
-                // Fetch player_ids from user_devices and users table
                 $target_pids = [];
                 if ($user_id > 0) {
                     $d_res = $conn->query("SELECT player_id FROM user_devices WHERE user_id = {$user_id} AND player_id IS NOT NULL AND player_id != ''");
@@ -61,9 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
 
-                // OneSignal Credentials
-                $onesignal_app_id = "561bd59e-8355-47c8-88cc-0766688a105a";
-                $onesignal_api_key = base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
+                $onesignal_app_id = defined('ONESIGNAL_APP_ID') ? ONESIGNAL_APP_ID : (function_exists('env') ? env('ONESIGNAL_APP_ID', '561bd59e-8355-47c8-88cc-0766688a105a') : '561bd59e-8355-47c8-88cc-0766688a105a');
+                $onesignal_api_key = function_exists('get_onesignal_key') ? get_onesignal_key() : (function_exists('env') ? env('ONESIGNAL_API_KEY', '') : '');
 
                 if (!empty($onesignal_app_id)) {
                     $fields = [
@@ -76,7 +115,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if (!empty($target_pids)) {
                         $fields['include_player_ids'] = $target_pids;
                     } else {
-                        // Fallback to External User ID mapping
                         $fields['include_external_user_ids'] = [strval($user_id)];
                         $fields['channel_for_external_user_ids'] = 'push';
                     }
@@ -92,18 +130,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     curl_close($ch);
                 }
 
-                // Safely ensure table supports notifications and insert in-app alert
                 @$conn->query("ALTER TABLE app_notifications ADD COLUMN IF NOT EXISTS user_id INT DEFAULT 0");
                 $conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($notif_title) . "', '" . $conn->real_escape_string($notif_body) . "', '/?tab=wallet', 'PAYOUT_SUCCESS')");
 
-            } catch (Exception $e) {
-                $conn->rollback();
-                $msg = "Payout processing error: " . $e->getMessage();
-                $msg_type = "error";
-            }
-        } elseif ($act === 'reject') {
-            $conn->begin_transaction();
-            try {
+            } else {
+                // Rejection: Refund wallet balance ONLY after atomic status flip succeeded
                 if ($is_host_request && $host_admin_id > 0) {
                     $conn->query("UPDATE admin SET wallet_balance = wallet_balance + {$amount} WHERE id = {$host_admin_id}");
                 } else {
@@ -121,15 +152,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $tx->close();
                 }
 
-                $conn->query("UPDATE withdrawals SET status = 'Rejected' WHERE id = $w_id");
                 $conn->commit();
-                $msg = "Withdrawal request rejected and " . format_inr($amount) . " refunded.";
+                $msg = "Withdrawal request rejected and " . format_inr($amount) . " refunded to wallet.";
                 $msg_type = "success";
-            } catch (Exception $e) {
-                $conn->rollback();
-                $msg = "Rejection error: " . $e->getMessage();
-                $msg_type = "error";
             }
+        } catch (Exception $e) {
+            $conn->rollback();
+            $msg = "Payout processing error: " . $e->getMessage();
+            $msg_type = "error";
         }
     }
 }
@@ -146,17 +176,17 @@ $withdrawals = $conn->query("
 <div class="mb-5 flex items-center justify-between">
     <div>
         <h2 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2 font-display">
-            <i class="fa-solid fa-hand-holding-dollar text-yellow-500"></i>
+            <i class="fa-solid fa-hand-holding-dollar text-blue-400"></i>
             <span>UPI Withdrawal Requests</span>
         </h2>
         <p class="text-xs text-slate-500">Send money to player UPI ID and mark payout completed</p>
     </div>
     <div class="flex items-center gap-2">
-        <button type="button" onclick="location.reload();" class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm cursor-pointer">
+        <button type="button" onclick="location.reload();" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black flex items-center gap-1 shadow-sm cursor-pointer">
             <i class="fa-solid fa-rotate text-[10px]"></i>
             <span>Refresh</span>
         </button>
-        <span class="text-xs font-bold px-3 py-1 bg-yellow-100 dark:bg-yellow-400/10 text-yellow-900 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-400/30 rounded-full">
+        <span class="text-xs font-bold px-3 py-1 bg-blue-950/60 dark:bg-blue-600/10 text-sky-400 dark:text-sky-400 border border-blue-600/40 dark:border-blue-500/30 rounded-full">
             Payouts Studio
         </span>
     </div>
@@ -177,7 +207,7 @@ $withdrawals = $conn->query("
                 $is_completed = (strtolower($w['status']) === 'completed');
                 $is_host_req = ((int)($w['is_admin_request'] ?? 0) === 1);
             ?>
-            <div class="bg-white dark:bg-[#131b2e] border <?= $is_host_req ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.25)] ring-2 ring-yellow-400/30' : ($is_pending ? 'border-amber-400/60 ring-1 ring-amber-400/20' : 'border-slate-200 dark:border-slate-800') ?> rounded-2xl p-4 shadow-sm space-y-3 transition">
+            <div class="bg-white dark:bg-[#131b2e] border <?= $is_host_req ? 'border-blue-500 shadow-[0_0_20px_rgba(250,204,21,0.25)] ring-2 ring-blue-500/30' : ($is_pending ? 'border-amber-400/60 ring-1 ring-amber-400/20' : 'border-slate-200 dark:border-slate-800') ?> rounded-2xl p-4 shadow-sm space-y-3 transition">
                 
                 <div class="flex items-start justify-between">
                     <div>
@@ -185,14 +215,14 @@ $withdrawals = $conn->query("
                             <span class="text-sm font-extrabold text-slate-900 dark:text-white">@<?= htmlspecialchars($w['username']); ?></span>
                             
                             <?php if ($is_host_req): ?>
-                                <span class="px-2.5 py-0.5 rounded-full bg-yellow-400 text-slate-950 font-black text-[10px] uppercase shadow-md shadow-yellow-400/40 animate-pulse flex items-center gap-1">
+                                <span class="px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-black text-[10px] uppercase shadow-md shadow-blue-500/40 animate-pulse flex items-center gap-1">
                                     <i class="fa-solid fa-crown text-[9px]"></i>
                                     <span>HOST ADMIN PAYOUT</span>
                                 </span>
                             <?php endif; ?>
 
                             <?php if ($is_pending): ?>
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/10 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-400/35">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950/50 dark:bg-blue-600/10 text-sky-200 dark:text-sky-400 border border-amber-300 dark:border-amber-400/35">
                                     Pending Payment
                                 </span>
                             <?php elseif ($is_completed): ?>
@@ -227,7 +257,7 @@ $withdrawals = $conn->query("
                         </span>
                     </div>
                     <div>
-                        <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($w['upi_id']); ?>'); alert('UPI ID copied!');" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-yellow-400 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($w['upi_id']); ?>'); alert('UPI ID copied!');" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
                             <i class="fa-solid fa-copy mr-1"></i> Copy UPI
                         </button>
                     </div>

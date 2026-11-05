@@ -38,6 +38,22 @@ try {
         $conn->query("ALTER TABLE users ADD COLUMN upi_id VARCHAR(255) NULL AFTER wallet_balance;");
     }
 
+    // 5. Create cashfree_orders table if not exists
+    $conn->query("CREATE TABLE IF NOT EXISTS `cashfree_orders` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `order_id` VARCHAR(100) NOT NULL UNIQUE,
+        `user_id` INT NOT NULL,
+        `amount` DECIMAL(10, 2) NOT NULL,
+        `status` ENUM('PENDING', 'PAID', 'FAILED', 'USER_DROPPED') NOT NULL DEFAULT 'PENDING',
+        `payment_session_id` VARCHAR(255) NULL,
+        `cf_payment_id` VARCHAR(100) NULL,
+        `raw_response` TEXT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX `idx_user` (`user_id`),
+        INDEX `idx_status` (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
     // Default settings seed
     $conn->query("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES 
         ('admin_upi_id', '9878385810@upi'),

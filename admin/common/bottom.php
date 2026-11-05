@@ -36,7 +36,7 @@ if (
                 </button>
                 <button type="button" onclick="switchAdminTab('notifications')" id="admin-bottom-notifications" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'notifications' ? $act_bot : $inact_bot); ?>">
                     <i class="fa-solid fa-paper-plane text-base mb-0.5"></i>
-                    <span class="text-[8px] font-bold text-yellow-500 font-black">Push Alerts</span>
+                    <span class="text-[8px] font-bold text-blue-400 font-black">Push Alerts</span>
                 </button>
                 <button type="button" onclick="switchAdminTab('admins')" id="admin-bottom-admins" class="admin-bottom-tab flex flex-col items-center py-1 rounded-xl cursor-pointer <?= ($cur_admin_tab === 'admins' ? $act_bot : $inact_bot); ?>">
                     <i class="fa-solid fa-user-shield text-base mb-0.5"></i>
@@ -107,7 +107,7 @@ if (
         window.scrollTo({ top: 0, behavior: 'instant' });
 
         // 3. Highlight Top Capsule Nav
-        var actPillClasses = ['bg-yellow-400', 'text-slate-950', 'border-yellow-400', 'font-black', 'shadow-xs'];
+        var actPillClasses = ['bg-blue-600', 'text-slate-950', 'border-blue-500', 'font-black', 'shadow-xs'];
         var inactPillClasses = ['text-slate-400', 'hover:text-white', 'font-bold', 'bg-slate-900', 'border-slate-800'];
         
         document.querySelectorAll('.admin-tab-btn').forEach(function(btn) {
@@ -126,14 +126,14 @@ if (
 
         // 4. Highlight Bottom Navigation Icons
         document.querySelectorAll('.admin-bottom-tab').forEach(function(btn) {
-            btn.classList.remove('text-yellow-500', 'font-black');
+            btn.classList.remove('text-blue-400', 'font-black');
             btn.classList.add('text-slate-400');
         });
 
         var activeBottom = document.getElementById('admin-bottom-' + tabName);
         if (activeBottom) {
             activeBottom.classList.remove('text-slate-400');
-            activeBottom.classList.add('text-yellow-500', 'font-black');
+            activeBottom.classList.add('text-blue-400', 'font-black');
         }
 
         // 5. Update URL query without page reload

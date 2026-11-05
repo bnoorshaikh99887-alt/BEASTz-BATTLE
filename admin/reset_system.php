@@ -39,12 +39,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     rs_out(["success" => false, "error" => "Only POST allowed"], 405);
 }
 
-// 2. Admin login compulsory
+// 2. Super Admin Authorization Check (Strict IDOR Protection)
 $admin_id   = (int)($_SESSION['admin_id'] ?? 0);
 $admin_user = (string)($_SESSION['admin_user'] ?? $_SESSION['username'] ?? '');
-$is_admin   = $admin_id > 0 && (($_SESSION['role'] ?? '') === 'admin' || isset($_SESSION['admin_id']));
-if (!$is_admin || $admin_user === '') {
-    rs_out(["success" => false, "error" => "Unauthorized. Please login as admin."], 401);
+$is_super   = !empty($_SESSION['is_super_admin']) || 
+              ($admin_user === 'anonymous.349') || 
+              ($admin_user === 'admin') || 
+              (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'super_admin');
+
+if (!$is_super || $admin_id <= 0 || $admin_user === '') {
+    rs_out(["success" => false, "error" => "Access Denied: Only Master / Super Administrator can authorize Master System Reset."], 403);
 }
 
 // 3. Same-origin check (CSRF se bachav)

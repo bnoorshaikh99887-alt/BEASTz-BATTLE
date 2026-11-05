@@ -17,14 +17,14 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 <!-- Top Profile Header (Clean & Fast) -->
 <div class="text-center pt-2 pb-5">
     <div class="relative inline-block mb-2.5 cursor-pointer group" onclick="openAvatarModal()" title="Click to Change Photo">
-        <img id="profileHeaderAvatar" src="<?= htmlspecialchars($my_avatar); ?>" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-4 border-yellow-400 shadow-md bg-slate-100 mx-auto transition group-hover:scale-105">
-        <div class="absolute bottom-0 right-0 w-7 h-7 bg-yellow-400 text-slate-950 border-2 border-white rounded-full flex items-center justify-center text-xs shadow-md group-hover:bg-yellow-500 transition">
+        <img id="profileHeaderAvatar" src="<?= htmlspecialchars($my_avatar); ?>" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-4 border-blue-500 shadow-md bg-slate-100 mx-auto transition group-hover:scale-105">
+        <div class="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 text-white border-2 border-white rounded-full flex items-center justify-center text-xs shadow-md group-hover:bg-blue-600 transition">
             <i class="fa-solid fa-camera text-[10px]"></i>
         </div>
     </div>
     
     <div>
-        <button type="button" onclick="openAvatarModal()" class="text-[11px] font-bold text-yellow-600 hover:text-yellow-700 underline mb-1">
+        <button type="button" onclick="openAvatarModal()" class="text-[11px] font-bold text-sky-300 hover:text-sky-200 underline mb-1">
             Change Photo
         </button>
     </div>
@@ -36,8 +36,8 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
         <?= !empty($me['email']) ? htmlspecialchars($me['email']) : (!empty($my_phone) ? '+91 ' . htmlspecialchars($my_phone) : 'Player'); ?>
     </span>
 
-    <div class="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 bg-yellow-50 border border-yellow-300 rounded-full text-xs font-black text-yellow-900">
-        <i class="fa-solid fa-wallet text-yellow-500"></i>
+    <div class="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 bg-blue-950/40 border border-blue-600/40 rounded-full text-xs font-black text-sky-400">
+        <i class="fa-solid fa-wallet text-blue-400"></i>
         <span>Balance: <?= format_compact_inr($me['wallet_balance']); ?></span>
     </div>
 </div>
@@ -48,12 +48,12 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-3.5">
     <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
         <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs">
+            <div class="w-7 h-7 rounded-lg bg-blue-950/60 text-sky-200 flex items-center justify-center text-xs">
                 <i class="fa-solid fa-id-badge"></i>
             </div>
             <span class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Account Settings</span>
         </div>
-        <button type="button" onclick="openAccountModal()" class="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-lg text-[10px] shadow-xs transition active:scale-95 flex items-center gap-1">
+        <button type="button" onclick="openAccountModal()" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg text-[10px] shadow-xs transition active:scale-95 flex items-center gap-1">
             <i class="fa-solid fa-pen-to-square text-[9px]"></i>
             <span>Edit</span>
         </button>
@@ -93,7 +93,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-3.5">
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-sm shadow-2xs">
+            <div class="w-9 h-9 rounded-xl bg-blue-950/60 text-sky-200 flex items-center justify-center text-sm shadow-2xs">
                 <i class="fa-solid fa-moon beastz-theme-icon"></i>
             </div>
             <div>
@@ -104,7 +104,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
         <!-- Toggle Switch -->
         <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" onchange="toggleTheme()" class="sr-only peer beastz-theme-toggle-input">
-            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
         </label>
     </div>
 </div>
@@ -115,7 +115,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
     <!-- FAQ SECTION (FREQUENTLY ASKED QUESTIONS) -->
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs mb-3">
         <h3 class="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center gap-2 mb-3">
-            <i class="fa-solid fa-circle-question text-yellow-500"></i>
+            <i class="fa-solid fa-circle-question text-blue-400"></i>
             <span>Frequently Asked Questions (FAQ)</span>
         </h3>
         <div class="space-y-2 text-xs">
@@ -152,7 +152,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
     <!-- Change Avatar Button -->
     <button type="button" onclick="openAvatarModal()" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs transition group">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-black transition">
+            <div class="w-8 h-8 rounded-xl bg-blue-950/60 text-sky-200 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-black transition">
                 <i class="fa-solid fa-camera"></i>
             </div>
             <div class="text-left">
@@ -195,12 +195,12 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs mb-8">
     <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs">
+            <div class="w-7 h-7 rounded-lg bg-blue-950/60 text-sky-200 flex items-center justify-center text-xs">
                 <i class="fa-solid fa-receipt"></i>
             </div>
             <span class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Passbook History</span>
         </div>
-        <button type="button" onclick="switchAppTab('wallet')" class="text-[10px] font-bold text-yellow-600 hover:underline cursor-pointer">Deposit / Withdraw</button>
+        <button type="button" onclick="switchAppTab('wallet')" class="text-[10px] font-bold text-sky-300 hover:underline cursor-pointer">Deposit / Withdraw</button>
     </div>
 
     <!-- Strict Fixed Height & Vertical Scroll Container -->
@@ -237,7 +237,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
         </button>
 
         <div class="text-center mb-4">
-            <div class="w-12 h-12 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-lg font-black mx-auto mb-2 shadow-xs">
+            <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-lg font-black mx-auto mb-2 shadow-xs">
                 <i class="fa-solid fa-user-gear"></i>
             </div>
             <h3 class="text-sm font-extrabold text-slate-900">Account Settings</h3>
@@ -249,25 +249,25 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
             
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Game Character Name (IGN) <span class="text-rose-500">*</span></label>
-                <input type="text" name="game_name" value="<?= htmlspecialchars($my_ign); ?>" required placeholder="e.g. ShadowHunter" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
+                <input type="text" name="game_name" value="<?= htmlspecialchars($my_ign); ?>" required placeholder="e.g. ShadowHunter" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Free Fire Game UID <span class="text-rose-500">*</span></label>
-                <input type="text" name="game_id" value="<?= htmlspecialchars($my_game_id); ?>" required placeholder="e.g. 2839221886" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="text" name="game_id" value="<?= htmlspecialchars($my_game_id); ?>" required placeholder="e.g. 2839221886" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">WhatsApp Phone Number</label>
-                <input type="tel" name="phone" value="<?= htmlspecialchars($my_phone); ?>" placeholder="10-digit mobile" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="tel" name="phone" value="<?= htmlspecialchars($my_phone); ?>" placeholder="10-digit mobile" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Default Payout UPI ID</label>
-                <input type="text" name="upi_id" value="<?= htmlspecialchars($my_upi); ?>" placeholder="e.g. yourname@upi" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none">
+                <input type="text" name="upi_id" value="<?= htmlspecialchars($my_upi); ?>" placeholder="e.g. yourname@upi" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none">
             </div>
 
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95">
+            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95">
                 Save Account Details
             </button>
         </form>
@@ -295,7 +295,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
             <!-- Live Preview -->
             <div class="text-center">
                 <div class="relative inline-block">
-                    <img id="avatarPreviewImg" src="<?= htmlspecialchars($my_avatar); ?>" alt="Preview" class="w-20 h-20 rounded-full object-cover border-4 border-yellow-400 shadow-sm mx-auto bg-slate-100">
+                    <img id="avatarPreviewImg" src="<?= htmlspecialchars($my_avatar); ?>" alt="Preview" class="w-20 h-20 rounded-full object-cover border-4 border-blue-500 shadow-sm mx-auto bg-slate-100">
                     <div id="uploadSpinner" class="hidden absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white text-xs">
                         <i class="fa-solid fa-spinner fa-spin"></i>
                     </div>
@@ -304,9 +304,9 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
             </div>
 
             <!-- Upload Custom Image (With Client-Side HTML5 Canvas Downscaler) -->
-            <div class="bg-yellow-50/70 border border-yellow-200 rounded-2xl p-3 text-center">
+            <div class="bg-blue-950/40/70 border border-blue-500/40 rounded-2xl p-3 text-center">
                 <label for="avatarFileInput" class="block cursor-pointer">
-                    <div class="w-10 h-10 mx-auto rounded-full bg-yellow-400 text-slate-950 flex items-center justify-center text-base mb-1.5 shadow-xs">
+                    <div class="w-10 h-10 mx-auto rounded-full bg-blue-600 text-white flex items-center justify-center text-base mb-1.5 shadow-xs">
                         <i class="fa-solid fa-arrow-up-from-bracket"></i>
                     </div>
                     <span class="text-xs font-black text-slate-900 block">Upload from Phone Gallery / Camera</span>
@@ -324,7 +324,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
                     if (!empty($BEASTZ_GAMING_AVATARS)):
                         foreach ($BEASTZ_GAMING_AVATARS as $pr):
                     ?>
-                        <button type="button" onclick="selectPreset('<?= htmlspecialchars($pr['svg']); ?>', this)" class="preset-btn p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-yellow-400 bg-slate-50 dark:bg-slate-800 hover:bg-yellow-50 transition flex flex-col items-center">
+                        <button type="button" onclick="selectPreset('<?= htmlspecialchars($pr['svg']); ?>', this)" class="preset-btn p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 bg-slate-50 dark:bg-slate-800 hover:bg-blue-950/40 transition flex flex-col items-center">
                             <img src="<?= htmlspecialchars($pr['svg']); ?>" alt="<?= $pr['label']; ?>" class="w-10 h-10 rounded-full pointer-events-none shadow-xs">
                             <span class="text-[9px] font-black text-slate-700 dark:text-slate-300 mt-1"><?= $pr['label']; ?></span>
                         </button>
@@ -335,7 +335,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
                 </div>
             </div>
 
-            <button type="submit" id="saveAvatarBtn" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
+            <button type="submit" id="saveAvatarBtn" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-floppy-disk"></i>
                 <span>Save Profile Photo</span>
             </button>
@@ -372,7 +372,7 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
             const file = e.target.files && e.target.files[0];
             if (!file) return;
             document.querySelectorAll('.preset-btn').forEach(function(b) {
-                b.classList.remove('border-yellow-400', 'ring-2', 'ring-yellow-400', 'bg-yellow-100', 'dark:bg-yellow-950/40');
+                b.classList.remove('border-blue-500', 'ring-2', 'ring-blue-500', 'bg-blue-950/60', 'dark:bg-blue-950/40');
                 b.classList.add('border-slate-200', 'dark:border-slate-700');
             });
 
@@ -446,7 +446,8 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
         var origText = btn.innerHTML;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> <span>Saving...</span>';
 
-        fetch('api/update_profile.php', {
+        var sender = window.beastzFetch || fetch;
+        sender('api/update_profile.php', {
             method: 'POST',
             body: fd
         })
@@ -494,7 +495,8 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
             fd.append('avatar_file', fileInput.files[0]);
         }
 
-        fetch('api/update_profile.php', {
+        var sender = window.beastzFetch || fetch;
+        sender('api/update_profile.php', {
             method: 'POST',
             body: fd
         })

@@ -42,12 +42,12 @@ $all_gamers = $conn->query("
     <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
             <h2 class="text-base font-extrabold text-slate-900 dark:text-white font-display flex items-center gap-2">
-                <i class="fa-solid fa-users text-yellow-500"></i>
+                <i class="fa-solid fa-users text-blue-400"></i>
                 <span>Registered Gamers Directory</span>
             </h2>
             <p class="text-[11px] text-slate-500">View gamer names, mobile numbers, emails, and direct WhatsApp contact</p>
         </div>
-        <span class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black rounded-full text-[10px] uppercase">
+        <span class="px-2.5 py-1 bg-blue-600 text-white font-black rounded-full text-[10px] uppercase">
             Total: <?= ($all_gamers ? $all_gamers->num_rows : 0); ?>
         </span>
     </div>
@@ -62,7 +62,7 @@ $all_gamers = $conn->query("
     <!-- Search Input -->
     <div class="relative">
         <span class="absolute left-3.5 top-2.5 text-slate-400 text-xs"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="gamerSearchInput" onkeyup="filterGamerList()" placeholder="Search gamers by username, phone or email..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-yellow-400 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+        <input type="text" id="gamerSearchInput" onkeyup="filterGamerList()" placeholder="Search gamers by username, phone or email..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
     </div>
 
     <!-- Gamers Cards List -->
@@ -124,7 +124,7 @@ $all_gamers = $conn->query("
 
                         <div>
                             <span class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Game IGN</span>
-                            <span class="font-bold text-yellow-600 dark:text-yellow-400">
+                            <span class="font-bold text-sky-300 dark:text-sky-400">
                                 <?= !empty($u['game_name']) ? htmlspecialchars($u['game_name']) : 'Not set'; ?>
                             </span>
                         </div>

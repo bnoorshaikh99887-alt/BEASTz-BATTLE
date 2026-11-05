@@ -27,6 +27,11 @@ $alert_msg = "";
 $alert_type = "";
 $msg = "";
 $msg_type = "";
+if (!empty($_SESSION['flash_msg'])) {
+    $alert_msg = (string)$_SESSION['flash_msg'];
+    $alert_type = (string)($_SESSION['flash_type'] ?? 'success');
+    unset($_SESSION['flash_msg'], $_SESSION['flash_type']);
+}
 
 // -------------------------------------------------------------
 // 1. ACTION HANDLER: TOURNAMENT JOIN / REGISTRATION
@@ -35,135 +40,172 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     check_user_auth();
     $curr_uid = (int)$_SESSION['user_id'];
     $tid = (int)($_POST['tournament_id'] ?? 0);
-    $in_game_name = sanitize($_POST['in_game_name'] ?? '');
-    $game_id = sanitize($_POST['game_id'] ?? '');
-    $slot_no = (int)($_POST['slot_no'] ?? 1);
+    $slot_no = (int)($_POST['slot_no'] ?? 0);
+    $match_mode = strtoupper(trim($_POST['match_mode'] ?? ''));
 
-    if ($tid <= 0 || empty($in_game_name)) {
-        $alert_msg = "Please enter your in-game character name (IGN).";
-        $alert_type = "error";
-    } elseif (empty($game_id)) {
-        $alert_msg = "Please enter your Game UID.";
+    if ($tid <= 0 || $slot_no <= 0) {
+        $alert_msg = "Please select a valid tournament and empty slot number.";
         $alert_type = "error";
     } else {
-        $t_stmt = $conn->prepare("
-            SELECT t.id, t.title, COALESCE(t.game_name, t.game, 'Free Fire') as game_name, t.entry_fee, t.prize_pool, t.status, t.total_slots,
-            (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count
-            FROM tournaments t 
-            WHERE t.id = ?
-        ");
-        $t_stmt->bind_param("i", $tid);
-        $t_stmt->execute();
-        $tourney = $t_stmt->get_result()->fetch_assoc();
-        $t_stmt->close();
+        $conn->begin_transaction();
+        try {
+            // 1. Lock tournament row for update to ensure consistent state
+            $t_stmt = $conn->prepare("
+                SELECT t.id, t.title, COALESCE(t.game_name, t.game, 'Free Fire') as game_name, 
+                       t.entry_fee, t.prize_pool, t.status, t.total_slots, t.match_type,
+                       (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count
+                FROM tournaments t 
+                WHERE t.id = ? FOR UPDATE
+            ");
+            $t_stmt->bind_param("i", $tid);
+            $t_stmt->execute();
+            $tourney = $t_stmt->get_result()->fetch_assoc();
+            $t_stmt->close();
 
-        $max_slots = (int)($tourney['total_slots'] ?? 48);
-        if ($max_slots <= 0) $max_slots = 48;
-
-        if (!$tourney) {
-            $alert_msg = "Tournament not found or expired.";
-            $alert_type = "error";
-        } elseif (strtolower($tourney['status']) === 'completed') {
-            $alert_msg = "This tournament has already ended.";
-            $alert_type = "error";
-        } elseif ((int)$tourney['enrolled_count'] >= $max_slots) {
-            $alert_msg = "Match is full! All slots have been booked.";
-            $alert_type = "error";
-        } elseif ($slot_no < 1 || $slot_no > $max_slots) {
-            $alert_msg = "Please select a valid slot number between 1 and " . $max_slots . ".";
-            $alert_type = "error";
-        } else {
-            $chk_stmt = $conn->prepare("SELECT id, slot_no FROM participants WHERE tournament_id = ? AND user_id = ?");
-            $chk_stmt->bind_param("ii", $tid, $curr_uid);
-            $chk_stmt->execute();
-            $already_joined = $chk_stmt->get_result()->fetch_assoc();
-            $chk_stmt->close();
-
-            if ($already_joined) {
-                $alert_msg = "You have already joined this match (Occupying Slot #" . ($already_joined['slot_no'] ?: 1) . ")!";
-                $alert_type = "warning";
-            } else {
-                $fee = (float)$tourney['entry_fee'];
-                $conn->begin_transaction();
-                try {
-                    // FIX (WALLET RACE): lock the user row, re-check balance and slot INSIDE the transaction
-                    $u_stmt = $conn->prepare("SELECT wallet_balance FROM users WHERE id = ? FOR UPDATE");
-                    $u_stmt->bind_param("i", $curr_uid);
-                    $u_stmt->execute();
-                    $user_data = $u_stmt->get_result()->fetch_assoc();
-                    $u_stmt->close();
-                    $user_bal = (float)($user_data['wallet_balance'] ?? 0.00);
-
-                    $slot_chk = $conn->prepare("SELECT id FROM participants WHERE tournament_id = ? AND slot_no = ? FOR UPDATE");
-                    $slot_chk->bind_param("ii", $tid, $slot_no);
-                    $slot_chk->execute();
-                    $is_slot_taken = ($slot_chk->get_result()->num_rows > 0);
-                    $slot_chk->close();
-
-                    $cnt_chk = $conn->prepare("SELECT COUNT(*) AS c FROM participants WHERE tournament_id = ?");
-                    $cnt_chk->bind_param("i", $tid);
-                    $cnt_chk->execute();
-                    $enrolled_now = (int)($cnt_chk->get_result()->fetch_assoc()['c'] ?? 0);
-                    $cnt_chk->close();
-
-                    if ($is_slot_taken) {
-                        $conn->rollback();
-                        $alert_msg = "Slot #" . $slot_no . " was just booked by another player! Please choose an available slot.";
-                        $alert_type = "error";
-                    } elseif ($enrolled_now >= $max_slots) {
-                        $conn->rollback();
-                        $alert_msg = "Match is full! All slots have been booked.";
-                        $alert_type = "error";
-                    } elseif ($user_bal < $fee) {
-                        $conn->rollback();
-                        $alert_msg = "Insufficient wallet balance! Please add " . format_inr($fee - $user_bal) . " to your wallet.";
-                        $alert_type = "error";
-                    } else {
-                        if ($fee > 0) {
-                            $ded_stmt = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ? AND wallet_balance >= ?");
-                            $ded_stmt->bind_param("did", $fee, $curr_uid, $fee);
-                            $ded_stmt->execute();
-                            $deducted = ($ded_stmt->affected_rows > 0);
-                            $ded_stmt->close();
-                            if (!$deducted) { throw new Exception("Insufficient wallet balance."); }
-
-                            $tx_desc = "Entry Fee: " . $tourney['title'] . " (Match #" . $tid . ", Slot #" . $slot_no . ")";
-                            $tx_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'debit', ?)");
-                            $tx_stmt->bind_param("ids", $curr_uid, $fee, $tx_desc);
-                            $tx_stmt->execute();
-                            $tx_stmt->close();
-                        }
-
-                        $tourney_game = $tourney['game_name'] ?? 'Free Fire';
-                        $p_stmt = $conn->prepare("INSERT INTO participants (tournament_id, user_id, in_game_name, game_name, game_id, slot_no) VALUES (?, ?, ?, ?, ?, ?)");
-                        $p_stmt->bind_param("iisssi", $tid, $curr_uid, $in_game_name, $tourney_game, $game_id, $slot_no);
-                        $p_stmt->execute();
-                        $p_stmt->close();
-
-                        @$conn->query("INSERT INTO user_tournaments (user_id, tournament_id, game_name, slot_no) VALUES ({$curr_uid}, {$tid}, '" . $conn->real_escape_string($in_game_name) . "', {$slot_no})");
-
-                        $upd_u = $conn->prepare("UPDATE users SET game_name = ?, game_id = ? WHERE id = ?");
-                        if ($upd_u) {
-                            $upd_u->bind_param("ssi", $in_game_name, $game_id, $curr_uid);
-                            $upd_u->execute();
-                            $upd_u->close();
-                        }
-
-                        $conn->commit();
-                        $alert_msg = "🎉 Slot #" . $slot_no . " booked successfully for " . htmlspecialchars($tourney['title']) . "! View Room ID in My Matches.";
-                        $alert_type = "success";
-                    }
-                } catch (Throwable $e) {
-                    @$conn->rollback();
-                    $alert_msg = "Registration Error: " . $e->getMessage();
-                    $alert_type = "error";
-                }
+            if (!$tourney) {
+                throw new Exception("Tournament not found or expired.");
             }
+            if (strtolower($tourney['status']) === 'completed') {
+                throw new Exception("This tournament has already ended.");
+            }
+
+            // 2. Dynamic Slot Rules: Squad = 12 slots, Duo = 24 slots, Solo = standard slots
+            $t_title_upper = strtoupper($tourney['title'] ?? '');
+            $t_type_upper = strtoupper($tourney['match_type'] ?? '');
+            $is_squad = ($match_mode === 'SQUAD' || str_contains($t_type_upper, 'SQUAD') || str_contains($t_title_upper, 'SQUAD'));
+            $is_duo = (!$is_squad && ($match_mode === 'DUO' || str_contains($t_type_upper, 'DUO') || str_contains($t_type_upper, '2VS2') || str_contains($t_title_upper, 'DUO')));
+
+            $max_slots = $is_squad ? 12 : ($is_duo ? 24 : (int)($tourney['total_slots'] ?: 48));
+            if ($max_slots <= 0) $max_slots = 48;
+
+            if ($slot_no < 1 || $slot_no > $max_slots) {
+                throw new Exception("Please select a valid slot number between 1 and " . $max_slots . ".");
+            }
+
+            // 3. Dynamic Roster Parsing & Validation (Squad: 4 players, Duo: 2 players, Solo: 1 player)
+            $p_count = $is_squad ? 4 : ($is_duo ? 2 : 1);
+            $roster_igns = [];
+            $roster_uids = [];
+
+            for ($p = 1; $p <= $p_count; $p++) {
+                $p_ign = sanitize($_POST["player{$p}_ign"] ?? '');
+                $p_uid = sanitize($_POST["player{$p}_uid"] ?? '');
+
+                // Fallback for single player / legacy forms
+                if (empty($p_ign) || empty($p_uid)) {
+                    if ($p === 1) {
+                        $p_ign = sanitize($_POST['in_game_name'] ?? '');
+                        $p_uid = sanitize($_POST['game_id'] ?? '');
+                    }
+                }
+
+                if (empty($p_ign)) {
+                    throw new Exception("Please enter In-Game Character Name (IGN) for Player #" . $p . ".");
+                }
+                if (empty($p_uid)) {
+                    throw new Exception("Please enter Game UID for Player #" . $p . ".");
+                }
+
+                $roster_igns[] = ($p === 1 && $p_count > 1) ? $p_ign . " [Leader]" : $p_ign;
+                $roster_uids[] = $p_uid;
+            }
+
+            $in_game_name = implode(", ", $roster_igns);
+            $game_id = implode(" / ", $roster_uids);
+
+            // 4. Lock user balance row
+            $u_stmt = $conn->prepare("SELECT wallet_balance FROM users WHERE id = ? FOR UPDATE");
+            $u_stmt->bind_param("i", $curr_uid);
+            $u_stmt->execute();
+            $user_data = $u_stmt->get_result()->fetch_assoc();
+            $u_stmt->close();
+            $user_bal = (float)($user_data['wallet_balance'] ?? 0.00);
+
+            // 5. Anti-Race Double Booking Checks inside Transaction
+            $dup = $conn->prepare("SELECT id, slot_no FROM participants WHERE tournament_id = ? AND user_id = ? FOR UPDATE");
+            $dup->bind_param("ii", $tid, $curr_uid);
+            $dup->execute();
+            $dup_row = $dup->get_result()->fetch_assoc();
+            $dup->close();
+            if ($dup_row) {
+                throw new Exception("You have already joined this match (Occupying Slot #" . ($dup_row['slot_no'] ?: 1) . ")!");
+            }
+
+            // Check if slot_no is already taken
+            $slot_chk = $conn->prepare("SELECT id FROM participants WHERE tournament_id = ? AND slot_no = ? FOR UPDATE");
+            $slot_chk->bind_param("ii", $tid, $slot_no);
+            $slot_chk->execute();
+            $is_taken = ($slot_chk->get_result()->num_rows > 0);
+            $slot_chk->close();
+            if ($is_taken) {
+                throw new Exception("Slot #" . $slot_no . " was just booked by another player! Please choose an available slot.");
+            }
+
+            // Check match capacity
+            $cnt_chk = $conn->prepare("SELECT COUNT(*) AS c FROM participants WHERE tournament_id = ? FOR UPDATE");
+            $cnt_chk->bind_param("i", $tid);
+            $cnt_chk->execute();
+            $enrolled_now = (int)($cnt_chk->get_result()->fetch_assoc()['c'] ?? 0);
+            $cnt_chk->close();
+            if ($enrolled_now >= $max_slots) {
+                throw new Exception("Match is full! All " . $max_slots . " slots have been booked.");
+            }
+
+            // 6. Balance Verification & Atomic Barrier Deduction
+            $fee = (float)$tourney['entry_fee'];
+            if ($user_bal < $fee) {
+                throw new Exception("Insufficient wallet balance! Please add " . format_inr($fee - $user_bal) . " to your wallet.");
+            }
+
+            if ($fee > 0) {
+                $ded_stmt = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ? AND wallet_balance >= ?");
+                $ded_stmt->bind_param("did", $fee, $curr_uid, $fee);
+                $ded_stmt->execute();
+                $deducted = ($ded_stmt->affected_rows === 1);
+                $ded_stmt->close();
+                if (!$deducted) {
+                    throw new Exception("Insufficient wallet balance or concurrent payment modification.");
+                }
+
+                $mode_desc = $is_squad ? 'Squad' : ($is_duo ? 'Duo' : 'Solo');
+                $tx_desc = "Entry Fee: " . $tourney['title'] . " (Match #" . $tid . ", Slot #" . $slot_no . " [" . $mode_desc . "])";
+                $tx_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'debit', ?)");
+                $tx_stmt->bind_param("ids", $curr_uid, $fee, $tx_desc);
+                $tx_stmt->execute();
+                $tx_stmt->close();
+            }
+
+            // 7. Insert Participant Record
+            $tourney_game = $tourney['game_name'] ?? 'Free Fire';
+            $p_stmt = $conn->prepare("INSERT INTO participants (tournament_id, user_id, in_game_name, game_name, game_id, slot_no) VALUES (?, ?, ?, ?, ?, ?)");
+            $p_stmt->bind_param("iisssi", $tid, $curr_uid, $in_game_name, $tourney_game, $game_id, $slot_no);
+            $p_stmt->execute();
+            $p_stmt->close();
+
+            @$conn->query("INSERT INTO user_tournaments (user_id, tournament_id, game_name, slot_no) VALUES ({$curr_uid}, {$tid}, '" . $conn->real_escape_string($in_game_name) . "', {$slot_no})");
+
+            $upd_u = $conn->prepare("UPDATE users SET game_name = ?, game_id = ? WHERE id = ?");
+            if ($upd_u) {
+                $leader_ign = $roster_igns[0] ?? $in_game_name;
+                $leader_uid = $roster_uids[0] ?? $game_id;
+                $upd_u->bind_param("ssi", $leader_ign, $leader_uid, $curr_uid);
+                $upd_u->execute();
+                $upd_u->close();
+            }
+
+            $conn->commit();
+            $_SESSION['flash_msg'] = "Slot #" . $slot_no . " booked successfully for " . $tourney['title'] . "! Room ID will be displayed in My Matches.";
+            $_SESSION['flash_type'] = "success";
+            safe_redirect("index.php?tab=matches");
+            exit;
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $alert_msg = "Booking Error: " . $e->getMessage();
+            $alert_type = "error";
         }
     }
 }
 
-// -------------------------------------------------------------
 // 2. ACTION HANDLER: PROFILE & ACCOUNT SETTINGS
 // -------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_account_settings') {
@@ -380,8 +422,11 @@ $winners_res = $conn->query("
     SELECT p.tournament_id, p.in_game_name, p.kills, p.rank_no, p.prize_won, u.username
     FROM participants p
     INNER JOIN users u ON p.user_id = u.id
-    WHERE p.prize_won > 0 OR p.rank_no > 0
-    ORDER BY p.rank_no ASC, p.prize_won DESC
+    INNER JOIN (
+        SELECT id FROM tournaments WHERE LOWER(status) = 'completed' ORDER BY id DESC LIMIT 40
+    ) recent ON recent.id = p.tournament_id
+    WHERE p.prize_won > 0 OR (p.rank_no IS NOT NULL AND p.rank_no > 0)
+    ORDER BY p.tournament_id DESC, p.rank_no ASC, p.prize_won DESC
 ");
 if ($winners_res) {
     while ($wrow = $winners_res->fetch_assoc()) {

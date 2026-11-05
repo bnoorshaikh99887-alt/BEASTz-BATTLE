@@ -51,24 +51,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// 2. Handle Instant Tournament Deletion (Active or Completed)
+// 2. Handle Instant Tournament Deletion with Atomic Entry Fee Refunds
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_tournament') {
     $tid = (int)($_POST['tournament_id'] ?? 0);
     if ($tid > 0) {
-        @$conn->query("DELETE FROM anti_cheat_logs WHERE tournament_id = $tid");
-        @$conn->query("DELETE FROM participants WHERE tournament_id = $tid");
-        @$conn->query("DELETE FROM user_tournaments WHERE tournament_id = $tid");
-        $del = $conn->prepare("DELETE FROM tournaments WHERE id = ?");
-        if ($del) {
-            $del->bind_param("i", $tid);
-            if ($del->execute()) {
-                $msg = "Tournament #$tid successfully deleted from system.";
-                $msg_type = "success";
-            } else {
-                $msg = "Delete failed: " . $del->error;
-                $msg_type = "error";
+        $conn->begin_transaction();
+        try {
+            $t_stmt = $conn->prepare("SELECT id, title, entry_fee FROM tournaments WHERE id = ? FOR UPDATE");
+            $t_stmt->bind_param("i", $tid);
+            $t_stmt->execute();
+            $tourney = $t_stmt->get_result()->fetch_assoc();
+            $t_stmt->close();
+
+            if ($tourney) {
+                $fee = (float)($tourney['entry_fee'] ?? 0.00);
+                if ($fee > 0) {
+                    $p_stmt = $conn->prepare("SELECT user_id FROM participants WHERE tournament_id = ?");
+                    $p_stmt->bind_param("i", $tid);
+                    $p_stmt->execute();
+                    $p_res = $p_stmt->get_result();
+                    $refund_users = [];
+                    while ($pr = $p_res->fetch_assoc()) {
+                        $uid = (int)$pr['user_id'];
+                        if ($uid > 0) $refund_users[] = $uid;
+                    }
+                    $p_stmt->close();
+                    $refund_users = array_values(array_unique($refund_users));
+
+                    foreach ($refund_users as $p_uid) {
+                        $upd_u = $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
+                        $upd_u->bind_param("di", $fee, $p_uid);
+                        $upd_u->execute();
+                        $upd_u->close();
+
+                        $tx_desc = "Refund: Match #" . $tid . " (" . $tourney['title'] . ") Cancelled by Admin";
+                        $tx = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'credit', ?)");
+                        $tx->bind_param("ids", $p_uid, $fee, $tx_desc);
+                        $tx->execute();
+                        $tx->close();
+                    }
+                }
             }
-            $del->close();
+
+            @$conn->query("DELETE FROM anti_cheat_logs WHERE tournament_id = {$tid}");
+            @$conn->query("DELETE FROM participants WHERE tournament_id = {$tid}");
+            @$conn->query("DELETE FROM user_tournaments WHERE tournament_id = {$tid}");
+            $conn->query("DELETE FROM tournaments WHERE id = {$tid}");
+            $conn->commit();
+
+            $msg = "Tournament #$tid deleted successfully and participant entry fees refunded to wallets!";
+            $msg_type = "success";
+        } catch (Exception $e) {
+            $conn->rollback();
+            $msg = "Delete failed: " . $e->getMessage();
+            $msg_type = "error";
         }
     }
 }
@@ -116,7 +152,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
 <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs mb-6">
     <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
         <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-            <i class="fa-solid fa-circle-plus text-yellow-500 text-sm"></i> Create New Tournament
+            <i class="fa-solid fa-circle-plus text-blue-400 text-sm"></i> Create New Tournament
         </h3>
         <span class="text-[10px] text-slate-400 font-bold uppercase">Free Fire & BGMI</span>
     </div>
@@ -126,13 +162,13 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
 
         <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Tournament Title *</label>
-            <input type="text" name="title" required placeholder="e.g. FREE FIRE - SOLO HUNTER" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
+            <input type="text" name="title" required placeholder="e.g. FREE FIRE - SOLO HUNTER" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
         </div>
 
         <div class="grid grid-cols-2 gap-2">
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Game *</label>
-                <select name="game_name" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-medium focus:outline-none">
+                <select name="game_name" required class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-medium focus:outline-none">
                     <option value="Free Fire">Free Fire</option>
                     <option value="Free Fire Max">Free Fire Max</option>
                     <option value="BGMI">BGMI</option>
@@ -141,7 +177,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Match Category</label>
-                <select name="match_type" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-medium focus:outline-none">
+                <select name="match_type" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-medium focus:outline-none">
                     <option value="SOLO BR">SOLO BR</option>
                     <option value="DUO BR">DUO BR</option>
                     <option value="DUO PR KILL">DUO PR KILL</option>
@@ -158,7 +194,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
         <div class="grid grid-cols-2 gap-2">
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Map</label>
-                <select name="map" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-medium focus:outline-none">
+                <select name="map" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-medium focus:outline-none">
                     <option value="BERMUDA">BERMUDA</option>
                     <option value="PURGATORY">PURGATORY</option>
                     <option value="KALAHARI">KALAHARI</option>
@@ -168,31 +204,31 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Total Slots</label>
-                <input type="number" name="total_slots" value="48" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="number" name="total_slots" value="48" required class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
         </div>
 
         <div class="grid grid-cols-3 gap-2">
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Entry Fee (₹)</label>
-                <input type="number" step="0.5" name="entry_fee" value="10" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="number" step="0.5" name="entry_fee" value="10" required class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Per Kill (₹)</label>
-                <input type="number" step="0.5" name="per_kill" value="0" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="number" step="0.5" name="per_kill" value="0" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Prize Pool (₹)</label>
-                <input type="number" step="1" name="prize_pool" value="225" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-black text-amber-600 focus:outline-none">
+                <input type="number" step="1" name="prize_pool" value="225" required class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 font-mono font-black text-amber-600 focus:outline-none">
             </div>
         </div>
 
         <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Match Schedule Time *</label>
-            <input type="datetime-local" name="match_time" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none">
+            <input type="datetime-local" name="match_time" required class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none">
         </div>
 
-        <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+        <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-bolt text-xs"></i>
             <span>Publish Tournament Match</span>
         </button>
@@ -209,7 +245,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
 
     <!-- Navigation Tabs (Active vs Completed Section) -->
     <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 dark:bg-slate-800 rounded-2xl text-xs font-bold">
-        <button type="button" onclick="switchTourneySubTab('active', this)" id="adminBtnTourneyActive" class="tourney-subtab-btn py-2 text-center rounded-xl transition bg-yellow-400 text-slate-950 font-black shadow-xs cursor-pointer">
+        <button type="button" onclick="switchTourneySubTab('active', this)" id="adminBtnTourneyActive" class="tourney-subtab-btn py-2 text-center rounded-xl transition bg-blue-600 text-white font-black shadow-xs cursor-pointer">
             <i class="fa-solid fa-gamepad mr-1"></i> Active & Live (<?= $active_cnt; ?>)
         </button>
         <button type="button" onclick="switchTourneySubTab('completed', this)" id="adminBtnTourneyCompleted" class="tourney-subtab-btn py-2 text-center rounded-xl transition text-slate-600 dark:text-slate-400 hover:text-slate-900 font-bold cursor-pointer">
@@ -231,7 +267,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                     <div class="flex items-start justify-between">
                         <div>
                             <div class="flex items-center gap-1.5 mb-1">
-                                <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase <?= $is_live ? 'bg-emerald-100 text-emerald-800 font-black' : 'bg-yellow-100 text-yellow-800 font-bold' ?>">
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase <?= $is_live ? 'bg-emerald-100 text-emerald-800 font-black' : 'bg-blue-950/60 text-sky-200 font-bold' ?>">
                                     <?= htmlspecialchars($t['status']); ?>
                                 </span>
                                 <span class="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 px-1.5 py-0.5 rounded">
@@ -247,7 +283,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                         </div>
                         <div class="text-right">
                             <span class="text-[10px] text-slate-400 block font-bold">Prize Pool</span>
-                            <span class="text-xs font-black text-amber-500 font-mono"><?= format_compact_inr($t['prize_pool']); ?></span>
+                            <span class="text-xs font-black text-blue-400 font-mono"><?= format_compact_inr($t['prize_pool']); ?></span>
                         </div>
                     </div>
 
@@ -270,7 +306,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
 
                     <!-- Admin Action Buttons -->
                     <div class="flex items-center gap-2 pt-1">
-                        <a href="manage_tournament.php?id=<?= $t['id']; ?>" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-center font-black rounded-xl text-xs shadow-xs transition">
+                        <a href="manage_tournament.php?id=<?= $t['id']; ?>" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white text-center font-black rounded-xl text-xs shadow-xs transition">
                             <i class="fa-solid fa-gear text-[10px] mr-1"></i> Manage & Results
                         </a>
                         <form method="POST" action="index.php?tab=tournaments" onsubmit="return confirm('Are you sure you want to delete this tournament and remove its participants?');" class="shrink-0">
@@ -315,7 +351,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
                         </div>
                         <div class="text-right">
                             <span class="text-[10px] text-slate-400 block font-bold">Prize Distributed</span>
-                            <span class="text-xs font-black text-amber-500 font-mono"><?= format_compact_inr($ct['prize_pool']); ?></span>
+                            <span class="text-xs font-black text-blue-400 font-mono"><?= format_compact_inr($ct['prize_pool']); ?></span>
                         </div>
                     </div>
 
@@ -338,7 +374,7 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
 
                     <!-- Manage / Anti-Cheat Rollback Button -->
                     <div class="flex items-center gap-2 pt-1">
-                        <a href="manage_tournament.php?id=<?= $ct['id']; ?>&anti_cheat=1" class="flex-1 py-2 bg-slate-100 hover:bg-yellow-50 text-slate-800 hover:text-slate-950 text-center font-bold border border-slate-200 rounded-xl text-xs transition">
+                        <a href="manage_tournament.php?id=<?= $ct['id']; ?>&anti_cheat=1" class="flex-1 py-2 bg-slate-100 hover:bg-blue-950/40 text-slate-800 hover:text-slate-950 text-center font-bold border border-slate-200 rounded-xl text-xs transition">
                             <i class="fa-solid fa-shield-halved text-rose-500 mr-1"></i> View Results & Anti-Cheat
                         </a>
                         <form method="POST" action="index.php?tab=tournaments" onsubmit="return confirm('Delete completed tournament archive?');" class="shrink-0">
@@ -362,12 +398,12 @@ $completed_cnt = $completed_tourneys ? $completed_tourneys->num_rows : 0;
     <script>
     function switchTourneySubTab(tab, btn) {
         document.querySelectorAll(".tourney-subtab-btn").forEach(function(b) {
-            b.classList.remove("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+            b.classList.remove("bg-blue-600", "text-slate-950", "font-black", "shadow-xs");
             b.classList.add("text-slate-600", "dark:text-slate-400", "font-bold");
         });
         if (btn) {
             btn.classList.remove("text-slate-600", "dark:text-slate-400", "font-bold");
-            btn.classList.add("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+            btn.classList.add("bg-blue-600", "text-slate-950", "font-black", "shadow-xs");
         }
         document.querySelectorAll(".admin-tourney-pane").forEach(function(p) {
             p.classList.add("hidden");

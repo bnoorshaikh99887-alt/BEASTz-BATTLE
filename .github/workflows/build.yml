@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -30,19 +31,58 @@ jobs:
         working-directory: ./android-app
         run: gradle assembleDebug
 
+      - name: Prepare APK Release Files
+        run: |
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE-v2.0.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE.apk
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BEASTz-BATTLE-APK
-          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          name: BEASTz-BATTLE-v2.0-APK
+          path: |
+            BEASTz-BATTLE-v2.0.apk
+            BEASTz-BATTLE.apk
+            android-app/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Create or Update GitHub Release
+      - name: Create or Update GitHub Release v2.0
+        uses: softprops/action-gh-release@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v2.0
+          name: "BEASTz BATTLE v2.0 (Official Native APK)"
+          body: |
+            # 🎮 BEASTz BATTLE v2.0 Official Native Release
+
+            Download the new **v2.0** native Android APK for BEASTz BATTLE.
+
+            ### 🚀 What's New in v2.0:
+            - **Native Pull-to-Refresh**: Swipe down from top on any screen to reload live tournament data instantly.
+            - **Modern Blue & Slate UI Theme**: High-contrast blue gaming interface with sleek glassmorphism.
+            - **WebView Cache Auto-Buster**: Flushes stale WebView HTTP cache on upgrade so new features reflect immediately without freezing.
+            - **Admin Maintenance Bypass**: Master Admins retain full control and are never locked out when Maintenance Mode is active.
+            - **OneSignal Push Notifications**: Android system tray notifications even when the app is completely closed.
+            - **Direct Cashfree & UPI Payments**: 1-tap intent opening for PhonePe, Paytm, Google Pay, and UPI apps.
+
+            ### 📲 Direct Download:
+            👉 **[Download BEASTz-BATTLE-v2.0.apk](https://github.com/bnoorshaikh99887-alt/beast-battle/releases/download/v2.0/BEASTz-BATTLE-v2.0.apk)**
+          files: |
+            BEASTz-BATTLE-v2.0.apk
+            BEASTz-BATTLE.apk
+            android-app/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Also Update Latest Tag Release
         uses: softprops/action-gh-release@v1
         if: github.ref == 'refs/heads/main'
         with:
           tag_name: latest
-          name: "BEASTz BATTLE Latest APK"
-          body: "Official Android APK release for BEASTz BATTLE. Features real OneSignal system push notifications (Android notification bar even when app is killed), instant native splash screen, and ultra-fast AJAX profile & payout updates."
-          files: android-app/app/build/outputs/apk/debug/app-debug.apk
+          name: "BEASTz BATTLE Latest APK (v2.0)"
+          body: "Official latest Android APK (v2.0) for BEASTz BATTLE with Pull-to-Refresh, Blue Gaming Theme, and Admin Maintenance Bypass."
+          files: |
+            BEASTz-BATTLE-v2.0.apk
+            BEASTz-BATTLE.apk
+            android-app/app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

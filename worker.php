@@ -301,13 +301,13 @@ if ($nt_q) {
     <header class="w-full bg-white dark:bg-[#0d1424] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center font-black text-xl shadow-sm">
+                <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
                     <i class="fa-solid fa-gamepad"></i>
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="font-black text-sm tracking-tight font-display">BEASTz<span class="text-yellow-500">WORKER</span></span>
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 border border-yellow-400/40">HOST STUDIO</span>
+                        <span class="font-black text-sm tracking-tight font-display">BEASTz<span class="text-blue-400">WORKER</span></span>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-600/20 text-sky-300 dark:text-sky-400 border border-blue-500/40">HOST STUDIO</span>
                     </div>
                     <p class="text-[11px] text-slate-400 font-medium">Logged in as @<?= htmlspecialchars($logged_worker_user); ?></p>
                 </div>
@@ -317,7 +317,7 @@ if ($nt_q) {
                     <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
                 </button>
                 <!-- Worker Header Brand -->
-                <div class="px-2.5 py-1 rounded-xl bg-yellow-400/20 text-yellow-400 border border-yellow-400/30 text-xs font-black flex items-center gap-1">
+                <div class="px-2.5 py-1 rounded-xl bg-blue-600/20 text-sky-400 border border-blue-500/30 text-xs font-black flex items-center gap-1">
                     <i class="fa-solid fa-gamepad"></i> <span>WORKER STUDIO</span>
                 </div>
                 <a href="index.php" target="_blank" class="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold flex items-center gap-1">
@@ -333,7 +333,7 @@ if ($nt_q) {
         <!-- TOP HEADING: EXACTLY 2 MAIN TABS -->
         <!-- ============================================================ -->
         <div class="max-w-5xl mx-auto px-4 pb-2 pt-1 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800/80">
-            <button type="button" onclick="switchWorkerMainTab('push')" id="wmain-tab-push" class="w-main-tab flex-1 py-2.5 px-4 rounded-xl font-black text-xs transition uppercase tracking-wider flex items-center justify-center gap-2 bg-yellow-400 text-slate-950 shadow-sm cursor-pointer">
+            <button type="button" onclick="switchWorkerMainTab('push')" id="wmain-tab-push" class="w-main-tab flex-1 py-2.5 px-4 rounded-xl font-black text-xs transition uppercase tracking-wider flex items-center justify-center gap-2 bg-blue-600 text-white shadow-sm cursor-pointer">
                 <i class="fa-solid fa-paper-plane text-sm"></i>
                 <span>Push Notification Studio</span>
             </button>
@@ -359,8 +359,8 @@ if ($nt_q) {
         <section id="worker-tab-view-push" class="worker-top-view space-y-5">
             <div class="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
                 <div>
-                    <h2 class="text-base font-extrabold flex items-center gap-2">
-                        <i class="fa-solid fa-paper-plane text-yellow-500"></i> Push Notification Studio
+                    <h2 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-paper-plane text-blue-400"></i> Push Notification Studio
                     </h2>
                     <p class="text-xs text-slate-500">Send instant Room ID & Password alerts to match participants or broadcast announcements to all gamers</p>
                 </div>
@@ -371,9 +371,9 @@ if ($nt_q) {
                 <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                            <i class="fa-solid fa-key text-yellow-500"></i> Match Room IDP Push Alert
+                            <i class="fa-solid fa-key text-blue-400"></i> Match Room IDP Push Alert
                         </h3>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-400/20 text-yellow-600 dark:text-yellow-400">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-600/20 text-sky-300 dark:text-sky-400">
                             TARGETED PLAYERS
                         </span>
                     </div>
@@ -404,18 +404,18 @@ if ($nt_q) {
                         </div>
 
                         <!-- Push Alert Preview Box (Mirroring Admin Panel) -->
-                        <div class="p-3 bg-yellow-400/10 border border-yellow-400/40 rounded-xl space-y-1.5">
+                        <div class="p-3 bg-blue-600/10 border border-blue-500/40 rounded-xl space-y-1.5">
                             <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-black text-yellow-500">Auto Push Notification (To Joined Players Only)</span>
-                                <span class="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[9px] uppercase shadow-xs">DEFAULT ACTIVE</span>
+                                <span class="text-[11px] font-black text-blue-400">Auto Push Notification (To Joined Players Only)</span>
+                                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-black text-[9px] uppercase shadow-xs">DEFAULT ACTIVE</span>
                             </div>
-                            <div class="text-[11px] font-mono text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg border border-yellow-400/20">
+                            <div class="text-[11px] font-mono text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg border border-blue-500/20">
                                 WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI
                             </div>
                             <p class="text-[10px] text-slate-400">&bull; Target: Only gamers who booked slot in this match</p>
                         </div>
 
-                        <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                             <i class="fa-solid fa-paper-plane"></i>
                             <span>Save Room Credentials & Dispatch Instant IDP Push</span>
                         </button>
@@ -467,7 +467,7 @@ if ($nt_q) {
             <!-- RECENT PUSH NOTIFICATIONS TABLE -->
             <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-3">
                 <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                    <i class="fa-solid fa-clock-rotate-left text-yellow-500"></i> Recent Push Alerts & In-App Logs
+                    <i class="fa-solid fa-clock-rotate-left text-blue-400"></i> Recent Push Alerts & In-App Logs
                 </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
@@ -485,7 +485,7 @@ if ($nt_q) {
                                     <tr>
                                         <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white whitespace-nowrap"><?= htmlspecialchars($rn["title"]); ?></td>
                                         <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 max-w-xs truncate"><?= htmlspecialchars($rn["message"]); ?></td>
-                                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[9px] font-black bg-yellow-400/20 text-yellow-500"><?= htmlspecialchars($rn["badge_type"]); ?></span></td>
+                                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[9px] font-black bg-blue-600/20 text-blue-400"><?= htmlspecialchars($rn["badge_type"]); ?></span></td>
                                         <td class="py-2.5 px-3 text-slate-400 text-[10px] whitespace-nowrap"><?= date("d M, h:i A", strtotime($rn["created_at"])); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -507,7 +507,7 @@ if ($nt_q) {
             <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs mb-6">
                 <div class="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
                     <h3 class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-circle-plus text-yellow-500 text-sm"></i> Create New Tournament
+                        <i class="fa-solid fa-circle-plus text-blue-400 text-sm"></i> Create New Tournament
                     </h3>
                     <span class="text-[10px] text-slate-400 font-bold uppercase">Free Fire & BGMI</span>
                 </div>
@@ -515,12 +515,12 @@ if ($nt_q) {
                     <input type="hidden" name="action" value="create_tourney">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tournament Title *</label>
-                        <input type="text" name="title" required placeholder="e.g. FREE FIRE - SOLO HUNTER" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-bold focus:outline-none">
+                        <input type="text" name="title" required placeholder="e.g. FREE FIRE - SOLO HUNTER" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-bold focus:outline-none">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Game *</label>
-                            <select name="game" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                            <select name="game" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
                                 <option value="Free Fire">Free Fire</option>
                                 <option value="Free Fire Max">Free Fire Max</option>
                                 <option value="BGMI">BGMI</option>
@@ -529,7 +529,7 @@ if ($nt_q) {
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Match Category</label>
-                            <select name="match_type" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                            <select name="match_type" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
                                 <option value="SOLO BR">SOLO BR</option>
                                 <option value="DUO BR">DUO BR</option>
                                 <option value="DUO PR KILL">DUO PR KILL</option>
@@ -545,7 +545,7 @@ if ($nt_q) {
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Map</label>
-                            <select name="map" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                            <select name="map" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
                                 <option value="BERMUDA">BERMUDA</option>
                                 <option value="PURGATORY">PURGATORY</option>
                                 <option value="KALAHARI">KALAHARI</option>
@@ -555,28 +555,28 @@ if ($nt_q) {
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Total Slots</label>
-                            <input type="number" name="total_slots" value="48" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                            <input type="number" name="total_slots" value="48" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Entry Fee (₹)</label>
-                            <input type="number" step="0.5" name="entry_fee" value="10" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                            <input type="number" step="0.5" name="entry_fee" value="10" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Per Kill (₹)</label>
-                            <input type="number" step="0.5" name="per_kill" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                            <input type="number" step="0.5" name="per_kill" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Prize Pool (₹)</label>
-                            <input type="number" step="1" name="prize_pool" value="225" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-2.5 py-2 text-xs text-amber-500 font-mono font-black focus:outline-none">
+                            <input type="number" step="1" name="prize_pool" value="225" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-blue-400 font-mono font-black focus:outline-none">
                         </div>
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Match Schedule Time *</label>
-                        <input type="datetime-local" name="match_time" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                        <input type="datetime-local" name="match_time" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
                     </div>
-                    <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-bolt text-xs"></i>
                         <span>Publish Tournament Match</span>
                     </button>
@@ -591,7 +591,7 @@ if ($nt_q) {
 
                 <!-- Navigation Tabs (Active vs Completed Section) -->
                 <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 dark:bg-slate-800 rounded-2xl text-xs font-bold">
-                    <button type="button" onclick="switchWorkerSubTab('active', this)" id="workerBtnTourneyActive" class="worker-subtab-btn py-2 text-center rounded-xl transition bg-yellow-400 text-slate-950 font-black shadow-xs cursor-pointer">
+                    <button type="button" onclick="switchWorkerSubTab('active', this)" id="workerBtnTourneyActive" class="worker-subtab-btn py-2 text-center rounded-xl transition bg-blue-600 text-white font-black shadow-xs cursor-pointer">
                         <i class="fa-solid fa-gamepad mr-1"></i> Active & Live (<?= count($active_tourneys); ?>)
                     </button>
                     <button type="button" onclick="switchWorkerSubTab('completed', this)" id="workerBtnTourneyCompleted" class="worker-subtab-btn py-2 text-center rounded-xl transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold cursor-pointer">
@@ -613,7 +613,7 @@ if ($nt_q) {
                                 <div class="flex items-start justify-between">
                                     <div>
                                         <div class="flex items-center gap-1.5 mb-1">
-                                            <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase <?= $is_live ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-black" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 font-bold" ?>">
+                                            <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase <?= $is_live ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-black" : "bg-blue-950/60 text-sky-200 dark:bg-yellow-950 dark:text-yellow-300 font-bold" ?>">
                                                 <?= htmlspecialchars($t["status"]); ?>
                                             </span>
                                             <span class="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
@@ -629,7 +629,7 @@ if ($nt_q) {
                                     </div>
                                     <div class="text-right">
                                         <span class="text-[10px] text-slate-400 block font-bold">Prize Pool</span>
-                                        <span class="text-xs font-black text-amber-500 font-mono"><?= format_compact_inr($t["prize_pool"]); ?></span>
+                                        <span class="text-xs font-black text-blue-400 font-mono"><?= format_compact_inr($t["prize_pool"]); ?></span>
                                     </div>
                                 </div>
 
@@ -652,7 +652,7 @@ if ($nt_q) {
 
                                 <!-- Action Buttons -->
                                 <div class="flex items-center gap-2 pt-1 text-xs">
-                                    <a href="worker_manage.php?id=<?= $t["id"]; ?>" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-center font-black rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <a href="worker_manage.php?id=<?= $t["id"]; ?>" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white text-center font-black rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
                                         <i class="fa-solid fa-gear text-[10px]"></i> Manage & Results
                                     </a>
                                     <form method="POST" action="worker.php" onsubmit="return confirm('Revoke Match #<?= $t["id"]; ?> and refund entry fees to all joined players?');" class="shrink-0">
@@ -715,7 +715,7 @@ if ($nt_q) {
                                     </div>
                                     <div>
                                         <span class="text-slate-400 text-[10px] block">Top Winner</span>
-                                        <span class="font-bold text-yellow-500"><?= !empty($ct["winner_name"]) ? "@" . htmlspecialchars($ct["winner_name"]) : "Results Paid"; ?></span>
+                                        <span class="font-bold text-blue-400"><?= !empty($ct["winner_name"]) ? "@" . htmlspecialchars($ct["winner_name"]) : "Results Paid"; ?></span>
                                     </div>
                                     <div class="text-right">
                                         <span class="text-slate-400 text-[10px] block">Status</span>
@@ -755,7 +755,7 @@ if ($nt_q) {
         var btnPush = document.getElementById("wmain-tab-push");
         var btnTourneys = document.getElementById("wmain-tab-tournaments");
 
-        var actCls = ["bg-yellow-400", "text-slate-950", "shadow-sm", "font-black"];
+        var actCls = ["bg-blue-600", "text-slate-950", "shadow-sm", "font-black"];
         var inactCls = ["bg-slate-100", "dark:bg-slate-800/60", "text-slate-600", "dark:text-slate-400", "font-bold"];
 
         if (tab === "push") {
@@ -782,7 +782,7 @@ if ($nt_q) {
     function switchWorkerSubTab(sub, btn) {
         document.querySelectorAll(".worker-tourney-pane").forEach(function(el) { el.classList.add("hidden"); });
         document.querySelectorAll(".worker-subtab-btn").forEach(function(b) {
-            b.classList.remove("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+            b.classList.remove("bg-blue-600", "text-slate-950", "font-black", "shadow-xs");
             b.classList.add("text-slate-600", "dark:text-slate-400", "font-bold");
         });
         if (sub === "active") {
@@ -791,7 +791,7 @@ if ($nt_q) {
             document.getElementById("workerTourneysCompleted").classList.remove("hidden");
         }
         btn.classList.remove("text-slate-600", "dark:text-slate-400", "font-bold");
-        btn.classList.add("bg-yellow-400", "text-slate-950", "font-black", "shadow-xs");
+        btn.classList.add("bg-blue-600", "text-slate-950", "font-black", "shadow-xs");
         if (window.initCustomSelects) window.initCustomSelects();
     }
 

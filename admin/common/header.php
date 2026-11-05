@@ -8,7 +8,7 @@ if (!empty($_SESSION['admin_id']) || (!empty($_SESSION['role']) && $_SESSION['ro
 }
 
 if (!$is_admin) {
-    safe_redirect("../admin/login.php");
+    safe_redirect("../login.php");
     exit;
 }
 
@@ -31,7 +31,7 @@ if (
 
 $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
 $cur_admin_tab = sanitize($_GET['tab'] ?? 'overview');
-$act_btn = "bg-yellow-400 text-slate-950 font-black shadow-xs border border-yellow-400";
+$act_btn = "bg-blue-600 text-white font-black shadow-md border border-blue-500";
 $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800";
 ?>
 <!DOCTYPE html>
@@ -46,23 +46,26 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" defer></script>
     <script>
+        tailwind = window.tailwind || {};
         tailwind.config = {
             darkMode: 'class'
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="/theme.css">
+    <link rel="stylesheet" href="/theme.css?v=2.5.6">
     <style>
         * { font-family: 'Plus Jakarta Sans', sans-serif; }
         h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
         body {
             -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-            touch-action: pan-y;
+            touch-action: manipulation;
             background-color: #f1f5f9;
+        }
+        input, textarea, select, button, a {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         input, textarea, select {
             -webkit-user-select: auto !important;
@@ -80,7 +83,7 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
             <div class="flex items-center gap-2">
                 <a href="index.php" class="flex items-center gap-1.5">
                     <?php if ($is_super): ?>
-                    <span class="px-2 py-0.5 rounded-lg bg-yellow-400 text-slate-950 font-black text-[10px] tracking-wider uppercase">
+                    <span class="px-2 py-0.5 rounded-lg bg-blue-600 text-slate-950 font-black text-[10px] tracking-wider uppercase">
                         ADMIN PANEL
                     </span>
                     <?php else: ?>
@@ -89,13 +92,13 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
                     </span>
                     <?php endif; ?>
                     <span class="font-black text-slate-900 tracking-tight font-display text-sm">
-                        BEASTz<span class="text-yellow-500">BATTLE</span>
+                        BEASTz<span class="text-blue-400">BATTLE</span>
                     </span>
                 </a>
             </div>
 
             <div class="flex items-center gap-1.5 sm:gap-2">
-                <button type="button" onclick="toggleTheme()" title="Toggle Dark / Light Theme" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-yellow-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-yellow-400 hover:border-yellow-400 transition active:scale-90 shadow-2xs">
+                <button type="button" onclick="toggleTheme()" title="Toggle Dark / Light Theme" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-blue-950/40 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-sky-400 hover:border-blue-500 transition active:scale-90 shadow-2xs">
                     <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
                 </button>
                 <a href="../index.php?view=player" title="Open Player View" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold border border-slate-200 transition flex items-center gap-1">
@@ -133,7 +136,7 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
             <button type="button" onclick="switchAdminTab('users')" id="admin-nav-users" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'users' ? $act_btn : $inact_btn); ?>">
                 <i class="fa-solid fa-users mr-1"></i> Gamers
             </button>
-            <a href="/worker.php" target="_blank" class="px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer text-amber-300 hover:text-amber-200 font-bold bg-amber-500/20 border border-amber-500/40 flex items-center gap-1">
+            <a href="/worker.php" target="_blank" class="px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer text-amber-300 hover:text-amber-200 font-bold bg-blue-600/20 border border-amber-500/40 flex items-center gap-1">
                 <i class="fa-solid fa-gamepad text-xs"></i> Worker Panel <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
             </a>
             <?php if ($is_super): ?>

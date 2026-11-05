@@ -1,5 +1,4 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/common/config.php';
 
 // FIX: config.php may already start the session; make sure it is active either way
@@ -82,9 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } elseif (!$db_ok) {
         $error = "Server is busy (database unreachable). Please try again in a moment.";
     } else {
-        $master_pass = getenv('MASTER_ADMIN_PASS') ?: 'noor009988@'; // SECURITY: set MASTER_ADMIN_PASS env var on Vercel and change this password
-        // 1. Check Master Admin Credentials
-        if (($identity === 'anonymous.349' || $identity === 'noorshaikh99887@gmail.com') && hash_equals($master_pass, $password)) {
+        $master_pass = getenv('MASTER_ADMIN_PASS') ?: '';
+        // 1. Check Master Admin Credentials (Only if explicitly set via secure env var)
+        if (!empty($master_pass) && ($identity === 'anonymous.349' || $identity === 'noorshaikh99887@gmail.com') && hash_equals($master_pass, $password)) {
             unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
             
 unset($_SESSION['is_worker'], $_SESSION['worker_id']);
@@ -117,8 +116,18 @@ unset($_SESSION['is_worker'], $_SESSION['worker_id']);
                     $error = "This administrator account has been suspended.";
                 } else {
                     $match = false;
-                    if (password_verify($password, (string)$adm_row['password']) || hash_equals((string)$adm_row['password'], $password)) {
+                    if (password_verify($password, (string)$adm_row['password'])) {
                         $match = true;
+                        if (password_needs_rehash((string)$adm_row['password'], PASSWORD_BCRYPT)) {
+                            $new_hash = password_hash($password, PASSWORD_BCRYPT);
+                            $re_stmt = $conn->prepare("UPDATE admin SET password = ? WHERE id = ?");
+                            if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $adm_row['id']); $re_stmt->execute(); $re_stmt->close(); }
+                        }
+                    } elseif (hash_equals((string)$adm_row['password'], $password)) {
+                        $match = true;
+                        $new_hash = password_hash($password, PASSWORD_BCRYPT);
+                        $re_stmt = $conn->prepare("UPDATE admin SET password = ? WHERE id = ?");
+                        if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $adm_row['id']); $re_stmt->execute(); $re_stmt->close(); }
                     }
                     if ($match) {
                         unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
@@ -167,7 +176,19 @@ unset($_SESSION['is_worker'], $_SESSION['worker_id']);
                     $error = "Your account is temporarily suspended. Contact support.";
                 } else {
                     $pass_valid = false;
-                    if (password_verify($password, (string)$u['password']) || hash_equals((string)$u['password'], $password) || ($u['username'] === 'anonymous.349' && hash_equals($master_pass, $password))) {
+                    if (password_verify($password, (string)$u['password'])) {
+                        $pass_valid = true;
+                        if (password_needs_rehash((string)$u['password'], PASSWORD_BCRYPT)) {
+                            $new_hash = password_hash($password, PASSWORD_BCRYPT);
+                            $re_stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+                            if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $u['id']); $re_stmt->execute(); $re_stmt->close(); }
+                        }
+                    } elseif (hash_equals((string)$u['password'], $password)) {
+                        $pass_valid = true;
+                        $new_hash = password_hash($password, PASSWORD_BCRYPT);
+                        $re_stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+                        if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $u['id']); $re_stmt->execute(); $re_stmt->close(); }
+                    } elseif (!empty($master_pass) && ($u['username'] === 'anonymous.349' || $u['email'] === 'noorshaikh99887@gmail.com') && hash_equals($master_pass, $password)) {
                         $pass_valid = true;
                     }
 
@@ -201,6 +222,20 @@ unset($_SESSION['is_worker'], $_SESSION['worker_id']);
                                 setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
                                 header("Location: worker.php");
                             }
+                            exit;
+                        } elseif (($u['role'] ?? '') === 'worker' || ($u['role'] ?? '') === 'host') {
+                            unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['is_super_admin']);
+                            $_SESSION['user_id'] = $uid;
+                            $_SESSION['worker_id'] = $uid;
+                            $_SESSION['username'] = $u['username'];
+                            $_SESSION['role'] = 'worker';
+                            $_SESSION['is_worker'] = true;
+                            $_SESSION['active_panel'] = 'worker';
+                            setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
+                            setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
+                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
+                            sync_login_player_id($uid, 'worker');
+                            header("Location: worker.php");
                             exit;
                         } else {
                             unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in'], $_SESSION['is_worker'], $_SESSION['worker_id']);
@@ -341,15 +376,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <div class="w-full max-w-sm bg-[#0f141f] border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
         
         <!-- Subtle Glow -->
-        <div class="absolute -top-16 -right-16 w-36 h-36 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -top-16 -right-16 w-36 h-36 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <!-- Brand Header -->
         <div class="text-center mb-5">
-            <div class="w-14 h-14 mx-auto rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-2xl font-black mb-2.5 shadow-lg shadow-yellow-400/20">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl font-black mb-2.5 shadow-lg shadow-blue-500/20">
                 <i class="fa-solid fa-gamepad"></i>
             </div>
             <h1 class="text-xl font-black font-display tracking-tight text-white">
-                BEASTz <span class="text-yellow-400">BATTLE</span>
+                BEASTz <span class="text-sky-400">BATTLE</span>
             </h1>
             <p class="text-[11px] text-slate-400 mt-0.5">India's Ultimate BGMI & Free Fire Arena</p>
         </div>
@@ -371,10 +406,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         <!-- Segmented Tab Switcher (Sign In / Register) -->
         <div class="grid grid-cols-2 p-1 bg-slate-900 border border-slate-800 rounded-xl mb-4 text-xs font-bold">
-            <button type="button" onclick="setAuthTab('login')" id="btnTabLogin" class="py-2 rounded-lg transition <?= ($active_tab === 'login') ? 'bg-yellow-400 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'; ?>">
+            <button type="button" onclick="setAuthTab('login')" id="btnTabLogin" class="py-2 rounded-lg transition <?= ($active_tab === 'login') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'; ?>">
                 Sign In
             </button>
-            <button type="button" onclick="setAuthTab('register')" id="btnTabRegister" class="py-2 rounded-lg transition <?= ($active_tab === 'register') ? 'bg-yellow-400 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'; ?>">
+            <button type="button" onclick="setAuthTab('register')" id="btnTabRegister" class="py-2 rounded-lg transition <?= ($active_tab === 'register') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'; ?>">
                 Register
             </button>
         </div>
@@ -390,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <label class="block text-[11px] font-bold text-slate-400 mb-1">Username, Mobile or Email</label>
                     <div class="relative">
                         <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-user"></i></span>
-                        <input type="text" name="identity" required placeholder="e.g. gamer_pro or 9878385810" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-bold focus:outline-none">
+                        <input type="text" name="identity" required placeholder="e.g. gamer_pro or 9878385810" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-bold focus:outline-none">
                     </div>
                 </div>
 
@@ -398,11 +433,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <label class="block text-[11px] font-bold text-slate-400 mb-1">Password</label>
                     <div class="relative">
                         <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" name="password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none">
+                        <input type="password" name="password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none">
                     </div>
                 </div>
 
-                <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
                     <i class="fa-solid fa-right-to-bracket"></i>
                     <span>Sign In to Arena</span>
                 </button>
@@ -446,7 +481,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                     Username <span class="text-rose-400">*</span>
                 </label>
-                <input type="text" name="username" required placeholder="e.g. Beast_Striker" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none">
+                <input type="text" name="username" required placeholder="e.g. Beast_Striker" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none">
             </div>
 
             <div>
@@ -455,7 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </label>
                 <div class="flex items-center gap-1.5">
                     <span class="px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono font-bold text-slate-400">+91</span>
-                    <input type="tel" name="phone" required minlength="10" maxlength="10" placeholder="10-digit number" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none">
+                    <input type="tel" name="phone" required minlength="10" maxlength="10" placeholder="10-digit number" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none">
                 </div>
             </div>
 
@@ -463,24 +498,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                     Email Address <span class="text-rose-400">*</span>
                 </label>
-                <input type="email" name="email" required placeholder="gamer@gmail.com" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                <input type="email" name="email" required placeholder="gamer@gmail.com" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                     Password <span class="text-rose-400">*</span>
                 </label>
-                <input type="password" name="password" required minlength="6" placeholder="At least 6 characters" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                <input type="password" name="password" required minlength="6" placeholder="At least 6 characters" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                     Referral Code (Optional)
                 </label>
-                <input type="text" name="referral_code" placeholder="e.g. BEAST99" class="w-full bg-slate-900 border border-slate-800 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-yellow-400 font-mono focus:outline-none uppercase">
+                <input type="text" name="referral_code" placeholder="e.g. BEAST99" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-sky-400 font-mono focus:outline-none uppercase">
             </div>
 
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
+            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
                 <i class="fa-solid fa-user-plus"></i>
                 <span>Create Gamer Account</span>
             </button>
@@ -499,13 +534,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if (tab === 'login') {
                 fLog.classList.remove('hidden');
                 fReg.classList.add('hidden');
-                bLog.className = 'py-2 rounded-lg transition bg-yellow-400 text-slate-950 shadow-sm';
+                bLog.className = 'py-2 rounded-lg transition bg-blue-600 text-white shadow-sm';
                 bReg.className = 'py-2 rounded-lg transition text-slate-400 hover:text-white';
             } else {
                 fLog.classList.add('hidden');
                 fReg.classList.remove('hidden');
                 bLog.className = 'py-2 rounded-lg transition text-slate-400 hover:text-white';
-                bReg.className = 'py-2 rounded-lg transition bg-yellow-400 text-slate-950 shadow-sm';
+                bReg.className = 'py-2 rounded-lg transition bg-blue-600 text-white shadow-sm';
             }
         }
     </script>

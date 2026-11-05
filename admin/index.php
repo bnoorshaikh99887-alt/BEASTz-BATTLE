@@ -62,19 +62,19 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
         <h2 class="text-base font-extrabold text-slate-900 font-display">Dashboard Overview</h2>
         <p class="text-[11px] text-slate-500">BEASTzBATTLE Real-Time Control Center</p>
     </div>
-    <a onclick="switchAdminTab('tournaments')" role="button" class="py-2 px-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 active:scale-95">
+    <a onclick="switchAdminTab('tournaments')" role="button" class="py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 active:scale-95">
         <i class="fa-solid fa-plus text-[10px]"></i> New Tourney
     </a>
 </div>
 
 <!-- Alert for Pending Requests -->
 <?php if ($pending_deposits > 0 || $pending_withdrawals > 0): ?>
-    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-4 flex items-center justify-between text-xs shadow-xs">
-        <div class="flex items-center gap-2 text-amber-900 font-bold">
-            <i class="fa-solid fa-bell text-amber-500 animate-bounce"></i>
+    <div class="bg-blue-950/40 border border-blue-600/40 rounded-2xl p-3.5 mb-4 flex items-center justify-between text-xs shadow-xs">
+        <div class="flex items-center gap-2 text-sky-200 font-bold">
+            <i class="fa-solid fa-bell text-blue-400 animate-bounce"></i>
             <span>Action Required: <span id="admin-pending-deposits-cnt"><?= $pending_deposits; ?></span> Deposits, <span id="admin-pending-payouts-cnt"><?= $pending_withdrawals; ?></span> Payouts pending review.</span>
         </div>
-        <a onclick="switchAdminTab('deposits')" role="button" class="text-[10px] font-black bg-yellow-400 hover:bg-yellow-500 text-slate-950 px-2.5 py-1 rounded-lg transition shadow-xs">
+        <a onclick="switchAdminTab('deposits')" role="button" class="text-[10px] font-black bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg transition shadow-xs">
             Review
         </a>
     </div>
@@ -83,10 +83,10 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
 <!-- 2x2 Stats Grid Cards (White Card + Yellow / Slate Accents) -->
 <div class="grid grid-cols-2 gap-3 mb-5">
     <!-- Total Users -->
-    <a onclick="switchAdminTab('users')" role="button" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-yellow-400 hover:shadow transition group cursor-pointer">
+    <a onclick="switchAdminTab('users')" role="button" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-blue-500 hover:shadow transition group cursor-pointer">
         <div class="flex items-center justify-between mb-2">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Gamers</span>
-            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+            <div class="w-7 h-7 rounded-lg bg-blue-950/60 text-sky-200 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-users"></i>
             </div>
         </div>
@@ -95,10 +95,10 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
     </a>
 
     <!-- Total Tournaments -->
-    <a onclick="switchAdminTab('tournaments')" role="button" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-yellow-400 hover:shadow transition group">
+    <a onclick="switchAdminTab('tournaments')" role="button" class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm block hover:border-blue-500 hover:shadow transition group">
         <div class="flex items-center justify-between mb-2">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tournaments</span>
-            <div class="w-7 h-7 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+            <div class="w-7 h-7 rounded-lg bg-blue-950/60 text-sky-200 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-trophy"></i>
             </div>
         </div>
@@ -110,11 +110,11 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
     <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm">
         <div class="flex items-center justify-between mb-2">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prize Paid</span>
-            <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
+            <div class="w-7 h-7 rounded-lg bg-blue-950/50 text-amber-700 flex items-center justify-center text-xs">
                 <i class="fa-solid fa-crown"></i>
             </div>
         </div>
-        <div class="text-xl font-black text-amber-500 font-mono"><?= format_inr($prize_dist); ?></div>
+        <div class="text-xl font-black text-blue-400 font-mono"><?= format_inr($prize_dist); ?></div>
         <span class="text-[10px] text-slate-400">Disbursed to Winners</span>
     </div>
 
@@ -135,7 +135,7 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
 <div class="space-y-2 mb-4">
     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">Quick Actions</h3>
     <div class="grid grid-cols-2 gap-2.5">
-        <a onclick="switchAdminTab('deposits')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+        <a onclick="switchAdminTab('deposits')" role="button" class="bg-white hover:bg-blue-950/40/60 border border-slate-200 hover:border-blue-500 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
             <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs group-hover:bg-emerald-500 group-hover:text-white transition">
                 <i class="fa-solid fa-arrow-down"></i>
             </div>
@@ -145,8 +145,8 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
             </div>
         </a>
 
-        <a onclick="switchAdminTab('payouts')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
-            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+        <a onclick="switchAdminTab('payouts')" role="button" class="bg-white hover:bg-blue-950/40/60 border border-slate-200 hover:border-blue-500 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-blue-950/50 text-amber-700 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-arrow-up"></i>
             </div>
             <div>
@@ -155,8 +155,8 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
             </div>
         </a>
 
-        <a onclick="switchAdminTab('tournaments')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
-            <div class="w-8 h-8 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+        <a onclick="switchAdminTab('tournaments')" role="button" class="bg-white hover:bg-blue-950/40/60 border border-slate-200 hover:border-blue-500 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-blue-950/60 text-sky-200 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-gamepad"></i>
             </div>
             <div>
@@ -165,8 +165,8 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
             </div>
         </a>
 
-        <a onclick="switchAdminTab('settings')" role="button" class="bg-white hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
-            <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+        <a onclick="switchAdminTab('settings')" role="button" class="bg-white hover:bg-blue-950/40/60 border border-slate-200 hover:border-blue-500 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-sliders"></i>
             </div>
             <div>
@@ -178,8 +178,8 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
         <!-- ============================================== -->
         <!-- ALWAYS VISIBLE: PUSH NOTIFICATIONS & WORKER PANEL -->
         <!-- ============================================== -->
-        <a onclick="switchAdminTab('notifications')" role="button" class="bg-white dark:bg-slate-900 hover:bg-yellow-50/60 border border-slate-200 dark:border-slate-800 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
-            <div class="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+        <a onclick="switchAdminTab('notifications')" role="button" class="bg-white dark:bg-slate-900 hover:bg-blue-950/40/60 border border-slate-200 dark:border-slate-800 hover:border-blue-500 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-paper-plane"></i>
             </div>
             <div>
@@ -187,8 +187,8 @@ a[onclick], [role=button] { cursor: pointer; user-select: none; }
                 <span class="text-[10px] text-slate-400">Send Announcements</span>
             </div>
         </a>
-        <a href="/worker.php" target="_blank" class="bg-white dark:bg-slate-900 hover:bg-yellow-50/60 border border-slate-200 dark:border-slate-800 hover:border-yellow-400 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
-            <div class="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs group-hover:bg-yellow-400 group-hover:text-slate-950 transition">
+        <a href="/worker.php" target="_blank" class="bg-white dark:bg-slate-900 hover:bg-blue-950/40/60 border border-slate-200 dark:border-slate-800 hover:border-blue-500 p-3 rounded-2xl flex items-center gap-2.5 transition shadow-xs group">
+            <div class="w-8 h-8 rounded-xl bg-blue-950/50 dark:bg-amber-900/40 text-amber-700 dark:text-sky-400 flex items-center justify-center text-xs group-hover:bg-blue-600 group-hover:text-slate-950 transition">
                 <i class="fa-solid fa-gamepad"></i>
             </div>
             <div>

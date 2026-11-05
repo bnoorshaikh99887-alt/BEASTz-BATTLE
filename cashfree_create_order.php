@@ -79,6 +79,31 @@ if ($http_status !== 200 || !isset($res_data['payment_session_id'])) {
 }
 
 $payment_session_id = $res_data['payment_session_id'];
+
+// Securely log order into cashfree_orders table for atomic state verification
+if ($conn && !$conn->connect_error) {
+    @$conn->query("CREATE TABLE IF NOT EXISTS `cashfree_orders` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `order_id` VARCHAR(100) NOT NULL UNIQUE,
+        `user_id` INT NOT NULL,
+        `amount` DECIMAL(10, 2) NOT NULL,
+        `status` ENUM('PENDING', 'PAID', 'FAILED', 'USER_DROPPED') NOT NULL DEFAULT 'PENDING',
+        `payment_session_id` VARCHAR(255) NULL,
+        `cf_payment_id` VARCHAR(100) NULL,
+        `raw_response` TEXT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX `idx_user` (`user_id`),
+        INDEX `idx_status` (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    $ins_cf = $conn->prepare("INSERT INTO cashfree_orders (order_id, user_id, amount, status, payment_session_id) VALUES (?, ?, ?, 'PENDING', ?) ON DUPLICATE KEY UPDATE payment_session_id = VALUES(payment_session_id)");
+    if ($ins_cf) {
+        $ins_cf->bind_param("sids", $order_id, $user_id, $amount_inr, $payment_session_id);
+        $ins_cf->execute();
+        $ins_cf->close();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -93,12 +118,12 @@ $payment_session_id = $res_data['payment_session_id'];
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-3xl p-6 text-center shadow-2xl">
-        <div class="w-12 h-12 mx-auto rounded-full border-4 border-yellow-400 border-t-transparent animate-spin mb-4"></div>
+        <div class="w-12 h-12 mx-auto rounded-full border-4 border-blue-500 border-t-transparent animate-spin mb-4"></div>
         <h3 class="text-base font-extrabold text-white mb-1">Connecting to Gateway...</h3>
-        <p class="text-xs text-slate-400 mb-2">Amount: <span class="text-yellow-400 font-mono font-black"><?= format_inr($amount_inr); ?></span></p>
+        <p class="text-xs text-slate-400 mb-2">Amount: <span class="text-blue-400 font-mono font-black"><?= format_inr($amount_inr); ?></span></p>
         <p class="text-[11px] text-slate-400 mb-5">Opening secure checkout (GPay, PhonePe, Paytm, Cards, NetBanking)...</p>
         
-        <button id="manualPayBtn" type="button" onclick="launchCashfree()" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl text-xs font-black transition shadow-xs flex items-center justify-center gap-2 active:scale-95">
+        <button id="manualPayBtn" type="button" onclick="launchCashfree()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black transition shadow-xs flex items-center justify-center gap-2 active:scale-95">
             <i class="fa-solid fa-lock text-xs"></i>
             <span>Pay <?= format_inr($amount_inr); ?> Now</span>
         </button>

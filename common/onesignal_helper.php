@@ -1,15 +1,17 @@
 <?php
+require_once __DIR__ . '/env.php';
+
 /**
  * BEASTz BATTLE - Ultra-Reliable OneSignal Push Notification Engine
  * App ID: 561bd59e-8355-47c8-88cc-0766688a105a
  */
 
 if (!defined("ONESIGNAL_APP_ID")) {
-    define("ONESIGNAL_APP_ID", "561bd59e-8355-47c8-88cc-0766688a105a");
+    define("ONESIGNAL_APP_ID", env("ONESIGNAL_APP_ID", "561bd59e-8355-47c8-88cc-0766688a105a"));
 }
 
 if (!defined("ONESIGNAL_API_KEY")) {
-    define("ONESIGNAL_API_KEY", base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk="));
+    define("ONESIGNAL_API_KEY", env("ONESIGNAL_API_KEY", ""));
 }
 
 function get_onesignal_key() {

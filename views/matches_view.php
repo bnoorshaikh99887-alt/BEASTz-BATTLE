@@ -1,7 +1,7 @@
 <!-- Top 3 Sub-Tabs: Upcoming / Live / Played (Full-Cover Solid Yellow Capsule Pills) -->
 <div class="bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-14 z-30 mb-4 -mx-4 px-3 py-2 shadow-xs">
     <div class="grid grid-cols-3 gap-1.5 text-center text-xs font-bold bg-slate-100 dark:bg-slate-900/90 p-1 rounded-full border border-slate-200 dark:border-slate-800">
-        <button type="button" onclick="switchMatchTab('upcoming', this)" id="tabBtnUpcoming" class="match-tab py-1.5 px-3 rounded-full bg-yellow-400 text-slate-950 font-black shadow-xs transition-all">
+        <button type="button" onclick="switchMatchTab('upcoming', this)" id="tabBtnUpcoming" class="match-tab py-1.5 px-3 rounded-full bg-blue-600 text-white font-black shadow-xs transition-all">
             Upcoming
         </button>
         <button type="button" onclick="switchMatchTab('live', this)" id="tabBtnLive" class="match-tab py-1.5 px-3 rounded-full text-slate-400 hover:text-white font-bold transition-all">
@@ -26,7 +26,7 @@
                             <span class="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded uppercase">
                                 <?= htmlspecialchars($t['match_type'] ?: 'SOLO'); ?> &bull; <?= htmlspecialchars($t['map'] ?: 'BERMUDA'); ?>
                             </span>
-                            <span class="text-[9px] font-black !text-black bg-yellow-400 px-2 py-0.5 rounded uppercase shadow-2xs">
+                            <span class="text-[9px] font-black !text-black bg-blue-600 px-2 py-0.5 rounded uppercase shadow-2xs">
                                 Slot #<?= $t['slot_no'] ?: 1; ?>
                             </span>
                         </div>
@@ -34,7 +34,7 @@
                             <?= htmlspecialchars($t['title']); ?>
                         </h3>
                     </div>
-                    <span class="text-xs font-extrabold text-amber-500">
+                    <span class="text-xs font-extrabold text-blue-400">
                         Pool: <?= format_compact_inr($t['prize_pool']); ?>
                     </span>
                 </div>
@@ -46,32 +46,32 @@
                     </div>
                     <div class="text-right">
                         <span class="text-[10px] text-slate-400 block font-semibold">Your Registered IGN</span>
-                        <span class="font-black text-amber-500 dark:text-yellow-400"><?= htmlspecialchars($t['in_game_name'] ?? 'Player'); ?></span>
+                        <span class="font-black text-blue-400 dark:text-sky-400"><?= htmlspecialchars($t['in_game_name'] ?? 'Player'); ?></span>
                     </div>
                 </div>
 
                 <!-- High-Contrast IDP Box (Dark Mode & Light Mode Comfortable) -->
-                <div class="bg-slate-900 border border-yellow-500/40 rounded-xl p-3 flex items-center justify-between text-white shadow-xs">
+                <div class="bg-slate-900 border border-blue-500/40 rounded-xl p-3 flex items-center justify-between text-white shadow-xs">
                     <div>
                         <div class="flex items-center gap-1.5 mb-0.5">
-                            <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-                            <span class="text-[10px] font-black text-yellow-400 uppercase tracking-wider block">
+                            <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                            <span class="text-[10px] font-black text-sky-400 uppercase tracking-wider block">
                                 CUSTOM ROOM CREDENTIALS (IDP)
                             </span>
                         </div>
                         <?php if (!empty($t['room_id'])): ?>
                             <div class="text-xs text-white font-mono mt-0.5 font-bold flex items-center gap-2">
-                                <span>ID: <strong class="text-yellow-400 font-black text-sm"><?= htmlspecialchars($t['room_id']); ?></strong></span>
-                                <span>PASS: <strong class="text-yellow-400 font-black text-sm"><?= htmlspecialchars($t['room_password'] ?: 'None'); ?></strong></span>
+                                <span>ID: <strong class="text-sky-400 font-black text-sm"><?= htmlspecialchars($t['room_id']); ?></strong></span>
+                                <span>PASS: <strong class="text-sky-400 font-black text-sm"><?= htmlspecialchars($t['room_password'] ?: 'None'); ?></strong></span>
                             </div>
                         <?php else: ?>
                             <span class="text-[11px] text-slate-300 font-medium">
-                                <i class="fa-solid fa-clock text-yellow-400 mr-1"></i> Room ID & Pass published 10 mins before match start.
+                                <i class="fa-solid fa-clock text-sky-400 mr-1"></i> Room ID & Pass published 10 mins before match start.
                             </span>
                         <?php endif; ?>
                     </div>
                     <?php if (!empty($t['room_id'])): ?>
-                        <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black text-[10px] rounded-lg shadow-xs transition active:scale-95">
+                        <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] rounded-lg shadow-xs transition active:scale-95">
                             Copy
                         </button>
                     <?php endif; ?>
@@ -80,12 +80,12 @@
         <?php endwhile; ?>
     <?php else: ?>
         <div class="text-center py-12 bg-white rounded-2xl border border-slate-200 p-6">
-            <div class="w-12 h-12 mx-auto rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center text-xl mb-2">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-950/60 text-sky-300 flex items-center justify-center text-xl mb-2">
                 <i class="fa-solid fa-calendar-xmark"></i>
             </div>
             <h4 class="text-sm font-bold text-slate-800">No upcoming matches</h4>
             <p class="text-xs text-slate-500 mt-1 mb-4">You have not joined any upcoming tournaments yet.</p>
-            <button type="button" onclick="switchAppTab('home')" class="inline-block px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-xs transition cursor-pointer">
+            <button type="button" onclick="switchAppTab('home')" class="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs shadow-xs transition cursor-pointer">
                 Browse Tournaments &rarr;
             </button>
         </div>
@@ -104,7 +104,7 @@
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                         <span>MATCH CURRENTLY LIVE</span>
                     </div>
-                    <span class="text-xs font-black px-2 py-0.5 rounded-lg bg-yellow-400 text-black">
+                    <span class="text-xs font-black px-2 py-0.5 rounded-lg bg-blue-600 text-white">
                         Your Slot: #<?= $t['slot_no'] ?: 1; ?>
                     </span>
                 </div>
@@ -133,12 +133,12 @@
                         <div>
                             <span class="text-[10px] text-slate-400 block uppercase font-mono">Custom Room Credentials</span>
                             <div class="text-xs font-mono font-bold mt-0.5">
-                                ID: <span class="text-yellow-400 font-extrabold"><?= htmlspecialchars($t['room_id'] ?: 'Pending'); ?></span> | 
-                                Pass: <span class="text-yellow-400 font-extrabold"><?= htmlspecialchars($t['room_password'] ?: 'Pending'); ?></span>
+                                ID: <span class="text-sky-400 font-extrabold"><?= htmlspecialchars($t['room_id'] ?: 'Pending'); ?></span> | 
+                                Pass: <span class="text-sky-400 font-extrabold"><?= htmlspecialchars($t['room_password'] ?: 'Pending'); ?></span>
                             </div>
                         </div>
                         <?php if (!empty($t['room_id'])): ?>
-                            <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black text-[10px] rounded-lg">
+                            <button type="button" onclick="copyCredentials('<?= htmlspecialchars($t['room_id']); ?>', '<?= htmlspecialchars($t['room_password']); ?>')" class="px-2.5 py-1 bg-blue-600 text-white font-black text-[10px] rounded-lg">
                                 Copy
                             </button>
                         <?php endif; ?>
@@ -195,7 +195,7 @@
                     <!-- Yellow "Winners" Button -->
                     <button type="button" 
                             onclick="openWinnersModal('<?= htmlspecialchars(addslashes($t['title'])); ?>', '<?= $tourney_winners_json; ?>')" 
-                            class="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black text-[11px] rounded-lg shadow-xs transition shrink-0">
+                            class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-black text-[11px] rounded-lg shadow-xs transition shrink-0">
                         Winners
                     </button>
                 </div>
@@ -263,7 +263,7 @@
         </button>
 
         <div class="text-center mb-4">
-            <div class="w-12 h-12 mx-auto rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-xl mb-2 shadow-xs">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl mb-2 shadow-xs">
                 <i class="fa-solid fa-crown"></i>
             </div>
             <h3 class="text-base font-extrabold text-slate-900" id="winnersModalTitle">Match Winners</h3>
@@ -289,13 +289,13 @@
         }
 
         document.querySelectorAll('.match-tab').forEach(function(b) {
-            b.classList.remove('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
+            b.classList.remove('bg-blue-600', 'text-slate-950', 'font-black', 'shadow-xs');
             b.classList.add('text-slate-400', 'font-bold');
         });
 
         if (btn) {
             btn.classList.remove('text-slate-400', 'font-bold');
-            btn.classList.add('bg-yellow-400', 'text-slate-950', 'font-black', 'shadow-xs');
+            btn.classList.add('bg-blue-600', 'text-slate-950', 'font-black', 'shadow-xs');
         }
 
         document.querySelectorAll('.tab-pane').forEach(function(p) {
@@ -343,7 +343,7 @@
                 const rankText = w.rank_no > 0 ? '#' + w.rank_no : (idx + 1);
                 row.innerHTML = `
                     <div class="flex items-center gap-2">
-                        <span class="w-6 h-6 rounded-full bg-yellow-400 text-slate-950 font-black flex items-center justify-center text-[10px]">
+                        <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-[10px]">
                             ${rankText}
                         </span>
                         <div>

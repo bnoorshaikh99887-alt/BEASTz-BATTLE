@@ -86,11 +86,11 @@ $display_uname = str_starts_with($curr_uname, 'player_') ? '' : $curr_uname;
     <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative overflow-hidden">
         
         <div class="text-center mb-6">
-            <div class="w-14 h-14 mx-auto rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-2xl mb-3 shadow-xs font-black">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl mb-3 shadow-xs font-black">
                 <i class="fa-solid fa-user-check"></i>
             </div>
             <h2 class="text-xl font-black text-slate-900 tracking-tight">Setup Your Profile</h2>
-            <div class="mt-1 inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-full text-[11px] text-yellow-800 font-bold">
+            <div class="mt-1 inline-flex items-center gap-1.5 px-3 py-1 bg-blue-950/40 border border-yellow-200 rounded-full text-[11px] text-sky-200 font-bold">
                 <i class="fa-brands fa-google text-xs"></i>
                 <span><?= htmlspecialchars($user['email'] ?? 'Google Account'); ?></span>
             </div>
@@ -112,7 +112,7 @@ $display_uname = str_starts_with($curr_uname, 'player_') ? '' : $curr_uname;
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                     <span>Gamer Username / Tag</span>
-                    <span class="text-[10px] text-yellow-600 font-bold">Displayed in match</span>
+                    <span class="text-[10px] text-sky-300 font-bold">Displayed in match</span>
                 </label>
                 <div class="relative">
                     <span class="absolute left-3.5 top-2.5 text-slate-400 text-xs font-bold">@</span>
@@ -120,7 +120,7 @@ $display_uname = str_starts_with($curr_uname, 'player_') ? '' : $curr_uname;
                            value="<?= htmlspecialchars($display_uname); ?>"
                            placeholder="e.g. shadow_ninja99" 
                            minlength="3" maxlength="20"
-                           class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl pl-8 pr-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none font-bold">
+                           class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl pl-8 pr-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none font-bold">
                 </div>
                 <p class="text-[10px] text-slate-400 mt-1">Letters, numbers, and underscores only.</p>
             </div>
@@ -138,12 +138,12 @@ $display_uname = str_starts_with($curr_uname, 'player_') ? '' : $curr_uname;
                            value="<?= htmlspecialchars($user['phone'] ?? ''); ?>"
                            placeholder="9876543210" 
                            maxlength="10" pattern="[0-9]{10}"
-                           class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-r-xl px-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none font-mono font-bold">
+                           class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-r-xl px-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none font-mono font-bold">
                 </div>
                 <p class="text-[10px] text-slate-400 mt-1">10-digit number used for match alerts.</p>
             </div>
 
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs shadow-md shadow-yellow-400/20 transition active:scale-95 flex items-center justify-center gap-2">
+            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs shadow-md shadow-blue-500/20 transition active:scale-95 flex items-center justify-center gap-2">
                 <span>Save & Enter Arena</span>
                 <i class="fa-solid fa-arrow-right text-xs"></i>
             </button>

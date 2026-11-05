@@ -18,14 +18,14 @@
                 Full: <?= format_inr($current_balance); ?>
             </span>
         </div>
-        <div class="w-12 h-12 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-xl shadow-xs font-black">
+        <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-xs font-black">
             <i class="fa-solid fa-wallet"></i>
         </div>
     </div>
 
     <!-- Quick Actions (Yellow Add Money & In-Modal Withdraw) -->
     <div class="grid grid-cols-2 gap-2.5">
-        <button type="button" onclick="openDepositModal()" class="py-2.5 px-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5">
+        <button type="button" onclick="openDepositModal()" class="py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-circle-plus text-xs"></i>
             <span>Add Money</span>
         </button>
@@ -52,7 +52,7 @@
                         <span class="font-black text-slate-900 block"><?= format_inr($pw['amount']); ?></span>
                         <span class="text-[10px] font-mono text-slate-500">UPI: <?= htmlspecialchars($pw['upi_id']); ?></span>
                     </div>
-                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-950/50 text-sky-200">
                         Pending Admin Transfer
                     </span>
                 </div>
@@ -70,7 +70,7 @@
             </h3>
             <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">In Review</span>
         </div>
-        <p class="text-[11px] text-amber-800 leading-tight">
+        <p class="text-[11px] text-sky-200 leading-tight">
             Your manual deposit is submitted. Admin is verifying the UTR on banking portal.
         </p>
         <div class="space-y-2 pt-1">
@@ -80,7 +80,7 @@
                         <span class="font-extrabold text-slate-900 block"><?= format_inr($pd['amount']); ?></span>
                         <span class="text-[10px] font-mono text-slate-500">UTR: <?= htmlspecialchars($pd['transaction_id']); ?></span>
                     </div>
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950/50 text-sky-200 border border-amber-300">
                         Pending Admin Credit
                     </span>
                 </div>
@@ -93,7 +93,7 @@
 <div class="space-y-3">
     <div class="flex items-center justify-between px-1">
         <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            <i class="fa-solid fa-receipt text-yellow-500"></i> Passbook History
+            <i class="fa-solid fa-receipt text-blue-400"></i> Passbook History
         </span>
         <span class="text-[10px] text-slate-400 font-semibold">Recent 15 Entries</span>
     </div>
@@ -145,7 +145,7 @@
         </button>
 
         <div class="text-center mb-4">
-            <div class="w-12 h-12 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-lg font-black mx-auto mb-2 shadow-xs">
+            <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-lg font-black mx-auto mb-2 shadow-xs">
                 <i class="fa-solid fa-paper-plane"></i>
             </div>
             <h3 class="text-base font-extrabold text-slate-900">Withdraw Winnings</h3>
@@ -177,7 +177,7 @@
                 </label>
                 <div class="relative">
                     <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">₹</span>
-                    <input type="number" name="amount" min="50" max="<?= max(50, (int)$current_balance); ?>" step="1" required placeholder="50" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                    <input type="number" name="amount" min="50" max="<?= max(50, (int)$current_balance); ?>" step="1" required placeholder="50" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
                 </div>
             </div>
 
@@ -185,11 +185,11 @@
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">
                     Your UPI ID <span class="text-rose-500">*</span>
                 </label>
-                <input type="text" name="upi_id" required value="<?= htmlspecialchars($saved_upi_id); ?>" placeholder="e.g. 9878385810@upi" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="text" name="upi_id" required value="<?= htmlspecialchars($saved_upi_id); ?>" placeholder="e.g. 9878385810@upi" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
                 <p class="text-[10px] text-slate-400 mt-1">UPI payment will be transferred directly to this ID.</p>
             </div>
 
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5">
+            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-check"></i>
                 <span>Confirm & Request Payout</span>
             </button>
@@ -209,8 +209,8 @@
         <p class="text-[11px] text-slate-400 mb-4">Choose your preferred deposit method</p>
 
         <div class="space-y-2.5">
-            <button type="button" onclick="openCashfreeModal()" class="w-full bg-slate-50 hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
-                <div class="w-10 h-10 rounded-xl bg-yellow-400 text-slate-950 flex items-center justify-center text-lg font-black shadow-xs">
+            <button type="button" onclick="openCashfreeModal()" class="w-full bg-slate-50 hover:bg-blue-950/40/60 border border-slate-200 hover:border-blue-500 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
+                <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg font-black shadow-xs">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
                 <div>
@@ -219,7 +219,7 @@
                 </div>
             </button>
 
-            <button type="button" onclick="openQRModal()" class="w-full bg-slate-50 hover:bg-yellow-50/60 border border-slate-200 hover:border-yellow-400 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
+            <button type="button" onclick="openQRModal()" class="w-full bg-slate-50 hover:bg-blue-950/40/60 border border-slate-200 hover:border-blue-500 rounded-2xl p-3.5 flex items-center gap-3.5 transition text-left group">
                 <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center text-lg font-bold shadow-xs">
                     <i class="fa-solid fa-qrcode"></i>
                 </div>
@@ -240,22 +240,22 @@
         </button>
         <h3 class="text-sm font-extrabold text-slate-900 mb-1">Instant Gateway Deposit</h3>
         <p class="text-[11px] text-slate-400 mb-4">Enter amount to add (Min ₹10.00)</p>
-        <form method="POST" action="cashfree_create_order.php" class="space-y-3.5" onsubmit="var b=this.querySelector('button[type=submit]'); if(b){ b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin mr-1.5\'></i> Loading...'; }">
+        <form method="POST" action="cashfree_create_order.php" class="space-y-3.5" onsubmit="return beastzLockCashfree(this);">
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Amount (₹)</label>
                 <div class="relative">
                     <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">₹</span>
-                    <input type="number" name="amount" min="10" step="1" value="50" required class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-extrabold focus:outline-none">
+                    <input type="number" name="amount" min="10" step="1" value="50" required class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl pl-7 pr-3 py-2 text-xs text-slate-900 font-extrabold focus:outline-none">
                 </div>
             </div>
             <!-- Quick Amount Badges -->
             <div class="grid grid-cols-4 gap-2">
-                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=20" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹20</button>
-                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=50" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹50</button>
-                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=100" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹100</button>
-                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=200" class="py-1.5 bg-slate-100 hover:bg-yellow-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹200</button>
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=20" class="py-1.5 bg-slate-100 hover:bg-blue-950/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹20</button>
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=50" class="py-1.5 bg-slate-100 hover:bg-blue-950/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹50</button>
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=100" class="py-1.5 bg-slate-100 hover:bg-blue-950/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹100</button>
+                <button type="button" onclick="document.querySelector('#cashfreeModal input[name=amount]').value=200" class="py-1.5 bg-slate-100 hover:bg-blue-950/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">₹200</button>
             </div>
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
+            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-lock text-xs"></i>
                 <span>Proceed to Cashfree Payment</span>
             </button>
@@ -281,14 +281,14 @@
         <form id="fastUtrForm" onsubmit="submitFastUTR(event)" class="space-y-3 text-left">
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Deposited Amount (₹)</label>
-                <input type="number" name="amount" min="10" step="1" required placeholder="50" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-yellow-400">
+                <input type="number" name="amount" min="10" step="1" required placeholder="50" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-blue-500">
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">12-Digit UPI Reference / UTR Number</label>
-                <input type="text" name="transaction_id" required minlength="6" placeholder="e.g. 429381920192" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:border-yellow-400">
+                <input type="text" name="transaction_id" required minlength="6" placeholder="e.g. 429381920192" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:border-blue-500">
                 <p class="text-[10px] text-slate-400 mt-1">Found in your payment app transaction details after sending money.</p>
             </div>
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
+            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-paper-plane"></i>
                 <span>Submit 12-Digit UTR for Verification</span>
             </button>
@@ -306,7 +306,7 @@
             <i class="fa-solid fa-xmark"></i>
         </button>
 
-        <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-500/20 text-amber-500 flex items-center justify-center text-2xl mb-3 shadow-xs">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-950/50 dark:bg-blue-600/20 text-blue-400 flex items-center justify-center text-2xl mb-3 shadow-xs">
             <i class="fa-solid fa-triangle-exclamation"></i>
         </div>
 
@@ -322,7 +322,7 @@
         </p>
 
         <div class="space-y-2">
-            <button type="button" onclick="closeInsufficientModal(); switchAppTab('home');" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+            <button type="button" onclick="closeInsufficientModal(); switchAppTab('home');" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-xs active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-gamepad"></i>
                 <span>Browse Tournaments & Play</span>
             </button>
@@ -400,6 +400,22 @@
         setTimeout(function() { el.style.opacity = "0"; el.style.transform = "translate(-50%, -10px)"; }, 3500);
     }
 
+    function beastzLockCashfree(form) {
+        var b = form.querySelector('button[type=submit]');
+        if (!b || b.dataset.locked === '1') return false;
+        b.dataset.locked = '1';
+        b.dataset.orig = b.innerHTML;
+        b.disabled = true;
+        b.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Loading payment...';
+        setTimeout(function() {
+            if (!b.isConnected) return;
+            b.disabled = false;
+            b.dataset.locked = '0';
+            if (b.dataset.orig) b.innerHTML = b.dataset.orig;
+        }, 8000);
+        return true;
+    }
+
     // Fast 0.3s UTR Submission
     function submitFastUTR(e) {
         e.preventDefault();
@@ -429,7 +445,8 @@
         fd.append("amount", amount);
         fd.append("transaction_id", utr);
 
-        fetch("payment_verify.php", {
+        var sender = window.beastzFetch || fetch;
+        sender("payment_verify.php", {
             method: "POST",
             headers: { "Accept": "application/json" },
             body: fd
@@ -489,7 +506,8 @@
         fd.append("amount", amount);
         fd.append("upi_id", upi);
 
-        fetch("api/request_withdrawal.php", {
+        var sender = window.beastzFetch || fetch;
+        sender("api/request_withdrawal.php", {
             method: "POST",
             body: fd
         })

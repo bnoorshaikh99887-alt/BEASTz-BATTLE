@@ -2,7 +2,7 @@
 // admin/views/admins_view.php - Multi-Admin & Host Management
 $admin_msg = "";
 $admin_msg_type = "";
-$is_super = (!empty($_SESSION['is_super_admin']) || ($logged_username ?? '') === 'anonymous.349' || ($logged_username ?? '') === 'admin' || ($_SESSION['admin_user'] ?? '') === 'anonymous.349' || ($_SESSION['admin_user'] ?? '') === 'admin' || ($_SESSION['admin_role'] ?? '') === 'super_admin' || !empty($_SESSION['admin_logged_in']));
+$is_super = (!empty($_SESSION['is_super_admin']) || ($logged_username ?? '') === 'anonymous.349' || ($logged_username ?? '') === 'admin' || ($_SESSION['admin_user'] ?? '') === 'anonymous.349' || ($_SESSION['admin_user'] ?? '') === 'admin' || ($_SESSION['admin_role'] ?? '') === 'super_admin' );
 
 // 1. ACTION: Create Sub-Admin / Host
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_host_admin') {
@@ -174,9 +174,9 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
 
 <div class="space-y-4">
         <!-- Direct Worker Panel Launcher -->
-    <div class="bg-gradient-to-r from-amber-500/10 via-yellow-400/15 to-amber-500/10 border border-amber-400/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+    <div class="bg-blue-950/20 border border-blue-600/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-lg shadow-sm">
+            <div class="w-10 h-10 rounded-2xl bg-blue-600 text-slate-950 flex items-center justify-center font-black text-lg shadow-sm">
                 <i class="fa-solid fa-gamepad"></i>
             </div>
             <div>
@@ -184,7 +184,7 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
                 <p class="text-[11px] text-slate-500 dark:text-slate-400">All tournaments, Room IDP notifications, and 24h history are segregated here.</p>
             </div>
         </div>
-        <a href="/worker.php" target="_blank" class="px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition whitespace-nowrap">
+        <a href="/worker.php" target="_blank" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-600 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition whitespace-nowrap">
             <span>Open Worker Panel</span>
             <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
         </a>
@@ -194,14 +194,14 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
     <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
             <h2 class="text-base font-extrabold text-slate-900 dark:text-white font-display flex items-center gap-2">
-                <i class="fa-solid fa-users-gear text-yellow-500"></i>
+                <i class="fa-solid fa-users-gear text-blue-400"></i>
                 <span><?= $is_super ? "Administrator & Host Control" : "Host Revenue & Earnings Studio"; ?></span>
             </h2>
             <p class="text-[11px] text-slate-500">
                 <?= $is_super ? "Create and manage dedicated worker accounts for match hosting, IDP delivery & anti-cheat" : "Track ₹3/room hosted earnings and request withdrawals"; ?>
             </p>
         </div>
-        <span class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black rounded-full text-[10px] uppercase">
+        <span class="px-2.5 py-1 bg-blue-600 text-white font-black rounded-full text-[10px] uppercase">
             <?= $is_super ? "SUPER ADMIN" : "HOST ADMIN"; ?>
         </span>
     </div>
@@ -217,20 +217,20 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
     <!-- ======================================================== -->
     <!-- SECTION 1: HOST REVENUE & EARNINGS CARD (FOR ALL HOSTS)  -->
     <!-- ======================================================== -->
-    <div class="bg-gradient-to-br from-yellow-500/10 via-slate-900 to-slate-950 border border-yellow-400/30 rounded-2xl p-4 shadow-md space-y-3">
+    <div class="bg-gradient-to-br from-blue-950/60 via-slate-900 to-slate-950 border border-blue-600/40 rounded-2xl p-4 shadow-md space-y-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-xl bg-yellow-400 text-slate-950 flex items-center justify-center text-sm font-black shadow-xs">
+                <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm font-black shadow-xs">
                     <i class="fa-solid fa-coins"></i>
                 </div>
                 <div>
-                    <h3 class="text-xs font-extrabold text-white">Host Room Revenue</h3>
-                    <span class="text-[10px] text-yellow-400 font-semibold">Earn ₹3 for every room hosted & completed</span>
+                    <h3 class="text-xs font-extrabold text-slate-900 dark:text-white">Host Room Revenue</h3>
+                    <span class="text-[10px] text-sky-400 font-semibold">Earn ₹3 for every room hosted & completed</span>
                 </div>
             </div>
             <div class="text-right">
                 <span class="text-[10px] text-slate-400 block font-semibold">Available Host Balance</span>
-                <span class="text-lg font-black font-mono text-yellow-400">
+                <span class="text-lg font-black font-mono text-sky-400">
                     <?= format_inr($curr_host_data['wallet_balance'] ?? 0.00); ?>
                 </span>
             </div>
@@ -248,7 +248,7 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
         </div>
 
         <!-- Request Payout Modal Trigger -->
-        <button type="button" onclick="document.getElementById('hostPayoutModal').classList.remove('hidden')" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+        <button type="button" onclick="document.getElementById('hostPayoutModal').classList.remove('hidden')" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
             <i class="fa-solid fa-money-bill-transfer"></i>
             <span>Request Host Earnings Withdrawal</span>
         </button>
@@ -260,10 +260,10 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
     <?php if ($is_super): ?>
     <div class="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
         <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-yellow-400/20 text-yellow-500 flex items-center justify-center text-xs">
+            <div class="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center text-xs">
                 <i class="fa-solid fa-user-plus"></i>
             </div>
-            <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+            <h3 class="text-xs font-black uppercase tracking-wider text-white">
                 Create New Sub-Admin / Match Host
             </h3>
         </div>
@@ -273,20 +273,20 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
             
             <div class="grid grid-cols-2 gap-2">
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">
                         Host Username <span class="text-rose-500">*</span>
                     </label>
-                    <input type="text" name="new_admin_username" required placeholder="e.g. host_shaikh" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none">
+                    <input type="text" name="new_admin_username" required placeholder="e.g. host_shaikh" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">
                         Host Password <span class="text-rose-500">*</span>
                     </label>
-                    <input type="password" name="new_admin_password" required minlength="6" placeholder="••••••••" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-yellow-400 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none">
+                    <input type="password" name="new_admin_password" required minlength="6" placeholder="••••••••" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none">
                 </div>
             </div>
 
-            <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+            <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fa-solid fa-plus"></i>
                 <span>Create Worker / Host Account</span>
             </button>
@@ -298,7 +298,7 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
     <!-- ======================================================== -->
     <div class="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
         <div class="flex items-center justify-between">
-            <h3 class="text-xs font-black uppercase tracking-wider text-slate-400">
+            <h3 class="text-xs font-black uppercase tracking-wider text-white">
                 Active Administrators & Match Hosts
             </h3>
             <span class="text-[10px] text-slate-500">Live Credentials</span>
@@ -311,12 +311,12 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
                         $is_this_master = ($adm['username'] === 'anonymous.349');
                         $is_suspended = ($adm['status'] === 'suspended');
                     ?>
-                    <div class="p-3 rounded-xl border <?= $is_this_master ? 'bg-yellow-400/5 border-yellow-400/40' : ($is_suspended ? 'bg-rose-500/5 border-rose-500/30' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'); ?> flex items-center justify-between gap-3 text-xs">
+                    <div class="p-3 rounded-xl border <?= $is_this_master ? 'bg-blue-600/5 border-blue-500/40' : ($is_suspended ? 'bg-rose-500/5 border-rose-500/30' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'); ?> flex items-center justify-between gap-3 text-xs">
                         <div>
                             <div class="flex items-center gap-2">
                                 <span class="font-extrabold text-slate-900 dark:text-white">@<?= htmlspecialchars($adm['username']); ?></span>
                                 <?php if ($is_this_master): ?>
-                                    <span class="px-2 py-0.5 rounded-full bg-yellow-400 text-slate-950 font-black text-[9px] uppercase shadow-xs">
+                                    <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white font-black text-[9px] uppercase shadow-xs">
                                         MASTER ADMIN (IMMUNE)
                                     </span>
                                 <?php elseif ($is_suspended): ?>
@@ -330,8 +330,8 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
                                 <?php endif; ?>
                             </div>
                             <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-3">
-                                <span>Rooms Hosted: <strong class="text-slate-200"><?= (int)$adm['rooms_hosted']; ?></strong></span>
-                                <span>Earnings: <strong class="text-yellow-400 font-mono"><?= format_inr($adm['wallet_balance']); ?></strong></span>
+                                <span>Rooms Hosted: <strong class="text-slate-800 dark:text-slate-200"><?= (int)$adm['rooms_hosted']; ?></strong></span>
+                                <span>Earnings: <strong class="text-sky-400 font-mono"><?= format_inr($adm['wallet_balance']); ?></strong></span>
                             </div>
                         </div>
 
@@ -368,46 +368,46 @@ $all_admins = $conn->query("SELECT * FROM admin ORDER BY CASE WHEN username = 'a
 
 <!-- Modal: Host Request Payout -->
 <div id="hostPayoutModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-slate-950 border border-yellow-400/40 rounded-3xl p-5 shadow-2xl relative text-left">
+    <div class="w-full max-w-sm bg-slate-950 border border-blue-500/40 rounded-3xl p-5 shadow-2xl relative text-left">
         <button type="button" onclick="document.getElementById('hostPayoutModal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
 
         <div class="text-center mb-4">
-            <div class="w-12 h-12 mx-auto rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center text-xl font-black mb-2 shadow-md">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl font-black mb-2 shadow-md">
                 <i class="fa-solid fa-wallet"></i>
             </div>
-            <h3 class="text-sm font-extrabold text-white">Withdraw Host Earnings</h3>
+            <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Withdraw Host Earnings</h3>
             <p class="text-[11px] text-slate-400">Request payout directly to your personal UPI ID</p>
         </div>
 
         <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex justify-between text-xs mb-3">
             <span class="text-slate-400">Available Host Balance:</span>
-            <strong class="text-yellow-400 font-mono font-black"><?= format_inr($curr_host_data['wallet_balance'] ?? 0.00); ?></strong>
+            <strong class="text-sky-400 font-mono font-black"><?= format_inr($curr_host_data['wallet_balance'] ?? 0.00); ?></strong>
         </div>
 
         <form method="POST" action="index.php?tab=admins" class="space-y-3 text-xs">
             <input type="hidden" name="action" value="host_request_payout">
             
             <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">
                     Withdrawal Amount (₹) <span class="text-slate-500">(Min ₹10)</span>
                 </label>
-                <input type="number" name="payout_amount" min="10" max="<?= max(10, (float)($curr_host_data['wallet_balance'] ?? 0)); ?>" required placeholder="50" class="w-full bg-slate-900 border border-slate-700 focus:border-yellow-400 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none">
+                <input type="number" name="payout_amount" min="10" max="<?= max(10, (float)($curr_host_data['wallet_balance'] ?? 0)); ?>" required placeholder="50" class="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none">
             </div>
 
             <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">
                     Your Personal UPI ID <span class="text-rose-400">*</span>
                 </label>
-                <input type="text" name="host_upi_id" required value="<?= htmlspecialchars($curr_host_data['upi_id'] ?? ''); ?>" placeholder="e.g. 9878385810@upi" class="w-full bg-slate-900 border border-slate-700 focus:border-yellow-400 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none">
+                <input type="text" name="host_upi_id" required value="<?= htmlspecialchars($curr_host_data['upi_id'] ?? ''); ?>" placeholder="e.g. 9878385810@upi" class="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none">
             </div>
 
             <p class="text-[10px] text-slate-500">
                 ⚡ Your request will appear in Master Admin's Payouts with a special yellow glow so it gets approved quickly!
             </p>
 
-            <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fa-solid fa-paper-plane"></i>
                 <span>Submit Payout Request</span>
             </button>

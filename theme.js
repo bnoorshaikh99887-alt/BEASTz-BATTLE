@@ -115,14 +115,14 @@ function switchAppTab(tabName, skipState) {
 
     // Update bottom nav bar and shift active yellow glow dynamically across tabs
     document.querySelectorAll(".nav-app-tab, .bottom-nav-item, [id^='nav-tab-']").forEach(function(btn) {
-        btn.classList.remove("active-tab", "text-yellow-500", "font-black");
+        btn.classList.remove("active-tab", "text-blue-500", "font-black");
         btn.classList.add("text-slate-400");
     });
 
     var activeBottom = document.getElementById("nav-tab-" + tabName) || document.getElementById("nav-" + tabName);
     if (activeBottom) {
         activeBottom.classList.remove("text-slate-400");
-        activeBottom.classList.add("active-tab", "text-yellow-500", "font-black");
+        activeBottom.classList.add("active-tab", "text-blue-500", "font-black");
     }
 
     if (!skipState && window.history && window.history.replaceState) {
@@ -198,7 +198,7 @@ function switchAdminTab(tabName, skipState) {
     window.scrollTo({ top: 0, behavior: 'instant' });
 
     // Top Navigation Pill Highlight
-    var actPills = ['bg-yellow-400', 'text-slate-950', 'border-yellow-400', 'font-black', 'shadow-xs'];
+    var actPills = ['bg-blue-600', 'text-white', 'border-blue-500', 'font-black', 'shadow-sm'];
     var inactPills = ['text-slate-400', 'hover:text-white', 'font-bold', 'bg-slate-900', 'border-slate-800'];
 
     document.querySelectorAll('.admin-tab-btn').forEach(function(btn) {
@@ -215,14 +215,14 @@ function switchAdminTab(tabName, skipState) {
 
     // Bottom Navigation Icon Highlight
     document.querySelectorAll('.admin-bottom-tab').forEach(function(btn) {
-        btn.classList.remove('text-yellow-500', 'font-black');
+        btn.classList.remove('text-blue-500', 'font-black');
         btn.classList.add('text-slate-400');
     });
 
     var activeBottomBtn = document.getElementById('admin-bottom-' + tabName);
     if (activeBottomBtn) {
         activeBottomBtn.classList.remove('text-slate-400');
-        activeBottomBtn.classList.add('text-yellow-500', 'font-black');
+        activeBottomBtn.classList.add('text-blue-500', 'font-black');
     }
 
     // Update URL query state without reload
@@ -292,12 +292,19 @@ function initPageTabs() {
 // ============================================================
 var LiveSyncEngine = (function() {
     var timerId = null;
-    var pollInterval = 5000; // 5s (was 3.5s) - lighter on mobile + serverless
+    var pollInterval = 8000; // 8s - avoids rewriting the DOM while the user is tapping
     var failCount = 0;        // consecutive failures -> exponential backoff
     var isAuthPage = /\/(login|install|update_database)(\.php)?\/?$/.test(window.location.pathname);
     var lastWalletBal = null;
     var lastCompletedWithdrawalId = null;
     var isPolling = false;
+    var userBusyUntil = 0;
+
+    ['touchstart', 'pointerdown', 'keydown'].forEach(function(evName) {
+        document.addEventListener(evName, function() {
+            userBusyUntil = Date.now() + 1400;
+        }, { passive: true });
+    });
 
     function flashElement(el, colorClass) {
         if (!el) return;
@@ -310,7 +317,7 @@ var LiveSyncEngine = (function() {
     function showInAppAlert(message, type) {
         var alertBox = document.createElement('div');
         alertBox.className = 'fixed top-14 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold transition-all transform translate-y-0 ' +
-            (type === 'success' ? 'bg-emerald-600 text-white' : 'bg-yellow-400 text-slate-950');
+            (type === 'success' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white');
         alertBox.innerHTML = '<i class="fa-solid fa-circle-check text-sm"></i><span>' + escapeHtml(message) + '</span>';
         document.body.appendChild(alertBox);
         setTimeout(function() {
@@ -334,7 +341,7 @@ var LiveSyncEngine = (function() {
             if (headerBal) {
                 if (headerBal.textContent !== data.user.compact_balance) {
                     headerBal.textContent = data.user.compact_balance;
-                    if (balChanged) flashElement(headerBal, 'text-yellow-400');
+                    if (balChanged) flashElement(headerBal, 'text-sky-400');
                 }
             }
 
@@ -358,20 +365,31 @@ var LiveSyncEngine = (function() {
             var pendingContainer = document.getElementById('user-pending-withdrawals-container');
             var pendingList = document.getElementById('user-pending-withdrawals-list');
             if (pendingContainer) {
-                if (data.user.pending_count === 0) {
-                    pendingContainer.classList.add('hidden');
+                var pSig = String(data.user.pending_count);
+                if (data.user.pending_withdrawals) {
+                    pSig += '|' + data.user.pending_withdrawals.map(function(pw) {
+                        return pw.id + ':' + pw.amount + ':' + pw.status;
+                    }).join(',');
+                }
+                if (pendingContainer.dataset.sig === pSig) {
+                    // same list — do not rebuild or the tap in progress gets cancelled
                 } else {
-                    pendingContainer.classList.remove('hidden');
-                    if (pendingList && data.user.pending_withdrawals) {
-                        var phtml = '';
-                        data.user.pending_withdrawals.forEach(function(pw) {
-                            phtml += '<div class="bg-white p-2.5 rounded-xl border border-blue-100 flex items-center justify-between text-xs">' +
-                                '<div><span class="font-black text-slate-900 block">' + pw.formatted_amount + '</span>' +
-                                '<span class="text-[10px] font-mono text-slate-500">UPI: ' + escapeHtml(pw.upi_id) + '</span></div>' +
-                                '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Pending Admin Transfer</span>' +
-                                '</div>';
-                        });
-                        pendingList.innerHTML = phtml;
+                    pendingContainer.dataset.sig = pSig;
+                    if (data.user.pending_count === 0) {
+                        pendingContainer.classList.add('hidden');
+                    } else {
+                        pendingContainer.classList.remove('hidden');
+                        if (pendingList && data.user.pending_withdrawals) {
+                            var phtml = '';
+                            data.user.pending_withdrawals.forEach(function(pw) {
+                                phtml += '<div class="bg-white p-2.5 rounded-xl border border-blue-100 flex items-center justify-between text-xs">' +
+                                    '<div><span class="font-black text-slate-900 block">' + pw.formatted_amount + '</span>' +
+                                    '<span class="text-[10px] font-mono text-slate-500">UPI: ' + escapeHtml(pw.upi_id) + '</span></div>' +
+                                    '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-950/60 text-sky-200 border border-blue-800/40">Pending Admin Transfer</span>' +
+                                    '</div>';
+                            });
+                            pendingList.innerHTML = phtml;
+                        }
                     }
                 }
             }
@@ -401,26 +419,32 @@ var LiveSyncEngine = (function() {
         if (data.leaderboard && data.leaderboard.length > 0) {
             var lbListEl = document.getElementById('live-leaderboard-list');
             if (lbListEl) {
-                var lbHtml = '';
-                data.leaderboard.forEach(function(p) {
-                    var isMe = p.is_me;
-                    var rankColor = p.rank <= 3 ? 'text-yellow-600 font-extrabold' : 'text-slate-400';
-                    lbHtml += '<div class="px-4 py-3 flex items-center justify-between ' + (isMe ? 'bg-yellow-50/50' : 'hover:bg-slate-50/80') + ' transition">' +
-                        '<div class="flex items-center gap-3">' +
-                            '<span class="w-6 text-center text-xs font-mono font-black ' + rankColor + '">#' + p.rank + '</span>' +
-                            '<img src="' + escapeHtml(p.avatar) + '" alt="Av" class="w-9 h-9 rounded-full object-cover border border-slate-200 bg-slate-50">' +
-                            '<div><span class="text-xs font-bold text-slate-900 block leading-tight flex items-center gap-1.5">' +
-                                escapeHtml(p.username) +
-                                (isMe ? ' <span class="text-[9px] bg-yellow-400 text-black px-1.5 py-0.2 rounded font-black">YOU</span>' : '') +
-                            '</span><span class="text-[10px] text-slate-400">Gamer #' + p.id + '</span></div>' +
-                        '</div>' +
-                        '<div class="text-right">' +
-                            '<span class="text-xs font-mono font-black text-slate-900 block">' + p.formatted_balance + '</span>' +
-                            '<span class="text-[9px] font-bold text-slate-400 uppercase">Balance</span>' +
-                        '</div>' +
-                    '</div>';
-                });
-                lbListEl.innerHTML = lbHtml;
+                var lbSig = data.leaderboard.map(function(p) {
+                    return p.id + ':' + p.rank + ':' + p.wallet_balance + ':' + (p.is_me ? 1 : 0);
+                }).join('|');
+                if (lbListEl.dataset.sig !== lbSig) {
+                    lbListEl.dataset.sig = lbSig;
+                    var lbHtml = '';
+                    data.leaderboard.forEach(function(p) {
+                        var isMe = p.is_me;
+                        var rankColor = p.rank <= 3 ? 'text-sky-400 font-extrabold' : 'text-slate-400';
+                        lbHtml += '<div class="px-4 py-3 flex items-center justify-between ' + (isMe ? 'bg-blue-950/30' : 'hover:bg-slate-50/80') + ' transition">' +
+                            '<div class="flex items-center gap-3">' +
+                                '<span class="w-6 text-center text-xs font-mono font-black ' + rankColor + '">#' + p.rank + '</span>' +
+                                '<img src="' + escapeHtml(p.avatar) + '" alt="Av" class="w-9 h-9 rounded-full object-cover border border-slate-200 bg-slate-50">' +
+                                '<div><span class="text-xs font-bold text-slate-900 block leading-tight flex items-center gap-1.5">' +
+                                    escapeHtml(p.username) +
+                                    (isMe ? ' <span class="text-[9px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-black">YOU</span>' : '') +
+                                '</span><span class="text-[10px] text-slate-400">Gamer #' + p.id + '</span></div>' +
+                            '</div>' +
+                            '<div class="text-right">' +
+                                '<span class="text-xs font-mono font-black text-slate-900 block">' + p.formatted_balance + '</span>' +
+                                '<span class="text-[9px] font-bold text-slate-400 uppercase">Balance</span>' +
+                            '</div>' +
+                        '</div>';
+                    });
+                    lbListEl.innerHTML = lbHtml;
+                }
             }
         }
 
@@ -454,8 +478,7 @@ var LiveSyncEngine = (function() {
                 var pendingSig = adm.pending_payouts_list.map(function(w) { return w.id + "-" + w.status; }).join("|");
                 if (pCardCont.dataset.lastPendingSig === pendingSig) {
                     // Skip redundant re-render so touch / click events are not aborted
-                    return;
-                }
+                } else {
                 pCardCont.dataset.lastPendingSig = pendingSig;
                 if (adm.pending_payouts_list.length === 0) {
                     pCardCont.innerHTML = '<div class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 text-xs font-bold">' +
@@ -466,13 +489,13 @@ var LiveSyncEngine = (function() {
                     var payHtml = '';
                     adm.pending_payouts_list.forEach(function(w) {
                         var isHost = w.is_admin_request === 1;
-                        var cardBorder = isHost ? 'border-yellow-400 ring-2 ring-yellow-400/30' : 'border-amber-400/60 ring-1 ring-amber-400/20';
+                        var cardBorder = isHost ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-blue-500/50 ring-1 ring-blue-500/20';
                         payHtml += '<div class="bg-white border ' + cardBorder + ' rounded-2xl p-4 shadow-sm space-y-3 transition">' +
                             '<div class="flex items-start justify-between">' +
                                 '<div><div class="flex items-center gap-2 flex-wrap">' +
                                     '<span class="text-sm font-extrabold text-slate-900">@' + escapeHtml(w.username) + '</span>' +
-                                    (isHost ? '<span class="px-2 py-0.5 rounded-full bg-yellow-400 text-slate-950 font-black text-[10px] uppercase">HOST ADMIN PAYOUT</span>' : '') +
-                                    '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">Pending Payment</span>' +
+                                    (isHost ? '<span class="px-2 py-0.5 rounded-full bg-blue-600 text-white font-black text-[10px] uppercase">HOST ADMIN PAYOUT</span>' : '') +
+                                    '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950/60 text-sky-200 border border-blue-800/40 border border-amber-300">Pending Payment</span>' +
                                 '</div>' +
                                 '<span class="text-[11px] text-slate-500 block mt-0.5">' + w.created_at + ' &bull; Ref #' + w.id + '</span></div>' +
                                 '<div class="text-right"><span class="text-lg font-black font-mono text-emerald-600 block">' + w.formatted_amount + '</span>' +
@@ -485,7 +508,7 @@ var LiveSyncEngine = (function() {
                                     '<form method="POST" class="inline" onsubmit="return confirm(\'Approve and send targeted Push Notification?\')">' +
                                         '<input type="hidden" name="withdrawal_id" value="' + w.id + '">' +
                                         '<input type="hidden" name="action" value="complete">' +
-                                        '<button type="submit" class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl text-xs font-black shadow-xs transition active:scale-95 flex items-center gap-1">' +
+                                        '<button type="submit" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-xs transition active:scale-95 flex items-center gap-1">' +
                                             '<i class="fa-solid fa-check text-[10px]"></i> Complete' +
                                         '</button>' +
                                     '</form>' +
@@ -495,22 +518,39 @@ var LiveSyncEngine = (function() {
                     });
                     pCardCont.innerHTML = payHtml;
                 }
+                }
             }
         }
     }
 
-    function scheduleNext() {
+    function scheduleNext(customDelay) {
         if (timerId) clearTimeout(timerId);
         timerId = null;
         if (document.hidden || isAuthPage) return;
-        // backoff: 5s, 10s, 20s ... max 60s when the server keeps failing
-        var delay = Math.min(pollInterval * Math.pow(2, Math.min(failCount, 4)), 60000);
+        var delay = (typeof customDelay === 'number')
+            ? customDelay
+            : Math.min(pollInterval * Math.pow(2, Math.min(failCount, 4)), 60000);
         timerId = setTimeout(doPoll, delay);
     }
 
+    function userIsBusy() {
+        if (Date.now() < userBusyUntil) return true;
+        var ae = document.activeElement;
+        if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) {
+            return true;
+        }
+        var modal = document.querySelector('#joinModal:not(.hidden), #cashfreeModal:not(.hidden), #qrModal:not(.hidden), #withdrawModal:not(.hidden), #insufficientBalanceModal:not(.hidden), #accountModal:not(.hidden), #avatarModal:not(.hidden)');
+        return !!modal;
+    }
+
     function doPoll() {
-        if (document.hidden || isAuthPage) return; // never poll in background or on login screen
+        if (document.hidden || isAuthPage) return;
         if (isPolling) return;
+        // Don't rewrite the page while a finger is down or a modal/keyboard is open.
+        if (userIsBusy()) {
+            scheduleNext(1500);
+            return;
+        }
         isPolling = true;
 
         var apiPath = window.location.pathname.indexOf('/admin/') !== -1 ? '../api/live_sync.php' : '/api/live_sync.php';
@@ -716,6 +756,19 @@ if (document.readyState === 'loading') {
 }
 
 // Global Exports
+window.beastzFetch = function(url, options, timeoutMs) {
+    var ms = timeoutMs || 20000;
+    var opts = options ? Object.assign({}, options) : {};
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = null;
+    if (ctrl) {
+        opts.signal = ctrl.signal;
+        timer = setTimeout(function() { ctrl.abort(); }, ms);
+    }
+    return fetch(url, opts).finally(function() {
+        if (timer) clearTimeout(timer);
+    });
+};
 window.toggleTheme = toggleTheme;
 window.setTheme = setTheme;
 window.updateThemeUI = updateThemeUI;
@@ -725,3 +778,11 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 window.LiveSyncEngine = LiveSyncEngine;
 window.initCustomSelects = initCustomSelects;
+
+// Sync scroll position with Android native SwipeRefreshLayout (Strict Top-Only Pull to Refresh)
+window.addEventListener('scroll', function() {
+    var sy = window.scrollY || document.documentElement.scrollTop || (document.body ? document.body.scrollTop : 0) || 0;
+    if (window.BEASTzNative && typeof window.BEASTzNative.onScroll === 'function') {
+        window.BEASTzNative.onScroll(sy);
+    }
+}, { passive: true });

@@ -20,7 +20,8 @@ $raw_input = file_get_contents("php://input");
 $json_data = json_decode($raw_input, true) ?? [];
 
 $player_id = trim($_POST["player_id"] ?? $json_data["player_id"] ?? $_GET["player_id"] ?? "");
-$user_id = (int)($_SESSION["user_id"] ?? $_POST["user_id"] ?? $json_data["user_id"] ?? 0);
+// SECURE SESSION EXTRACTION: Never trust client parameters for user_id to prevent IDOR
+$user_id = (int)($_SESSION["user_id"] ?? 0);
 $admin_id = (int)($_SESSION["admin_id"] ?? $_SESSION["worker_id"] ?? 0);
 
 if (empty($player_id)) {
@@ -88,8 +89,8 @@ if ($admin_id > 0) {
 // 3. OneSignal REST API External User ID Linking
 $target_ext_id = $user_id > 0 ? (string)$user_id : ($admin_id > 0 ? "admin_" . $admin_id : "");
 if (!empty($target_ext_id)) {
-    $os_app_id = "561bd59e-8355-47c8-88cc-0766688a105a";
-    $os_key = base64_decode("b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=");
+    $os_app_id = function_exists('env') ? env('ONESIGNAL_APP_ID', '561bd59e-8355-47c8-88cc-0766688a105a') : '561bd59e-8355-47c8-88cc-0766688a105a';
+    $os_key = function_exists('get_onesignal_key') ? get_onesignal_key() : (function_exists('env') ? env('ONESIGNAL_API_KEY', '') : '');
     
     $ch = curl_init("https://onesignal.com/api/v1/players/{$player_id}");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

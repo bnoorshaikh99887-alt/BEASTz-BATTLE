@@ -66,9 +66,8 @@ if ($stmt) {
 }
 
 // 2. DISPATCH TO ONESIGNAL REST API
-$onesignal_app_id = "561bd59e-8355-47c8-88cc-0766688a105a";
-$default_encoded = 'b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk=';
-$onesignal_rest_key = base64_decode($default_encoded);
+$onesignal_app_id = function_exists('env') ? env('ONESIGNAL_APP_ID', '561bd59e-8355-47c8-88cc-0766688a105a') : '561bd59e-8355-47c8-88cc-0766688a105a';
+$onesignal_rest_key = function_exists('get_onesignal_key') ? get_onesignal_key() : (function_exists('env') ? env('ONESIGNAL_API_KEY', '') : '');
 
 $fields = [
     'app_id' => $onesignal_app_id,

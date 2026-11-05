@@ -6,7 +6,7 @@
     </linearGradient>
     <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fde047"/>
-      <stop offset="50%" stop-color="#facc15"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
       <stop offset="100%" stop-color="#eab308"/>
     </linearGradient>
     <linearGradient id="goldGlow" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -41,5 +41,5 @@
   <polygon points="256,225 264,245 285,245 268,257 274,277 256,265 238,277 244,257 227,245 248,245" fill="#0f172a"/>
 
   <!-- Typography: BEASTz BATTLE -->
-  <text x="256" y="468" text-anchor="middle" font-family="'Arial Black', 'Impact', sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="2">BEAST<tspan fill="#facc15">z</tspan> BATTLE</text>
+  <text x="256" y="468" text-anchor="middle" font-family="'Arial Black', 'Impact', sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="2">BEAST<tspan fill="#38bdf8">z</tspan> BATTLE</text>
 </svg>

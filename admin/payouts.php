@@ -9,13 +9,13 @@
  *  - SQL string se build hoti thi -> ab prepared statements
  *  - Output escape, LIMIT 200 (bada table freeze karta tha), submit lock
  */
-require_once __DIR__ . '/common/config.php';
+require_once __DIR__ . '/../common/config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 $is_admin = !empty($_SESSION['admin_id']) || (($_SESSION['role'] ?? '') === 'admin')
          || !empty($_SESSION['is_super_admin']) || !empty($_SESSION['admin_role']);
 if (!$is_admin) {
-    header("Location: login.php");
+    safe_redirect("../login.php");
     exit;
 }
 
@@ -117,7 +117,7 @@ $withdrawals = $conn->query("
 <body class="bg-slate-950 text-slate-100 p-4 max-w-md mx-auto">
     <div class="flex items-center justify-between mb-4">
         <a href="index.php" class="px-3 py-1.5 bg-slate-800 text-xs font-bold rounded-xl"><i class="fa-solid fa-arrow-left mr-1"></i> Back</a>
-        <h2 class="text-sm font-black text-yellow-400">Payouts Studio</h2>
+        <h2 class="text-sm font-black text-sky-400">Payouts Studio</h2>
     </div>
 
     <?php if (!empty($msg)): ?>
@@ -144,7 +144,7 @@ $withdrawals = $conn->query("
 
                     <div class="bg-slate-900 p-2.5 rounded-xl text-xs flex justify-between items-center">
                         <span class="font-mono font-bold text-yellow-300"><?= htmlspecialchars((string)$w['upi_id']); ?></span>
-                        <a href="upi://pay?pa=<?= urlencode((string)$w['upi_id']); ?>&am=<?= urlencode((string)$w['amount']); ?>&cu=INR" class="px-2.5 py-1 bg-yellow-400 text-slate-950 font-black rounded-lg text-[10px]">Pay UPI</a>
+                        <a href="upi://pay?pa=<?= urlencode((string)$w['upi_id']); ?>&am=<?= urlencode((string)$w['amount']); ?>&cu=INR" class="px-2.5 py-1 bg-blue-600 text-white font-black rounded-lg text-[10px]">Pay UPI</a>
                     </div>
 
                     <?php if ($is_pending): ?>

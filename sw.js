@@ -1,5 +1,5 @@
 // BEASTz BATTLE Service Worker v3 - Anti-Stale Caching Engine
-const CACHE_NAME = 'beastz-battle-cache-v3';
+const CACHE_NAME = 'beastz-battle-cache-v4';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icon-192.png',
@@ -30,9 +30,9 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // NEVER cache HTML navigations or PHP dynamic pages to guarantee instant login/logout/action state
+  // Do not hijack navigations. respondWith(fetch) without a timeout used to
+  // freeze the Android WebView on a white screen when the network stalled.
   if (event.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.pathname === '/' || url.pathname.includes('/api/')) {
-    event.respondWith(fetch(event.request));
     return;
   }
 

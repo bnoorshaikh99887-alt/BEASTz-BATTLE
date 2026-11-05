@@ -18,7 +18,7 @@ $t = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$t) {
-    echo "<div class='p-6 text-center text-slate-600'><p class='font-bold mb-3'>Tournament not found.</p><a href='tournament.php' class='text-yellow-600 underline text-xs font-bold'>&larr; Back to Tournaments</a></div>";
+    echo "<div class='p-6 text-center text-slate-600'><p class='font-bold mb-3'>Tournament not found.</p><a href='tournament.php' class='text-sky-300 underline text-xs font-bold'>&larr; Back to Tournaments</a></div>";
     require_once __DIR__ . '/common/bottom.php';
     exit;
 }
@@ -343,7 +343,7 @@ $participants = $conn->query("
         <i class="fa-solid fa-arrow-left text-[10px]"></i>
         <span>Back to Tournaments</span>
     </a>
-    <span class="text-xs font-black px-2.5 py-0.5 rounded-full <?= ($t['status'] === 'completed') ? 'bg-slate-200 text-slate-800' : (($t['status'] === 'ongoing' || $t['status'] === 'live') ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-yellow-100 text-yellow-900 border border-yellow-300') ?>">
+    <span class="text-xs font-black px-2.5 py-0.5 rounded-full <?= ($t['status'] === 'completed') ? 'bg-slate-200 text-slate-800' : (($t['status'] === 'ongoing' || $t['status'] === 'live') ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-blue-950/60 text-yellow-900 border border-blue-600/40') ?>">
         <?= strtoupper($t['status']); ?>
     </span>
 </div>
@@ -352,7 +352,7 @@ $participants = $conn->query("
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-5 space-y-3">
     <div class="flex items-start justify-between">
         <div>
-            <span class="text-[10px] font-bold text-yellow-800 bg-yellow-100 border border-yellow-300 px-2 py-0.5 rounded uppercase">
+            <span class="text-[10px] font-bold text-sky-200 bg-blue-950/60 border border-blue-600/40 px-2 py-0.5 rounded uppercase">
                 <?= htmlspecialchars($t['display_game']); ?> &bull; <?= htmlspecialchars($t['match_type']); ?> &bull; <?= htmlspecialchars($t['map']); ?>
             </span>
             <h2 class="text-base font-extrabold text-slate-900 mt-1.5">
@@ -364,7 +364,7 @@ $participants = $conn->query("
         </div>
         <div class="text-right">
             <span class="text-[10px] text-slate-400 block font-semibold">Total Prize Pool</span>
-            <span class="text-base font-mono font-black text-amber-500"><?= format_compact_inr($t['prize_pool']); ?></span>
+            <span class="text-base font-mono font-black text-blue-400"><?= format_compact_inr($t['prize_pool']); ?></span>
         </div>
     </div>
 
@@ -383,7 +383,7 @@ $participants = $conn->query("
         </div>
         <div>
             <span class="text-[10px] text-slate-400 block">Joined</span>
-            <span class="font-bold text-yellow-700"><?= $t['enrolled_count']; ?></span>
+            <span class="font-bold text-sky-200"><?= $t['enrolled_count']; ?></span>
         </div>
     </div>
 </div>
@@ -398,7 +398,7 @@ $participants = $conn->query("
 <!-- Section 1: Room ID & Password Configuration -->
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-5">
     <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-        <i class="fa-solid fa-key text-yellow-500"></i> Room ID & Match Status
+        <i class="fa-solid fa-key text-blue-400"></i> Room ID & Match Status
     </h3>
     <p class="text-[11px] text-slate-400 mb-3">Room credentials are only visible to players who joined this match</p>
 
@@ -407,21 +407,21 @@ $participants = $conn->query("
         <div class="grid grid-cols-2 gap-2">
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Custom Room ID</label>
-                <input type="text" name="room_id" value="<?= htmlspecialchars($t['room_id'] ?? ''); ?>" placeholder="e.g. 8492019" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="text" name="room_id" value="<?= htmlspecialchars($t['room_id'] ?? ''); ?>" placeholder="e.g. 8492019" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Room Password</label>
-                <input type="text" name="room_password" value="<?= htmlspecialchars($t['room_password'] ?? ''); ?>" placeholder="e.g. 1234" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                <input type="text" name="room_password" value="<?= htmlspecialchars($t['room_password'] ?? ''); ?>" placeholder="e.g. 1234" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none">
             </div>
         </div>
 
-        <div class="p-3 bg-yellow-50/80 border border-yellow-300 rounded-2xl space-y-2">
+        <div class="p-3 bg-blue-950/40/80 border border-blue-600/40 rounded-2xl space-y-2">
             <div class="flex items-center justify-between">
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="send_idp_push" value="1" checked class="w-4 h-4 text-yellow-500 rounded focus:ring-yellow-400 accent-yellow-400">
+                    <input type="checkbox" name="send_idp_push" value="1" checked class="w-4 h-4 text-blue-400 rounded focus:ring-blue-500 accent-yellow-400">
                     <span class="text-xs font-black text-slate-900">Auto Push Notification (To Joined Players Only)</span>
                 </label>
-                <span class="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[9px] uppercase shadow-xs">
+                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-black text-[9px] uppercase shadow-xs">
                     DEFAULT ACTIVE
                 </span>
             </div>
@@ -432,14 +432,14 @@ $participants = $conn->query("
 
         <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">Match Stage / Status</label>
-            <select name="status" class="w-full bg-slate-50 border border-slate-300 focus:border-yellow-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
+            <select name="status" class="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none">
                 <option value="upcoming" <?= ($t['status'] === 'upcoming') ? 'selected' : ''; ?>>UPCOMING (Registration Open)</option>
                 <option value="live" <?= ($t['status'] === 'live' || $t['status'] === 'ongoing') ? 'selected' : ''; ?>>LIVE / ONGOING (Match Started / Under Review)</option>
                 <option value="completed" <?= ($t['status'] === 'completed') ? 'selected' : ''; ?>>COMPLETED (Finished / Results Declared)</option>
             </select>
         </div>
 
-        <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-save"></i>
             <span>Save Room Credentials & Status</span>
         </button>
@@ -470,7 +470,7 @@ $participants = $conn->query("
             <?php while ($ps = $participants_slots->fetch_assoc()): ?>
                 <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] flex flex-col justify-between">
                     <div class="flex items-center justify-between mb-0.5">
-                        <span class="px-1.5 py-0.2 bg-yellow-400 text-slate-950 font-black rounded text-[9px]">
+                        <span class="px-1.5 py-0.2 bg-blue-600 text-white font-black rounded text-[9px]">
                             Slot #<?= $ps['slot_no'] ?: 'A'; ?>
                         </span>
                         <span class="font-extrabold text-slate-900 truncate max-w-[85px]" title="@<?= htmlspecialchars($ps['username']); ?>">
@@ -525,7 +525,7 @@ $participants = $conn->query("
                         <div class="flex items-start justify-between">
                             <div>
                                 <div class="flex items-center gap-1.5">
-                                    <span class="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[10px]">
+                                    <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-black text-[10px]">
                                         Slot #<?= $p['slot_no'] ?: 'Auto'; ?>
                                     </span>
                                     <span class="font-extrabold text-slate-900 text-xs">
@@ -554,15 +554,15 @@ $participants = $conn->query("
                         <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-200/60">
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Kills (x <?= format_inr($per_kill_rate); ?>)</label>
-                                <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-white border border-slate-300 focus:border-yellow-400 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                                <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-white border border-slate-300 focus:border-blue-500 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
                             </div>
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Rank Placement Bonus (₹)</label>
-                                <input type="number" step="0.5" name="bonus[<?= $pid; ?>]" min="0" value="<?= $pre_bonus; ?>" class="w-full bg-white border border-slate-300 focus:border-yellow-400 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                                <input type="number" step="0.5" name="bonus[<?= $pid; ?>]" min="0" value="<?= $pre_bonus; ?>" class="w-full bg-white border border-slate-300 focus:border-blue-500 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
                             </div>
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Rank (1 = Winner)</label>
-                                <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-white border border-slate-300 focus:border-yellow-400 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
+                                <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-white border border-slate-300 focus:border-blue-500 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-mono font-bold focus:outline-none">
                             </div>
                         </div>
 
@@ -586,7 +586,7 @@ $participants = $conn->query("
         </div>
 
         <?php if ($participants && $participants->num_rows > 0): ?>
-            <button type="submit" onclick="return confirm('Calculate and credit prize winnings to each player wallet based on kills and rank?');" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+            <button type="submit" onclick="return confirm('Calculate and credit prize winnings to each player wallet based on kills and rank?');" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fa-solid fa-award text-sm"></i>
                 <span>Publish Results & Credit Wallets</span>
             </button>

@@ -267,7 +267,7 @@ $t_res = $conn->query("
 $t = $t_res ? $t_res->fetch_assoc() : null;
 
 if (!$t) {
-    echo "<div class='p-8 text-center text-slate-400'>Tournament not found.<br><br><a href='worker.php' class='px-4 py-2 bg-yellow-400 text-slate-950 font-bold rounded-xl text-xs'>&larr; Back to Worker Studio</a></div>";
+    echo "<div class='p-8 text-center text-slate-400'>Tournament not found.<br><br><a href='worker.php' class='px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs'>&larr; Back to Worker Studio</a></div>";
     exit;
 }
 
@@ -300,12 +300,12 @@ if ($p_res) {
     <div class="max-w-xl mx-auto px-4 py-4 space-y-4">
         
         <header class="flex items-center justify-between bg-slate-800/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-700">
-            <a href="worker.php" class="flex items-center gap-2 text-xs font-bold text-yellow-400 hover:text-yellow-300">
+            <a href="worker.php" class="flex items-center gap-2 text-xs font-bold text-sky-400 hover:text-yellow-300">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span>Worker Studio</span>
             </a>
             <div class="flex items-center gap-2">
-                <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-yellow-400 text-slate-950">Worker Match Studio</span>
+                <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-blue-600 text-white">Worker Match Studio</span>
                 <span class="text-xs font-mono font-bold text-slate-400">#<?= $t['id']; ?></span>
             </div>
         </header>
@@ -321,7 +321,7 @@ if ($p_res) {
             <div class="flex items-start justify-between">
                 <div>
                     <div class="flex items-center gap-1.5 mb-1">
-                        <span class="text-[9px] font-black px-2 py-0.5 rounded uppercase <?= ($t['status'] === 'completed') ? 'bg-slate-800 text-slate-300' : (($t['status'] === 'ongoing' || $t['status'] === 'live') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30') ?>">
+                        <span class="text-[9px] font-black px-2 py-0.5 rounded uppercase <?= ($t['status'] === 'completed') ? 'bg-slate-800 text-slate-300' : (($t['status'] === 'ongoing' || $t['status'] === 'live') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-blue-600/20 text-sky-400 border border-blue-500/30') ?>">
                             <?= strtoupper($t['status']); ?>
                         </span>
                         <span class="text-[9px] text-slate-400 font-bold uppercase bg-slate-800 px-1.5 py-0.5 rounded">
@@ -331,14 +331,14 @@ if ($p_res) {
                             <?= htmlspecialchars($t['display_game']); ?>
                         </span>
                     </div>
-                    <h2 class="text-sm font-black text-white"><?= htmlspecialchars($t['title']); ?></h2>
+                    <h2 class="text-sm font-black text-slate-900 dark:text-white"><?= htmlspecialchars($t['title']); ?></h2>
                     <p class="text-[10px] text-slate-400 font-mono mt-0.5">
-                        <i class="fa-solid fa-clock mr-1 text-yellow-500"></i><?= date("d M Y, h:i A", strtotime($t['match_time'])); ?> &bull; Map: <?= htmlspecialchars($t['map']); ?>
+                        <i class="fa-solid fa-clock mr-1 text-blue-400"></i><?= date("d M Y, h:i A", strtotime($t['match_time'])); ?> &bull; Map: <?= htmlspecialchars($t['map']); ?>
                     </p>
                 </div>
                 <div class="text-right">
                     <span class="text-[10px] text-slate-400 block font-bold">Prize Pool</span>
-                    <span class="text-sm font-black text-amber-400 font-mono">₹<?= number_format($t['prize_pool'], 0); ?></span>
+                    <span class="text-sm font-black text-sky-400 font-mono">₹<?= number_format($t['prize_pool'], 0); ?></span>
                 </div>
             </div>
 
@@ -353,7 +353,7 @@ if ($p_res) {
                 </div>
                 <div class="text-right">
                     <span class="text-slate-400 text-[10px] block">Slots Joined</span>
-                    <span class="font-bold text-yellow-400"><?= count($participants); ?> / <?= $t['total_slots']; ?></span>
+                    <span class="font-bold text-sky-400"><?= count($participants); ?> / <?= $t['total_slots']; ?></span>
                 </div>
             </div>
         </div>
@@ -362,9 +362,9 @@ if ($p_res) {
         <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 space-y-3.5">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                 <h3 class="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-                    <i class="fa-solid fa-key text-yellow-500"></i> Room ID & Password (IDP) Studio
+                    <i class="fa-solid fa-key text-blue-400"></i> Room ID & Password (IDP) Studio
                 </h3>
-                <span class="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded border border-yellow-400/20">
+                <span class="text-[10px] font-bold text-sky-400 bg-blue-600/10 px-2 py-0.5 rounded border border-blue-500/20">
                     Live Credentials
                 </span>
             </div>
@@ -375,35 +375,35 @@ if ($p_res) {
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-300 mb-1">Custom Room ID *</label>
-                        <input type="text" name="room_id" required value="<?= htmlspecialchars($t['room_id'] ?? ''); ?>" placeholder="e.g. 7864321" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:border-yellow-400 focus:outline-none">
+                        <input type="text" name="room_id" required value="<?= htmlspecialchars($t['room_id'] ?? ''); ?>" placeholder="e.g. 7864321" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:border-blue-500 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-300 mb-1">Room Password *</label>
-                        <input type="text" name="room_password" required value="<?= htmlspecialchars($t['room_password'] ?? ''); ?>" placeholder="e.g. 1234" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:border-yellow-400 focus:outline-none">
+                        <input type="text" name="room_password" required value="<?= htmlspecialchars($t['room_password'] ?? ''); ?>" placeholder="e.g. 1234" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:border-blue-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-[11px] font-bold text-slate-300 mb-1">Match Status</label>
-                    <select name="status" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-yellow-400 focus:outline-none">
+                    <select name="status" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-blue-500 focus:outline-none">
                         <option value="upcoming" <?= ($t['status'] === 'upcoming' ? 'selected' : ''); ?>>Upcoming (Registration Open)</option>
                         <option value="ongoing" <?= ($t['status'] === 'ongoing' || $t['status'] === 'live' ? 'selected' : ''); ?>>Ongoing / Live (Room Open)</option>
                         <option value="completed" <?= ($t['status'] === 'completed' ? 'selected' : ''); ?>>Completed (Results Published)</option>
                     </select>
                 </div>
 
-                <div class="p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-xl space-y-2">
+                <div class="p-3 bg-blue-600/10 border border-blue-500/30 rounded-xl space-y-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="send_idp_push" value="1" checked class="w-4 h-4 accent-yellow-400 rounded">
-                        <span class="text-[11px] font-black text-yellow-400">Broadcast Instant IDP Push Alert to Joined Gamers</span>
+                        <span class="text-[11px] font-black text-sky-400">Broadcast Instant IDP Push Alert to Joined Gamers</span>
                     </label>
-                    <div class="text-[10px] font-mono text-slate-300 bg-slate-900 p-2 rounded-lg border border-yellow-400/20">
+                    <div class="text-[10px] font-mono text-slate-300 bg-slate-900 p-2 rounded-lg border border-blue-500/20">
                         WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI!
                     </div>
                     <p class="text-[9px] text-slate-400">&bull; Targeted directly to <?= count($participants); ?> gamers who booked slots in this match.</p>
                 </div>
 
-                <button type="submit" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                     <i class="fa-solid fa-paper-plane"></i>
                     <span>Save Credentials & Dispatch IDP Push</span>
                 </button>
@@ -424,7 +424,7 @@ if ($p_res) {
                     <?php foreach ($participants as $ps): ?>
                         <div class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-[11px] flex flex-col justify-between">
                             <div class="flex items-center justify-between mb-0.5">
-                                <span class="px-1.5 py-0.2 bg-yellow-400 text-slate-950 font-black rounded text-[9px]">
+                                <span class="px-1.5 py-0.2 bg-blue-600 text-white font-black rounded text-[9px]">
                                     Slot #<?= $ps['slot_no'] ?: 'A'; ?>
                                 </span>
                                 <span class="font-extrabold text-white truncate max-w-[90px]" title="@<?= htmlspecialchars($ps['username']); ?>">
@@ -451,7 +451,7 @@ if ($p_res) {
         <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 space-y-3.5">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                 <h3 class="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-                    <i class="fa-solid fa-trophy text-yellow-500"></i> Declare Results & Distribute Prizes
+                    <i class="fa-solid fa-trophy text-blue-400"></i> Declare Results & Distribute Prizes
                 </h3>
                 <span class="text-[10px] font-bold text-emerald-400">
                     Auto Wallet Credit
@@ -468,11 +468,11 @@ if ($p_res) {
                                 $pid = $p['id'];
                                 $has_won = ($p['prize_won'] > 0);
                             ?>
-                            <div class="p-3 rounded-xl border <?= $has_won ? 'border-amber-400/50 bg-amber-400/5' : 'border-slate-800 bg-slate-900' ?> text-xs space-y-2">
+                            <div class="p-3 rounded-xl border <?= $has_won ? 'border-amber-400/50 bg-blue-600/5' : 'border-slate-800 bg-slate-900' ?> text-xs space-y-2">
                                 <div class="flex items-start justify-between">
                                     <div>
                                         <div class="flex items-center gap-1.5">
-                                            <span class="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[10px]">
+                                            <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-black text-[10px]">
                                                 Slot #<?= $p['slot_no'] ?: 'Auto'; ?>
                                             </span>
                                             <span class="font-extrabold text-white text-xs">
@@ -486,7 +486,7 @@ if ($p_res) {
 
                                     <div class="text-right">
                                         <?php if ($has_won): ?>
-                                            <span class="text-xs font-black text-amber-400 font-mono block">
+                                            <span class="text-xs font-black text-sky-400 font-mono block">
                                                 ₹<?= number_format($p['prize_won'], 2); ?> Won
                                             </span>
                                             <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.5 rounded">
@@ -501,15 +501,15 @@ if ($p_res) {
                                 <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800">
                                     <div>
                                         <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Kills</label>
-                                        <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-yellow-400 focus:outline-none">
+                                        <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-blue-500 focus:outline-none">
                                     </div>
                                     <div>
                                         <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Rank</label>
-                                        <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-yellow-400 focus:outline-none">
+                                        <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-blue-500 focus:outline-none">
                                     </div>
                                     <div>
                                         <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Bonus ₹</label>
-                                        <input type="number" step="0.5" name="bonus[<?= $pid; ?>]" min="0" value="<?= (float)$p['prize_won']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-emerald-400 font-mono font-bold focus:border-yellow-400 focus:outline-none">
+                                        <input type="number" step="0.5" name="bonus[<?= $pid; ?>]" min="0" value="<?= (float)$p['prize_won']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-emerald-400 font-mono font-bold focus:border-blue-500 focus:outline-none">
                                     </div>
                                 </div>
 
@@ -527,7 +527,7 @@ if ($p_res) {
                         <?php endforeach; ?>
                     </div>
 
-                    <button type="submit" onclick="return confirm('Calculate and credit prize winnings to each player wallet based on kills and rank?');" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                    <button type="submit" onclick="return confirm('Calculate and credit prize winnings to each player wallet based on kills and rank?');" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-award text-sm"></i>
                         <span>Publish Results & Credit Wallets</span>
                     </button>
@@ -551,7 +551,7 @@ if ($p_res) {
                 <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-black mb-2 border border-rose-500/40">
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
-                <h3 class="text-sm font-extrabold text-white">Anti-Cheat Prize Reclaim</h3>
+                <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Anti-Cheat Prize Reclaim</h3>
                 <p class="text-[11px] text-slate-400">Revoke prize from hacker and move match back to Live</p>
             </div>
 
@@ -572,7 +572,7 @@ if ($p_res) {
 
                 <div>
                     <label class="block text-[10px] font-bold text-slate-300 mb-1">Reason for Reclaim</label>
-                    <input type="text" name="admin_reason" value="Cheating / Third-Party Tools Detected" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-yellow-400 focus:outline-none">
+                    <input type="text" name="admin_reason" value="Cheating / Third-Party Tools Detected" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-blue-500 focus:outline-none">
                 </div>
 
                 <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">

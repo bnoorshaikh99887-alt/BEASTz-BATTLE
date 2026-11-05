@@ -32,16 +32,16 @@
         ?>
         <div class="flex flex-col items-center -translate-y-2">
             <div class="relative mb-2">
-                <div class="w-6 h-6 mx-auto text-yellow-500 text-base mb-0.5">
+                <div class="w-6 h-6 mx-auto text-blue-400 text-base mb-0.5">
                     <i class="fa-solid fa-crown"></i>
                 </div>
-                <img src="<?= htmlspecialchars($p1_avatar); ?>" alt="P1" class="w-18 h-18 rounded-full object-cover border-4 border-yellow-400 shadow-md bg-yellow-50">
-                <span class="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-400 text-slate-950 text-xs font-black rounded-full flex items-center justify-center border-2 border-white shadow">
+                <img src="<?= htmlspecialchars($p1_avatar); ?>" alt="P1" class="w-18 h-18 rounded-full object-cover border-4 border-blue-500 shadow-md bg-blue-950/40">
+                <span class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 text-white text-xs font-black rounded-full flex items-center justify-center border-2 border-white shadow">
                     1
                 </span>
             </div>
             <span class="text-sm font-black text-slate-900 truncate max-w-[100px]"><?= htmlspecialchars($p1['username']); ?></span>
-            <span class="text-xs font-mono font-black text-yellow-600 block mt-0.5">
+            <span class="text-xs font-mono font-black text-sky-300 block mt-0.5">
                 <?= format_compact_inr($p1['wallet_balance']); ?>
             </span>
         </div>
@@ -81,9 +81,9 @@
                 $p_avatar = get_avatar_url($p['avatar'] ?? '', $p['username']);
                 $is_me = ((int)$p['id'] === $curr_uid);
             ?>
-            <div class="px-4 py-3 flex items-center justify-between <?= $is_me ? 'bg-yellow-50/50' : 'hover:bg-slate-50/80' ?> transition">
+            <div class="px-4 py-3 flex items-center justify-between <?= $is_me ? 'bg-blue-950/30' : 'hover:bg-slate-50/80' ?> transition">
                 <div class="flex items-center gap-3">
-                    <span class="w-6 text-center text-xs font-mono font-black <?= ($rank <= 3) ? 'text-yellow-600 font-extrabold' : 'text-slate-400'; ?>">
+                    <span class="w-6 text-center text-xs font-mono font-black <?= ($rank <= 3) ? 'text-sky-300 font-extrabold' : 'text-slate-400'; ?>">
                         #<?= $rank; ?>
                     </span>
                     <img src="<?= htmlspecialchars($p_avatar); ?>" alt="Av" class="w-9 h-9 rounded-full object-cover border border-slate-200 bg-slate-50">
@@ -91,7 +91,7 @@
                         <span class="text-xs font-bold text-slate-900 block leading-tight flex items-center gap-1.5">
                             <?= htmlspecialchars($p['username']); ?>
                             <?php if ($is_me): ?>
-                                <span class="text-[9px] bg-yellow-400 text-black px-1.5 py-0.2 rounded font-black">YOU</span>
+                                <span class="text-[9px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-black">YOU</span>
                             <?php endif; ?>
                         </span>
                         <span class="text-[10px] text-slate-400">Gamer #<?= $p['id']; ?></span>
@@ -111,7 +111,7 @@
 <!-- Sticky Bottom Bar for Current User Ranking -->
 <div id="live-leaderboard-my-rank" class="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 z-40 shadow-lg flex items-center justify-between">
     <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-yellow-400 text-slate-950 font-black flex items-center justify-center text-xs shadow-xs">
+        <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-xs">
             <?= strtoupper(substr($my_name, 0, 1)); ?>
         </div>
         <div>
@@ -123,8 +123,8 @@
             </span>
         </div>
     </div>
-    <div class="flex items-center gap-1.5 bg-yellow-50 border border-yellow-300 px-3 py-1 rounded-xl">
-        <span class="text-[10px] text-yellow-800 font-bold uppercase">Your Rank</span>
+    <div class="flex items-center gap-1.5 bg-blue-950/40 border border-blue-600/40 px-3 py-1 rounded-xl">
+        <span class="text-[10px] text-sky-200 font-bold uppercase">Your Rank</span>
         <span class="text-sm font-black text-slate-900 font-mono">#<?= $my_rank; ?></span>
     </div>
 </div>
