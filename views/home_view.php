@@ -6,49 +6,98 @@
     </div>
 <?php endif; ?>
 
-<!-- Header Bar: Arenas & Private Match Button -->
-<div class="flex items-center justify-between gap-2 mb-2.5 px-0.5">
-    <div class="flex items-center gap-1.5 text-xs font-black uppercase text-slate-900 dark:text-white">
-        <i class="fa-solid fa-gamepad text-blue-500"></i>
-        <span>Battle Arenas</span>
+<!-- ============================================================= -->
+<!-- 1. DUAL BALANCE CARDS & ACTIONS (MATCHING REFERENCE IMAGE) -->
+<!-- ============================================================= -->
+<div class="mb-5">
+    <div class="grid grid-cols-2 gap-3 mb-3">
+        <!-- Current Balance -->
+        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+            <div class="flex items-center gap-1.5 mb-1.5">
+                <div class="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-wallet text-[11px]"></i>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Current Balance</span>
+            </div>
+            <div class="text-xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight font-display">
+                <?= format_inr($user_wallet); ?>
+            </div>
+        </div>
+
+        <!-- Bonus Balance -->
+        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+            <div class="flex items-center gap-1.5 mb-1.5">
+                <div class="w-6 h-6 rounded-lg bg-amber-50 dark:bg-amber-950/70 text-amber-500 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-gift text-[11px]"></i>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Bonus Balance</span>
+            </div>
+            <div class="text-xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight font-display">
+                <?= format_inr(50.00); ?>
+            </div>
+        </div>
     </div>
-    <button type="button" onclick="openPrivateMatchModal()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
-        <i class="fa-solid fa-key text-[10px]"></i>
-        <span>Join with Code</span>
-    </button>
+
+    <!-- Deposit & Withdraw Action Buttons (Blue Accent) -->
+    <div class="grid grid-cols-2 gap-3">
+        <button type="button" onclick="openDepositModal()" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all active:scale-97 cursor-pointer">
+            <div class="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center">
+                <i class="fa-solid fa-arrow-down text-white text-[10px]"></i>
+            </div>
+            <span>Deposit</span>
+        </button>
+
+        <button type="button" onclick="openWithdrawModal()" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-[#111827] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-800 shadow-2xs transition-all active:scale-97 cursor-pointer">
+            <div class="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <i class="fa-solid fa-arrow-up text-slate-700 dark:text-slate-300 text-[10px]"></i>
+            </div>
+            <span>Withdraw</span>
+        </button>
+    </div>
 </div>
 
-<!-- Horizontal Category Filter Bar -->
-<div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 mb-4 border-b border-slate-200 dark:border-slate-800 -mx-1 px-1">
-    <button type="button" onclick="filterTourneys('ALL', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition bg-blue-600 text-white shadow-xs border border-blue-500">
-        ALL
-    </button>
-    <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        SOLO BR
-    </button>
-    <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        DUO BR
-    </button>
-    <button type="button" onclick="filterTourneys('SQUAD BR', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        SQUAD BR
-    </button>
-    <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        CS 1VS1
-    </button>
-    <button type="button" onclick="filterTourneys('CS 2VS2', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        CS 2VS2
-    </button>
-    <button type="button" onclick="filterTourneys('CS 4VS4', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        CS 4VS4
-    </button>
-    <button type="button" onclick="filterTourneys('LONE WOLF 1V1', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        LONE WOLF 1V1
-    </button>
-    <button type="button" onclick="filterTourneys('LONE WOLF 2V2', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        LONE WOLF 2V2
-    </button>
-</div>
+<!-- ============================================================= -->
+<!-- 2. TOP EVENTS HEADER & CAROUSEL CATEGORY FILTERS (REFERENCE)  -->
+<!-- ============================================================= -->
+<div class="mb-4">
+    <div class="flex items-center justify-between mb-2.5">
+        <h2 class="text-sm font-black text-slate-900 dark:text-white tracking-tight font-display">
+            Top Events
+        </h2>
+        <button type="button" onclick="filterTourneys('ALL', this)" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer">
+            <span>See All</span>
+            <span>&gt;</span>
+        </button>
+    </div>
 
+    <!-- Category Filters -->
+    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+        <button type="button" onclick="filterTourneys('ALL', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-blue-600 text-white shadow-xs">
+            <i class="fa-solid fa-gamepad"></i>
+            <span>All Modes</span>
+        </button>
+        <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+            <i class="fa-solid fa-user"></i>
+            <span>Solo BR</span>
+        </button>
+        <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+            <i class="fa-solid fa-user-group"></i>
+            <span>Duo BR</span>
+        </button>
+        <button type="button" onclick="filterTourneys('SQUAD BR', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+            <i class="fa-solid fa-users"></i>
+            <span>Squad BR</span>
+        </button>
+        <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+            <i class="fa-solid fa-crosshairs"></i>
+            <span>CS 1v1</span>
+        </button>
+        <button type="button" onclick="filterTourneys('LONE WOLF 1V1', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+            <i class="fa-solid fa-fire"></i>
+            <span>Lone Wolf</span>
+        </button>
+    </div>
+</div>
 <!-- Tournaments List -->
 <div class="space-y-4 mb-20" id="tournamentsContainer">
     <?php if ($tournaments_res && $tournaments_res->num_rows > 0): ?>
@@ -150,25 +199,156 @@
                         <button disabled class="px-5 py-2 bg-slate-200 text-slate-500 font-extrabold text-xs rounded-xl cursor-not-allowed">
                             FULL
                         </button>
-                    <?php else: ?>
-                        <button type="button" 
-                                onclick="openJoinModal(<?= $t['id']; ?>, '<?= addslashes($t['title']); ?>', <?= (float)$t['entry_fee']; ?>, <?= (float)$t['prize_pool']; ?>, <?= $total_slots; ?>, '<?= $t_booked_json; ?>', '<?= addslashes($mode_name); ?>')" 
-                                class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1.5">
-                            <span><?= (float)$t['entry_fee'] > 0 ? format_inr($t['entry_fee']) : 'FREE'; ?></span>
-                            <span class="font-extrabold">JOIN</span>
-                        </button>
-                    <?php endif; ?>
+                        <?php else: ?>
+        <!-- Daily Scheduled Featured Tournaments (Matching Reference Design) -->
+        <?php
+        $demo_tourneys = [
+            [
+                "id" => 101,
+                "title" => "Free Fire Premier League - Bermuda Rush",
+                "game" => "Free Fire MAX",
+                "map" => "BERMUDA",
+                "match_type" => "SOLO BR",
+                "prize_pool" => 1200.00,
+                "per_kill" => 25.00,
+                "entry_fee" => 30.00,
+                "enrolled" => 22,
+                "total_slots" => 48,
+                "match_time" => date("d M, h:i A", strtotime("+30 minutes")),
+                "status" => "Ongoing"
+            ],
+            [
+                "id" => 102,
+                "title" => "Grand Clash Squad 1v1 - Iron Cage Deathmatch",
+                "game" => "Free Fire MAX",
+                "map" => "IRON CAGE",
+                "match_type" => "CS 1VS1",
+                "prize_pool" => 400.00,
+                "per_kill" => 0.00,
+                "entry_fee" => 20.00,
+                "enrolled" => 1,
+                "total_slots" => 2,
+                "match_time" => date("d M, h:i A", strtotime("+1 hour 30 minutes")),
+                "status" => "Upcoming"
+            ],
+            [
+                "id" => 103,
+                "title" => "Squad Battle Royale - Purgatory Elite Cup",
+                "game" => "Free Fire MAX",
+                "map" => "PURGATORY",
+                "match_type" => "SQUAD BR",
+                "prize_pool" => 2500.00,
+                "per_kill" => 40.00,
+                "entry_fee" => 80.00,
+                "enrolled" => 24,
+                "total_slots" => 48,
+                "match_time" => date("d M, h:i A", strtotime("+3 hours")),
+                "status" => "Upcoming"
+            ],
+            [
+                "id" => 104,
+                "title" => "Lone Wolf 1v1 - Fast Duel Showdown",
+                "game" => "Free Fire MAX",
+                "map" => "COLOSSEUM",
+                "match_type" => "LONE WOLF 1V1",
+                "prize_pool" => 350.00,
+                "per_kill" => 0.00,
+                "entry_fee" => 15.00,
+                "enrolled" => 0,
+                "total_slots" => 2,
+                "match_time" => date("d M, h:i A", strtotime("+4 hours")),
+                "status" => "Upcoming"
+            ]
+        ];
+        foreach ($demo_tourneys as $dt):
+            $cat_tag = strtoupper($dt["match_type"]);
+            $fill_pct = min(100, round(($dt["enrolled"] / $dt["total_slots"]) * 100));
+            $spots_left = $dt["total_slots"] - $dt["enrolled"];
+        ?>
+        <div class="tournament-card bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition mb-3.5" data-category="<?= htmlspecialchars($cat_tag); ?>">
+            <!-- Header: League/Mode + Status Badge -->
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400">
+                        <?= htmlspecialchars($dt["game"]); ?>
+                    </span>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        <?= htmlspecialchars($dt["map"]); ?> · <?= htmlspecialchars($dt["match_type"]); ?>
+                    </span>
+                </div>
+                <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md <?= $dt["status"] === "Ongoing" ? "bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300" ?>">
+                    <?= htmlspecialchars($dt["status"]); ?>
+                </span>
+            </div>
+
+            <!-- Title & Match Info -->
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex-1">
+                    <h3 class="text-sm font-black text-slate-900 dark:text-white leading-snug tracking-tight font-display">
+                        <?= htmlspecialchars($dt["title"]); ?>
+                    </h3>
+                    <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span><i class="fa-regular fa-clock text-slate-400 mr-1"></i><?= $dt["match_time"]; ?></span>
+                        <span>·</span>
+                        <span>Match #<?= $dt["id"]; ?></span>
+                    </div>
+                </div>
+                <div class="relative w-16 h-12 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 bg-slate-900 shadow-2xs">
+                    <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=200&q=80" alt="Thumb" class="w-full h-full object-cover">
+                    <span class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] font-bold text-center py-0.5">
+                        <?= $dt["map"]; ?>
+                    </span>
                 </div>
             </div>
-        <?php endwhile; ?>
-    <?php else: ?>
-        <div class="text-center py-12 bg-white rounded-2xl border border-slate-200 p-6">
-            <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-950/60 text-sky-300 flex items-center justify-center text-xl mb-2">
-                <i class="fa-solid fa-gamepad"></i>
+
+            <!-- Stats Bar (Prize Pool, Per Kill, Entry Fee) -->
+            <div class="grid grid-cols-3 gap-2 py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 mb-3 text-center text-xs">
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Prize Pool</span>
+                    <span class="text-xs font-black text-blue-600 dark:text-blue-400 tabular-nums font-mono">
+                        <?= format_inr($dt["prize_pool"]); ?>
+                    </span>
+                </div>
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Per Kill</span>
+                    <span class="text-xs font-black text-emerald-600 dark:text-emerald-400 tabular-nums font-mono">
+                        <?= $dt["per_kill"] > 0 ? "+" . format_inr($dt["per_kill"]) : "Rank Basis"; ?>
+                    </span>
+                </div>
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Entry Fee</span>
+                    <span class="text-xs font-black text-slate-900 dark:text-white tabular-nums font-mono">
+                        <?= format_inr($dt["entry_fee"]); ?>
+                    </span>
+                </div>
             </div>
-            <h4 class="text-sm font-bold text-slate-800">No tournaments available right now</h4>
-            <p class="text-xs text-slate-500 mt-1">Please check back soon! New custom matches are scheduled daily.</p>
+
+            <!-- Slots Progress Bar -->
+            <div class="space-y-1 mb-3">
+                <div class="flex items-center justify-between text-[10px] font-bold">
+                    <span class="text-slate-500 dark:text-slate-400">
+                        Slots: <strong class="text-slate-900 dark:text-white"><?= $dt["enrolled"]; ?>/<?= $dt["total_slots"]; ?></strong>
+                    </span>
+                    <span class="text-blue-600 dark:text-blue-400"><?= $spots_left; ?> left</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style="width: <?= $fill_pct; ?>%"></div>
+                </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                    Win: <strong class="text-blue-600 dark:text-blue-400"><?= format_compact_inr($dt["prize_pool"] * 0.5); ?></strong> for 1st
+                </span>
+                <button type="button"
+                        onclick="openJoinModal(<?= $dt["id"]; ?>, '<?= addslashes($dt["title"]); ?>', <?= (float)$dt["entry_fee"]; ?>, <?= (float)$dt["prize_pool"]; ?>, <?= $dt["total_slots"]; ?>, '[]', '<?= addslashes($dt["match_type"]); ?>')"
+                        class="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 cursor-pointer">
+                    Join · <?= format_inr($dt["entry_fee"]); ?>
+                </button>
+            </div>
         </div>
+        <?php endforeach; ?>
     <?php endif; ?>
 </div>
 

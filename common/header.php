@@ -284,47 +284,34 @@ $is_admin = $is_super_admin;
         <?php endif; ?>
 
         <!-- App Header (Matching Video: Avatar Left, Brand Center, Wallet Right) -->
-        <header class="sticky <?= $is_admin ? 'top-7' : 'top-0' ?> z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs">
-            <!-- Left: Avatar leading to Profile -->
-            <button type="button" onclick="switchAppTab('profile')" title="My Profile & Account Settings" class="flex items-center gap-2 group cursor-pointer text-left">
+        <header class="sticky <?= $is_admin ? 'top-7' : 'top-0' ?> z-40 bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-2xs">
+            <!-- Left: Avatar / Logo + Hey, [Username] -->
+            <button type="button" onclick="switchAppTab('profile')" title="My Profile & Settings" class="flex items-center gap-2.5 group cursor-pointer text-left">
                 <div class="relative">
-                    <img src="<?= htmlspecialchars($user_avatar); ?>" alt="Avatar" class="w-9 h-9 rounded-full object-cover border-2 border-blue-500 shadow-sm bg-slate-100">
-                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-                </div>
-                <div class="hidden sm:block text-left">
-                    <span class="text-xs font-bold text-slate-900 block leading-tight">
-                        <?= !empty($logged_username) ? htmlspecialchars($logged_username) : 'Guest Player'; ?>
+                    <img src="<?= htmlspecialchars($user_avatar); ?>" alt="Avatar" class="w-10 h-10 rounded-full object-cover border-2 border-blue-600 shadow-sm bg-slate-100">
+                    <span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[9px] shadow-xs">
+                        <i class="fa-solid fa-shield-halved text-[8px]"></i>
                     </span>
-                    <span class="text-[10px] text-slate-400">View Profile</span>
+                </div>
+                <div>
+                    <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 block leading-tight">Hey,</span>
+                    <span class="text-sm font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-blue-600 transition-colors">
+                        <?= !empty($logged_username) ? htmlspecialchars($logged_username) : 'Arus Developer'; ?>
+                    </span>
                 </div>
             </button>
 
-            <!-- Center: App Logo / Title -->
-            <button type="button" onclick="switchAppTab('home')" class="flex items-center gap-1.5 cursor-pointer">
-                <img src="/logo.png" alt="BEASTz" class="w-7 h-7 object-contain drop-shadow">
-                <span class="text-base font-black tracking-tight text-slate-900 font-display">
-                    BEASTz<span class="text-blue-400">BATTLE</span>
-                </span>
-            </button>
-
-            <!-- Right: Dark Mode Toggle & Wallet Button -->
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <!-- Dark Mode Quick Toggle Button -->
-                <button type="button" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Dark / Light Theme" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-blue-950/40 border border-slate-200 hover:border-blue-500 flex items-center justify-center text-slate-700 hover:text-blue-400 transition active:scale-90 shadow-2xs">
-                    <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
+            <!-- Right: Quick Wallet Badge + Notification Bell -->
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="switchAppTab('wallet')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all text-xs font-bold font-mono shadow-2xs cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-wallet text-xs"></i>
+                    <span id="header-wallet-balance"><?= format_compact_inr($user_wallet); ?></span>
                 </button>
 
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <button type="button" onclick="switchAppTab('wallet')" class="flex items-center gap-1.5 bg-slate-100 hover:bg-blue-950/40 border border-slate-200 hover:border-blue-500 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs transition group cursor-pointer">
-                        <i class="fa-solid fa-wallet text-blue-400 text-xs group-hover:scale-110 transition"></i>
-                        <span id="header-wallet-balance" class="text-xs font-extrabold text-slate-900 font-mono"><?= format_compact_inr($user_wallet); ?></span>
-                    </button>
-                <?php else: ?>
-                    <a href="login.php" class="text-xs bg-blue-600 hover:bg-blue-700 text-slate-950 font-black px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5">
-                        <i class="fa-brands fa-google text-xs"></i>
-                        <span>Login</span>
-                    </a>
-                <?php endif; ?>
+                <button type="button" onclick="switchAppTab('profile')" class="relative w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center transition cursor-pointer active:scale-95" title="Notifications & Settings">
+                    <i class="fa-regular fa-bell text-sm"></i>
+                    <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-[#0b0f19] animate-pulse"></span>
+                </button>
             </div>
         </header>
 
