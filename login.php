@@ -255,9 +255,12 @@ if (!function_exists('sanitize')) {
 
         let confirmationResult;
 
-        // Setup Invisible ReCaptcha
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            'size': 'invisible'
+        // Setup ReCaptcha bound to sendOtpBtn to prevent domain/widget errors on Vercel
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'sendOtpBtn', {
+            'size': 'invisible',
+            'callback': (response) => {
+                // reCAPTCHA verified successfully
+            }
         });
 
         // SEND OTP
