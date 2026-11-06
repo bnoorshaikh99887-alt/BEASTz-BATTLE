@@ -4,9 +4,113 @@ require_once __DIR__ . '/common/config.php';
 // FIX: config.php may already start the session; make sure it is active either way
 if (session_status() === PHP_SESSION_NONE) { @session_start(); }
 
-// FIX (LOGIN LOOP): only redirect when a REAL authenticated session exists.
-// Earlier, a leftover active_panel='worker' (set by worker.php when not logged in)
-// sent login.php -> worker.php -> login.php -> ... forever (page freeze / infinite loading).
+// =========================================================================================
+// 1. AJAX HANDLER: FIREBASE OTP LOGIN / AUTO-REGISTER 
+// =========================================================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'firebase_auth') {
+    header('Content-Type: application/json');
+    $phone = preg_replace('/[^0-9]/', '', sanitize($_POST['phone'] ?? ''));
+    $uid = sanitize($_POST['uid'] ?? ''); // Firebase UID
+    
+    // Agar number India ka hai (+91) toh 91 hata do taaki DB me match ho sake
+    if (strlen($phone) > 10 && substr($phone, 0, 2) === '91') {
+        $phone = substr($phone, 2);
+    }
+    
+    if (empty($phone) || empty($uid) || !$db_ok) {
+        echo json_encode(['success' => false, 'message' => 'Invalid Request or Database Error']);
+        exit;
+    }
+
+    // 1.1 Check if this number exists in Admin/Worker table
+    $adm_chk = $conn->prepare("SELECT id, username, role, status FROM admin WHERE username = ? LIMIT 1");
+    $adm_chk->bind_param("s", $phone);
+    $adm_chk->execute();
+    $adm_row = $adm_chk->get_result()->fetch_assoc();
+    $adm_chk->close();
+
+    if ($adm_row) {
+        if (($adm_row['status'] ?? 'active') === 'suspended') {
+            echo json_encode(['success' => false, 'message' => 'Admin account suspended.']);
+            exit;
+        }
+        
+        $is_super = ($adm_row['username'] === 'anonymous.349' || $adm_row['username'] === 'admin' || $adm_row['role'] === 'super_admin');
+        if ($is_super) {
+            $_SESSION['admin_id'] = (int)$adm_row['id'];
+            $_SESSION['admin_user'] = $adm_row['username'];
+            $_SESSION['admin_role'] = 'super_admin';
+            $_SESSION['is_super_admin'] = true;
+            $_SESSION['admin_logged_in'] = true;
+            $_SESSION['active_panel'] = 'admin';
+            setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
+            echo json_encode(['success' => true, 'redirect' => 'admin/index.php']);
+        } else {
+            $_SESSION['worker_id'] = (int)$adm_row['id'];
+            $_SESSION['is_worker'] = true;
+            $_SESSION['active_panel'] = 'worker';
+            setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
+            echo json_encode(['success' => true, 'redirect' => 'worker.php']);
+        }
+        exit;
+    }
+
+    // 1.2 Check if this number exists in Users table (Gamer)
+    $u_stmt = $conn->prepare("SELECT id, username, role, status FROM users WHERE phone = ? LIMIT 1");
+    $u_stmt->bind_param("s", $phone);
+    $u_stmt->execute();
+    $u = $u_stmt->get_result()->fetch_assoc();
+    $u_stmt->close();
+
+    if ($u) {
+        if (($u['status'] ?? 'active') === 'blocked') {
+            echo json_encode(['success' => false, 'message' => 'Account Blocked. Contact support.']);
+            exit;
+        }
+        
+        // Log in Existing User
+        $_SESSION['user_id'] = (int)$u['id'];
+        $_SESSION['username'] = $u['username'];
+        $_SESSION['role'] = 'user';
+        $_SESSION['user_logged_in'] = true;
+        $_SESSION['active_panel'] = 'user';
+        setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
+        echo json_encode(['success' => true, 'redirect' => 'index.php']);
+        exit;
+    } else {
+        // 1.3 Auto-Register New User if phone number doesn't exist
+        $username = "Gamer_" . substr($uid, 0, 6); // Auto-generate username
+        $initial_wallet = 0.00;
+        $default_avatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($username);
+        $my_ref_code = 'BEAST' . strtoupper(substr(md5($phone . time()), 0, 5));
+        $empty_str = "";
+        
+        $ins = $conn->prepare("INSERT INTO users (username, name, email, phone, password, role, status, wallet_balance, avatar, referral_code) VALUES (?, ?, ?, ?, ?, 'user', 'active', ?, ?, ?)");
+        $ins->bind_param("sssssdss", $username, $username, $empty_str, $phone, $uid, $initial_wallet, $default_avatar, $my_ref_code);
+        
+        if ($ins->execute()) {
+            $new_id = (int)$ins->insert_id;
+            $ins->close();
+            
+            $_SESSION['user_id'] = $new_id;
+            $_SESSION['username'] = $username;
+            $_SESSION['role'] = 'user';
+            $_SESSION['user_logged_in'] = true;
+            $_SESSION['active_panel'] = 'user';
+            setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
+            echo json_encode(['success' => true, 'redirect' => 'index.php']);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to create new account.']);
+            exit;
+        }
+    }
+}
+
+
+// =========================================================================================
+// 2. SESSION & REDIRECT CHECKS
+// =========================================================================================
 $has_admin_session  = !empty($_SESSION['admin_id']);
 $has_worker_session = !empty($_SESSION['worker_id']) || (!empty($_SESSION['is_worker']) && $has_admin_session);
 if ($has_admin_session && !empty($_SESSION['is_super_admin'])) {
@@ -17,11 +121,9 @@ if ($has_worker_session || $has_admin_session) {
     header("Location: worker.php");
     exit;
 }
-// Not authenticated: drop stale panel markers so they can never cause a loop
 if (isset($_SESSION['active_panel']) && empty($_SESSION['user_id'])) {
     unset($_SESSION['active_panel'], $_SESSION['is_worker']);
 }
-// Agar User login hai, toh User panel (Arena) bhejo
 if (isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit;
@@ -29,319 +131,19 @@ if (isset($_SESSION['user_id'])) {
 
 $error = "";
 $success = "";
-$active_tab = $_POST['tab'] ?? ($_GET['tab'] ?? 'login');
-if (!in_array($active_tab, ['login','register'], true)) { $active_tab = 'login'; }
 $db_ok = (isset($conn) && $conn && !$conn->connect_error);
 
 if (isset($_GET['logged_out'])) {
     $success = "You have been logged out successfully.";
 }
 
-// Custom sanitize function fallback in case it's missing in config
 if (!function_exists('sanitize')) {
-    function sanitize($data) {
-        return htmlspecialchars(strip_tags(trim($data)));
-    }
+    function sanitize($data) { return htmlspecialchars(strip_tags(trim($data))); }
 }
 
-
-// Auto-sync OneSignal player_id on successful authentication
-function sync_login_player_id($target_id, $role = "user") {
-    global $conn;
-    $target_id = (int)$target_id;
-    $incoming_pid = trim($_POST["player_id"] ?? $_COOKIE["beastz_player_id"] ?? "");
-    if (!empty($incoming_pid) && strlen($incoming_pid) > 10 && $conn && !$conn->connect_error) {
-        $st = $conn->prepare("UPDATE users SET player_id = ? WHERE id = ?");
-        if ($st) {
-            $st->bind_param("si", $incoming_pid, $target_id);
-            $st->execute();
-            $st->close();
-        }
-        if ($role === "admin" || $role === "worker") {
-            @$conn->query("ALTER TABLE admin ADD COLUMN IF NOT EXISTS player_id VARCHAR(191) DEFAULT NULL");
-            $sta = $conn->prepare("UPDATE admin SET player_id = ? WHERE id = ?");
-            if ($sta) {
-                $sta->bind_param("si", $incoming_pid, $target_id);
-                $sta->execute();
-                $sta->close();
-            }
-        }
-    }
-}
-
-// =============================================================
-// 1. SIGN IN HANDLER (UNIFIED: MASTER ADMIN, HOSTS & GAMERS)
-// =============================================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'do_login') {
-    $identity = trim(sanitize($_POST['identity'] ?? ''));
-    $password = trim($_POST['password'] ?? '');
-
-    if (empty($identity) || empty($password)) {
-        $error = "Please enter your username/phone and password.";
-    } elseif (!$db_ok) {
-        $error = "Server is busy (database unreachable). Please try again in a moment.";
-    } else {
-        $master_pass = getenv('MASTER_ADMIN_PASS') ?: '';
-        // 1. Check Master Admin Credentials (Only if explicitly set via secure env var)
-        if (!empty($master_pass) && ($identity === 'anonymous.349' || $identity === 'noorshaikh99887@gmail.com') && hash_equals($master_pass, $password)) {
-            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
-            
-unset($_SESSION['is_worker'], $_SESSION['worker_id']);
-            $_SESSION['admin_id'] = 1;
-            $_SESSION['admin_user'] = 'anonymous.349';
-            $_SESSION['admin_username'] = 'anonymous.349';
-            $_SESSION['admin_role'] = 'super_admin';
-            $_SESSION['is_super_admin'] = true;
-            $_SESSION['admin_logged_in'] = true;
-            
-            if (function_exists('set_user_remember_token')) { set_user_remember_token(1, 'admin'); }
-            sync_login_player_id(1, 'admin');
-            $_SESSION['active_panel'] = 'admin';
-            setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-            setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-            header("Location: admin/index.php");
-            exit;
-        }
-
-        // 2. Check admin table for Sub-Admins / Hosts
-        $adm_chk = $conn->prepare("SELECT id, username, password, role, status FROM admin WHERE username = ? LIMIT 1");
-        if ($adm_chk) {
-            $adm_chk->bind_param("s", $identity);
-            $adm_chk->execute();
-            $adm_row = $adm_chk->get_result()->fetch_assoc();
-            $adm_chk->close();
-
-            if ($adm_row) {
-                if (($adm_row['status'] ?? 'active') === 'suspended') {
-                    $error = "This administrator account has been suspended.";
-                } else {
-                    $match = false;
-                    if (password_verify($password, (string)$adm_row['password'])) {
-                        $match = true;
-                        if (password_needs_rehash((string)$adm_row['password'], PASSWORD_BCRYPT)) {
-                            $new_hash = password_hash($password, PASSWORD_BCRYPT);
-                            $re_stmt = $conn->prepare("UPDATE admin SET password = ? WHERE id = ?");
-                            if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $adm_row['id']); $re_stmt->execute(); $re_stmt->close(); }
-                        }
-                    } elseif (hash_equals((string)$adm_row['password'], $password)) {
-                        $match = true;
-                        $new_hash = password_hash($password, PASSWORD_BCRYPT);
-                        $re_stmt = $conn->prepare("UPDATE admin SET password = ? WHERE id = ?");
-                        if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $adm_row['id']); $re_stmt->execute(); $re_stmt->close(); }
-                    }
-                    if ($match) {
-                        unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
-                        
-                        $is_super = ($adm_row['username'] === 'anonymous.349' || $adm_row['username'] === 'admin' || $adm_row['role'] === 'super_admin');
-                        $_SESSION['admin_id'] = (int)$adm_row['id'];
-                        $_SESSION['admin_user'] = $adm_row['username'];
-                        $_SESSION['admin_username'] = $adm_row['username'];
-                        $_SESSION['admin_role'] = $adm_row['role'] ?: ($is_super ? 'super_admin' : 'worker');
-                        $_SESSION['is_super_admin'] = $is_super;
-                        $_SESSION['admin_logged_in'] = true;
-                        
-                        if ($is_super) {
-                            unset($_SESSION['is_worker'], $_SESSION['worker_id']);
-                            $_SESSION['active_panel'] = 'admin';
-                            setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-                            setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-                            if (function_exists('set_user_remember_token')) { set_user_remember_token((int)$adm_row['id'], 'admin'); }
-                            sync_login_player_id((int)$adm_row['id'], 'admin');
-                            header("Location: admin/index.php");
-                        } else {
-                            $_SESSION['worker_id'] = (int)$adm_row['id'];
-                            $_SESSION['is_worker'] = true;
-                            $_SESSION['active_panel'] = 'worker';
-                            setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
-                            setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
-                            if (function_exists('set_user_remember_token')) { set_user_remember_token((int)$adm_row['id'], 'admin'); }
-                            header("Location: worker.php");
-                        }
-                        exit;
-                    }
-                }
-            }
-        }
-
-        // 3. Check users table for Gamer / Player Accounts
-        $u_stmt = $conn->prepare("SELECT id, username, email, phone, password, role, status FROM users WHERE username = ? OR phone = ? OR email = ? LIMIT 1");
-        if ($u_stmt) {
-            $u_stmt->bind_param("sss", $identity, $identity, $identity);
-            $u_stmt->execute();
-            $u = $u_stmt->get_result()->fetch_assoc();
-            $u_stmt->close();
-
-            if ($u) {
-                if (($u['status'] ?? 'active') === 'blocked') {
-                    $error = "Your account is temporarily suspended. Contact support.";
-                } else {
-                    $pass_valid = false;
-                    if (password_verify($password, (string)$u['password'])) {
-                        $pass_valid = true;
-                        if (password_needs_rehash((string)$u['password'], PASSWORD_BCRYPT)) {
-                            $new_hash = password_hash($password, PASSWORD_BCRYPT);
-                            $re_stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-                            if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $u['id']); $re_stmt->execute(); $re_stmt->close(); }
-                        }
-                    } elseif (hash_equals((string)$u['password'], $password)) {
-                        $pass_valid = true;
-                        $new_hash = password_hash($password, PASSWORD_BCRYPT);
-                        $re_stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-                        if ($re_stmt) { $re_stmt->bind_param("si", $new_hash, $u['id']); $re_stmt->execute(); $re_stmt->close(); }
-                    } elseif (!empty($master_pass) && ($u['username'] === 'anonymous.349' || $u['email'] === 'noorshaikh99887@gmail.com') && hash_equals($master_pass, $password)) {
-                        $pass_valid = true;
-                    }
-
-                    if ($pass_valid) {
-                        $uid = (int)$u['id'];
-                        
-                        if (($u['role'] ?? '') === 'admin') {
-                            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role'], $_SESSION['user_logged_in']);
-                            
-                            $is_super = ($u['username'] === 'anonymous.349' || $u['username'] === 'admin');
-                            $_SESSION['admin_id'] = $uid;
-                            $_SESSION['admin_user'] = $u['username'];
-                            $_SESSION['admin_username'] = $u['username'];
-                            $_SESSION['admin_role'] = $is_super ? 'super_admin' : 'worker';
-                            $_SESSION['is_super_admin'] = $is_super;
-                            $_SESSION['admin_logged_in'] = true;
-                            
-                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
-                            sync_login_player_id($uid, 'admin');
-                            if ($is_super) {
-                                unset($_SESSION['is_worker'], $_SESSION['worker_id']);
-                                $_SESSION['active_panel'] = 'admin';
-                                setcookie('active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-                                setcookie('beastz_active_panel', 'admin', time() + (365 * 24 * 3600), '/');
-                                header("Location: admin/index.php");
-                            } else {
-                                $_SESSION['worker_id'] = $uid;
-                                $_SESSION['is_worker'] = true;
-                                $_SESSION['active_panel'] = 'worker';
-                                setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
-                                setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
-                                header("Location: worker.php");
-                            }
-                            exit;
-                        } elseif (($u['role'] ?? '') === 'worker' || ($u['role'] ?? '') === 'host') {
-                            unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['is_super_admin']);
-                            $_SESSION['user_id'] = $uid;
-                            $_SESSION['worker_id'] = $uid;
-                            $_SESSION['username'] = $u['username'];
-                            $_SESSION['role'] = 'worker';
-                            $_SESSION['is_worker'] = true;
-                            $_SESSION['active_panel'] = 'worker';
-                            setcookie('active_panel', 'worker', time() + (365 * 24 * 3600), '/');
-                            setcookie('beastz_active_panel', 'worker', time() + (365 * 24 * 3600), '/');
-                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'admin'); }
-                            sync_login_player_id($uid, 'worker');
-                            header("Location: worker.php");
-                            exit;
-                        } else {
-                            unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['admin_role'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in'], $_SESSION['is_worker'], $_SESSION['worker_id']);
-                            
-                            $_SESSION['user_id'] = $uid;
-                            $_SESSION['username'] = $u['username'];
-                            $_SESSION['email'] = $u['email'];
-                            $_SESSION['role'] = 'user';
-                            $_SESSION['user_logged_in'] = true;
-                            
-                            if (function_exists('set_user_remember_token')) { set_user_remember_token($uid, 'user'); }
-                            sync_login_player_id($uid, 'user');
-                            $_SESSION['active_panel'] = 'user';
-                            setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
-                            setcookie('beastz_active_panel', 'user', time() + (365 * 24 * 3600), '/');
-                            header("Location: index.php");
-                            exit;
-                        }
-                    } else {
-                        $error = "Incorrect password. Please try again.";
-                    }
-                }
-            } else {
-                $error = "Account not found with this username or mobile number.";
-            }
-        }
-    }
-}
-
-// =============================================================
-// 2. SIGN UP / REGISTRATION HANDLER (PHONE NUMBER MANDATORY)
-// =============================================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'do_register') {
-    $active_tab = 'register';
-    $username = preg_replace('/[^a-zA-Z0-9_]/', '', sanitize($_POST['username'] ?? ''));
-    $phone = preg_replace('/[^0-9]/', '', sanitize($_POST['phone'] ?? ''));
-    $email = sanitize($_POST['email'] ?? '');
-    $password = trim($_POST['password'] ?? '');
-    $referral = sanitize($_POST['referral_code'] ?? '');
-
-    if (empty($username) || strlen($username) < 3) {
-        $error = "Username must be at least 3 characters long.";
-    } elseif (empty($phone) || strlen($phone) < 10) {
-        $error = "Valid 10-digit mobile number is mandatory to register.";
-    } elseif (empty($email) || strpos($email, '@') === false) { 
-        $error = "Please enter a valid email address.";
-    } elseif (empty($password) || strlen($password) < 6) {
-        $error = "Password must be at least 6 characters long.";
-    } elseif (!$db_ok) {
-        $error = "Server is busy (database unreachable). Please try again in a moment.";
-    } else {
-        // Check uniqueness
-        $dup_chk = $conn->prepare("SELECT id, username, phone, email FROM users WHERE username = ? OR phone = ? OR email = ? LIMIT 1");
-        $dup_chk->bind_param("sss", $username, $phone, $email);
-        $dup_chk->execute();
-        $existing = $dup_chk->get_result()->fetch_assoc();
-        $dup_chk->close();
-
-        if ($existing) {
-            if (strtolower($existing['username']) === strtolower($username)) {
-                $error = "Username already taken! Please pick another.";
-            } elseif ($existing['phone'] === $phone) {
-                $error = "Mobile number already registered! Please sign in.";
-            } else {
-                $error = "Email address already registered! Please sign in.";
-            }
-        } else {
-            // Hash password
-            $hashed = password_hash($password, PASSWORD_BCRYPT);
-            $initial_wallet = 0.00;
-            $default_avatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($username);
-
-            $ins = $conn->prepare("INSERT INTO users (username, name, email, phone, password, role, status, wallet_balance, avatar, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, 'user', 'active', ?, ?, ?, ?)");
-            $my_ref_code = 'BEAST' . strtoupper(substr(md5($username . time()), 0, 5));
-            
-            $ins->bind_param("sssssdsss", $username, $username, $email, $phone, $hashed, $initial_wallet, $default_avatar, $my_ref_code, $referral);
-
-            if ($ins->execute()) {
-                $new_id = (int)$ins->insert_id;
-                $ins->close();
-                
-                unset($_SESSION['admin_id'], $_SESSION['admin_user'], $_SESSION['admin_username'], $_SESSION['is_super_admin'], $_SESSION['admin_logged_in'], $_SESSION['is_worker'], $_SESSION['worker_id']);
-                
-                $_SESSION['user_id'] = $new_id;
-                $_SESSION['username'] = $username;
-                $_SESSION['email'] = $email;
-                $_SESSION['role'] = 'user';
-                $_SESSION['user_logged_in'] = true;
-                
-                $_SESSION['active_panel'] = 'user';
-                setcookie('active_panel', 'user', time() + (365 * 24 * 3600), '/');
-                setcookie('beastz_active_panel', 'user', time() + (365 * 24 * 3600), '/');
-                if (function_exists('set_user_remember_token')) { set_user_remember_token($new_id, 'user'); }
-                sync_login_player_id($new_id, 'user');
-
-                header("Location: index.php"); 
-                exit;
-            } else {
-                $error = "Registration error: " . $conn->error;
-            }
-        }
-    }
-}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <script src="/theme.js"></script>
     <meta charset="UTF-8">
@@ -352,41 +154,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                        display: ['"Outfit"', 'sans-serif']
-                    }
-                }
-            }
-        };
-    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    
-    <!-- GOOGLE AUTH SCRIPT -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body class="bg-[#080a0f] text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-sm bg-[#0f141f] border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+    <div class="w-full max-w-sm bg-[#131b2e] border border-[#1e2d42] rounded-3xl p-6 shadow-2xl relative overflow-hidden">
         
         <!-- Subtle Glow -->
-        <div class="absolute -top-16 -right-16 w-36 h-36 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -top-16 -right-16 w-36 h-36 bg-[#3D40BD]/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <!-- Brand Header -->
         <div class="text-center mb-5">
             <div class="w-16 h-16 mx-auto mb-2.5 flex items-center justify-center">
-                <img src="/logo.png" alt="BEASTz BATTLE" class="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(56,189,248,0.7)]">
+                <img src="/logo.png" alt="BEASTz BATTLE" class="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(61,64,189,0.7)]">
             </div>
             <h1 class="text-xl font-black font-display tracking-tight text-white">
-                BEASTz <span class="text-sky-400">BATTLE</span>
+                BEASTz <span class="text-[#3D40BD]">BATTLE</span>
             </h1>
-            <p class="text-[11px] text-slate-400 mt-0.5">India's Ultimate BGMI & Free Fire Arena</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Instant OTP Login & Signup</p>
         </div>
 
         <!-- Alert Feedbacks -->
@@ -404,173 +190,159 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
         <?php endif; ?>
 
-        <!-- Segmented Tab Switcher (Sign In / Register) -->
-        <div class="grid grid-cols-2 p-1 bg-slate-900 border border-slate-800 rounded-xl mb-4 text-xs font-bold">
-            <button type="button" onclick="setAuthTab('login')" id="btnTabLogin" class="py-2 rounded-lg transition <?= ($active_tab === 'login') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'; ?>">
-                Sign In
-            </button>
-            <button type="button" onclick="setAuthTab('register')" id="btnTabRegister" class="py-2 rounded-lg transition <?= ($active_tab === 'register') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'; ?>">
-                Register
+        <!-- ========================================== -->
+        <!-- FIREBASE PHONE OTP SECTION -->
+        <!-- ========================================== -->
+        <div id="phone-section" class="space-y-3.5">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-400 mb-1">MOBILE NUMBER</label>
+                <div class="flex gap-2">
+                    <input type="text" value="+91" disabled class="w-16 bg-[#0b0f19] border border-[#1e293b] rounded-xl px-2 text-center text-white font-bold">
+                    <input type="number" id="phoneNumber" placeholder="10-digit number" class="w-full bg-[#0b0f19] border border-[#1e293b] rounded-xl px-3 py-2 text-white font-bold tracking-wide focus:border-[#3D40BD] focus:outline-none">
+                </div>
+            </div>
+            
+            <div id="recaptcha-container"></div>
+            
+            <button id="sendOtpBtn" class="w-full py-3 bg-[#3D40BD] hover:bg-[#6C6FF5] text-white font-black rounded-xl text-xs transition shadow-[0_4px_15px_-2px_rgba(61,64,189,0.4)] active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-2">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Send OTP</span>
             </button>
         </div>
 
-        <!-- ========================================== -->
-        <!-- FORM 1: SIGN IN (UNIFIED) -->
-        <!-- ========================================== -->
-        <div id="formLogin" class="space-y-3.5 <?= ($active_tab === 'login') ? '' : 'hidden'; ?>">
-            <form method="POST" action="login.php" class="space-y-3.5">
-                <input type="hidden" name="action" value="do_login">
-
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 mb-1">Username, Mobile or Email</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-user"></i></span>
-                        <input type="text" name="identity" required placeholder="e.g. gamer_pro or 9878385810" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-bold focus:outline-none">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 mb-1">Password</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-slate-500 text-xs"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" name="password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none">
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
-                    <i class="fa-solid fa-right-to-bracket"></i>
-                    <span>Sign In to Arena</span>
-                </button>
-            </form>
-            
-            <!-- GOOGLE LOGIN BUTTON SECTION -->
-            <div class="flex items-center my-3">
-                <div class="flex-grow border-t border-slate-700"></div>
-                <span class="px-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">OR</span>
-                <div class="flex-grow border-t border-slate-700"></div>
-            </div>
-
-            <!-- Google Setup (Redirect Mode For Android App) -->
-            <div id="g_id_onload"
-                 data-client_id="202554953418-39ib6bd6t6c8uj395lm6m70i05povk1b.apps.googleusercontent.com"
-                 data-context="signin"
-                 data-ux_mode="redirect"
-                 data-login_uri="https://beastz-battle.vercel.app/google_auth.php"
-                 data-auto_prompt="false">
-            </div>
-
-            <!-- Google Button UI -->
-            <div class="g_id_signin w-full flex justify-center mt-2"
-                 data-type="standard"
-                 data-shape="rectangular"
-                 data-theme="filled_black"
-                 data-text="signin_with"
-                 data-size="large"
-                 data-logo_alignment="left">
+        <div id="otp-section" class="hidden space-y-3.5">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-400 mb-1 text-center">ENTER OTP RECEIVED</label>
+                <input type="number" id="otpCode" placeholder="••••••" class="w-full bg-[#0b0f19] border border-[#1e293b] rounded-xl px-3 py-3 text-white text-center tracking-[0.5em] text-xl font-bold focus:border-[#3D40BD] focus:outline-none">
             </div>
             
-        </div>
-
-        <!-- ========================================== -->
-        <!-- FORM 2: REGISTER (PHONE NUMBER MANDATORY) -->
-        <!-- ========================================== -->
-        <form method="POST" action="login.php" id="formRegister" class="space-y-3 <?= ($active_tab === 'register') ? '' : 'hidden'; ?>">
-            <input type="hidden" name="action" value="do_register">
-
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Username <span class="text-rose-400">*</span>
-                </label>
-                <input type="text" name="username" required placeholder="e.g. Beast_Striker" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none">
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Mobile Number (Mandatory) <span class="text-rose-400">*</span>
-                </label>
-                <div class="flex items-center gap-1.5">
-                    <span class="px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono font-bold text-slate-400">+91</span>
-                    <input type="tel" name="phone" required minlength="10" maxlength="10" placeholder="10-digit number" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Email Address <span class="text-rose-400">*</span>
-                </label>
-                <input type="email" name="email" required placeholder="gamer@gmail.com" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Password <span class="text-rose-400">*</span>
-                </label>
-                <input type="password" name="password" required minlength="6" placeholder="At least 6 characters" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Referral Code (Optional)
-                </label>
-                <input type="text" name="referral_code" placeholder="e.g. BEAST99" class="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-sky-400 font-mono focus:outline-none uppercase">
-            </div>
-
-            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
-                <i class="fa-solid fa-user-plus"></i>
-                <span>Create Gamer Account</span>
+            <button id="verifyOtpBtn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs transition shadow-[0_4px_15px_-2px_rgba(5,150,105,0.4)] active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-2">
+                <i class="fa-solid fa-check-circle"></i>
+                <span>Verify & Enter Arena</span>
             </button>
-        </form>
+            <button id="backBtn" class="w-full text-slate-400 text-[11px] font-semibold mt-4 hover:text-white transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Change Number
+            </button>
+        </div>
 
     </div>
 
-    <!-- UI TAB SWITCHER SCRIPT -->
-    <script>
-        function setAuthTab(tab) {
-            var fLog = document.getElementById('formLogin');
-            var fReg = document.getElementById('formRegister');
-            var bLog = document.getElementById('btnTabLogin');
-            var bReg = document.getElementById('btnTabRegister');
+    <!-- Firebase SDK & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            if (tab === 'login') {
-                fLog.classList.remove('hidden');
-                fReg.classList.add('hidden');
-                bLog.className = 'py-2 rounded-lg transition bg-blue-600 text-white shadow-sm';
-                bReg.className = 'py-2 rounded-lg transition text-slate-400 hover:text-white';
-            } else {
-                fLog.classList.add('hidden');
-                fReg.classList.remove('hidden');
-                bLog.className = 'py-2 rounded-lg transition text-slate-400 hover:text-white';
-                bReg.className = 'py-2 rounded-lg transition bg-blue-600 text-white shadow-sm';
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnTjTDD8gcpW1u4vhG6A0GMUpI7eax9FA",
+            authDomain: "beast-esports-community.firebaseapp.com",
+            projectId: "beast-esports-community",
+            storageBucket: "beast-esports-community.firebasestorage.app",
+            messagingSenderId: "187588604278",
+            appId: "1:187588604278:web:f699a010f37ae609aaca57"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const phoneSection = document.getElementById('phone-section');
+        const otpSection = document.getElementById('otp-section');
+        const phoneInput = document.getElementById('phoneNumber');
+        const otpInput = document.getElementById('otpCode');
+        const sendOtpBtn = document.getElementById('sendOtpBtn');
+        const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+        const backBtn = document.getElementById('backBtn');
+
+        let confirmationResult;
+
+        // Setup Invisible ReCaptcha
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            'size': 'invisible'
+        });
+
+        // SEND OTP
+        sendOtpBtn.addEventListener('click', () => {
+            const numberVal = phoneInput.value.trim();
+            if(numberVal.length !== 10) {
+                alert("Please enter a valid 10-digit mobile number.");
+                return;
             }
-        }
-    </script>
+            const number = "+91" + numberVal;
 
-    <!-- AUTO-DETECT ONESIGNAL PLAYER ID FOR INSTANT LOGIN SYNC -->
-    <script>
-    (function() {
-        function setPidInputs(pId) {
-            if (!pId) return;
-            document.querySelectorAll("form").forEach(function(f) {
-                var existing = f.querySelector("input[name=player_id]");
-                if (!existing) {
-                    var inp = document.createElement("input");
-                    inp.type = "hidden";
-                    inp.name = "player_id";
-                    inp.value = pId;
-                    f.appendChild(inp);
-                } else {
-                    existing.value = pId;
-                }
+            sendOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Sending...</span>';
+            sendOtpBtn.disabled = true;
+
+            signInWithPhoneNumber(auth, number, window.recaptchaVerifier)
+                .then((result) => {
+                    confirmationResult = result;
+                    phoneSection.classList.add('hidden');
+                    otpSection.classList.remove('hidden');
+                    sendOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send OTP</span>';
+                    sendOtpBtn.disabled = false;
+                }).catch((error) => {
+                    console.error("SMS Error:", error);
+                    alert("Error sending OTP. Please try again.");
+                    sendOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send OTP</span>';
+                    sendOtpBtn.disabled = false;
+                    window.recaptchaVerifier.render().then(function(widgetId) {
+                        grecaptcha.reset(widgetId);
+                    });
+                });
+        });
+
+        // VERIFY OTP & AJAX LOGIN
+        verifyOtpBtn.addEventListener('click', () => {
+            const code = otpInput.value.trim();
+            if(code.length !== 6) {
+                alert("Please enter the 6-digit OTP.");
+                return;
+            }
+
+            verifyOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Verifying...</span>';
+            verifyOtpBtn.disabled = true;
+
+            confirmationResult.confirm(code).then((result) => {
+                const user = result.user;
+                
+                // Send verified data to PHP for Session creation
+                const formData = new FormData();
+                formData.append('action', 'firebase_auth');
+                formData.append('phone', user.phoneNumber);
+                formData.append('uid', user.uid);
+
+                fetch('login.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        window.location.href = data.redirect; // Go to Home/Admin/Worker
+                    } else {
+                        alert(data.message || "Account error.");
+                        verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> <span>Verify & Enter Arena</span>';
+                        verifyOtpBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    alert("System error connecting to server.");
+                    verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> <span>Verify & Enter Arena</span>';
+                    verifyOtpBtn.disabled = false;
+                });
+                
+            }).catch((error) => {
+                alert("Invalid OTP! Please check and try again.");
+                verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> <span>Verify & Enter Arena</span>';
+                verifyOtpBtn.disabled = false;
             });
-        }
-        var pid = localStorage.getItem("beastz_onesignal_player_id");
-        if (window.BEASTzNative && typeof window.BEASTzNative.getPlayerId === "function") {
-            var nId = window.BEASTzNative.getPlayerId();
-            if (nId) pid = nId;
-        }
-        if (pid) setPidInputs(pid);
-        window.onNativePlayerIdReady = function(id) { setPidInputs(id); };
-    })();
+        });
+
+        // BACK BUTTON
+        backBtn.addEventListener('click', () => {
+            otpSection.classList.add('hidden');
+            phoneSection.classList.remove('hidden');
+            otpInput.value = '';
+        });
     </script>
 </body>
 </html>
