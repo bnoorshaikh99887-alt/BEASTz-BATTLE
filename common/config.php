@@ -811,7 +811,7 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
                                  (isset($_GET['apk']) && $_GET['apk'] === '1');
 
                 if ($is_native_apk) {
-                    $download_url = get_setting('apk_download_url', 'https://github.com/bnoorshaikh99887-alt/beast-battle/releases/download/v2.0/BEASTz-BATTLE-v2.0.apk');
+                    $download_url = get_setting('apk_download_url', 'https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.5/BEASTz-BATTLE-v2.5.apk');
                     
                     if ($is_ajax) {
                         http_response_code(426);

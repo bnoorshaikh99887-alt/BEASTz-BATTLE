@@ -11,19 +11,19 @@
     <button type="button" onclick="filterTourneys('ALL', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition bg-blue-600 text-white shadow-xs border border-blue-500">
         ALL
     </button>
-    <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+    <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         SOLO BR
     </button>
-    <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+    <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         DUO BR
     </button>
-    <button type="button" onclick="filterTourneys('SQUAD', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+    <button type="button" onclick="filterTourneys('SQUAD', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         SQUAD
     </button>
-    <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+    <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         CS 1VS1
     </button>
-    <button type="button" onclick="filterTourneys('CS 2VS2', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+    <button type="button" onclick="filterTourneys('CS 2VS2', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         CS 2VS2
     </button>
 </div>

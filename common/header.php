@@ -139,15 +139,15 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-start overflow-x-hidden">
     <!-- BEASTz BATTLE Ultra-Stylish Glowing Esports Intro / Splash Screen -->
-    <div id="beastz-splash-screen" class="fixed inset-0 z-[9999] bg-[#05070e] flex flex-col items-center justify-center transition-opacity duration-700 overflow-hidden" style="background: radial-gradient(circle at 50% 45%, rgba(250, 204, 21, 0.25) 0%, rgba(7, 10, 18, 0.95) 60%, #05070e 100%);">
+    <div id="beastz-splash-screen" class="fixed inset-0 z-[9999] bg-[#05070e] flex flex-col items-center justify-center transition-opacity duration-700 overflow-hidden" style="background: radial-gradient(circle at 50% 45%, rgba(37, 99, 235, 0.25) 0%, rgba(7, 10, 18, 0.95) 60%, #05070e 100%);">
         <!-- Ambient Glowing Aura Rings -->
-        <div class="absolute w-72 h-72 rounded-full bg-blue-600/10 blur-3xl animate-pulse pointer-events-none"></div>
+        <div class="absolute w-72 h-72 rounded-full bg-blue-600/15 blur-3xl animate-pulse pointer-events-none"></div>
         
         <div class="relative flex flex-col items-center z-10 px-6 text-center">
             <!-- Glowing Rotating Cyber Shield Badge -->
             <div class="relative mb-5">
-                <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-yellow-400 via-amber-400 to-yellow-500 text-slate-950 flex items-center justify-center text-4xl shadow-[0_0_50px_rgba(250,204,21,0.85)] border-2 border-white/40 transform transition hover:scale-105">
-                    <i class="fa-solid fa-gamepad text-slate-950 drop-shadow-md"></i>
+                <div class="w-24 h-24 rounded-3xl bg-slate-900 border-2 border-blue-500/40 flex items-center justify-center shadow-[0_0_50px_rgba(56,189,248,0.5)] transform transition hover:scale-105 p-3">
+                    <img src="/logo.png" alt="BEASTz" class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]">
                 </div>
                 <!-- Dual Outer Neon Rings -->
                 <div class="absolute -inset-2 rounded-[28px] border-2 border-blue-500/60 animate-ping" style="animation-duration: 2.5s;"></div>
@@ -155,16 +155,16 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
             </div>
 
             <!-- Glowing Logo Typography -->
-            <h1 class="text-3xl sm:text-4xl font-black tracking-wider font-display text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 drop-shadow-[0_0_30px_rgba(250,204,21,0.7)]">
-                BEASTz<span class="text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]">BATTLE</span>
+            <h1 class="text-3xl sm:text-4xl font-black tracking-wider font-display text-white drop-shadow-[0_0_20px_rgba(56,189,248,0.6)]">
+                BEASTz<span class="text-blue-500 drop-shadow-[0_0_20px_rgba(59,130,246,0.8)]">BATTLE</span>
             </h1>
             
             <div class="flex items-center gap-2 mt-2">
-                <span class="h-[1px] w-6 bg-gradient-to-r from-transparent to-yellow-400"></span>
+                <span class="h-[1px] w-6 bg-gradient-to-r from-transparent to-blue-400"></span>
                 <span class="text-[10px] font-black uppercase tracking-[0.25em] text-sky-400 font-mono">
                     ESPORTS ARENA &bull; BATTLE GROUND
                 </span>
-                <span class="h-[1px] w-6 bg-gradient-to-l from-transparent to-yellow-400"></span>
+                <span class="h-[1px] w-6 bg-gradient-to-l from-transparent to-blue-400"></span>
             </div>
 
             <!-- Laser Power Energy Bar -->
@@ -214,7 +214,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                     <button type="button" onclick="toggleTheme()" title="Toggle Dark/Light Mode" class="text-sky-400 hover:text-yellow-300 text-[10px] flex items-center gap-1">
                         <i class="fa-solid fa-moon text-[10px] beastz-theme-icon"></i>
                     </button>
-                    <a href="logout.php" title="Sign Out" class="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1">
+                    <a href="logout.php" onclick="return confirm('Are you sure you want to log out?');" title="Sign Out" class="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1">
                         <i class="fa-solid fa-power-off text-[9px]"></i>
                         <span>Logout</span>
                     </a>
@@ -269,9 +269,7 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
 
             <!-- Center: App Logo / Title -->
             <button type="button" onclick="switchAppTab('home')" class="flex items-center gap-1.5 cursor-pointer">
-                <div class="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-slate-950 shadow-xs font-black">
-                    <i class="fa-solid fa-gamepad text-xs"></i>
-                </div>
+                <img src="/logo.png" alt="BEASTz" class="w-7 h-7 object-contain drop-shadow">
                 <span class="text-base font-black tracking-tight text-slate-900 font-display">
                     BEASTz<span class="text-blue-400">BATTLE</span>
                 </span>

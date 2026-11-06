@@ -199,7 +199,7 @@ function switchAdminTab(tabName, skipState) {
 
     // Top Navigation Pill Highlight
     var actPills = ['bg-blue-600', 'text-white', 'border-blue-500', 'font-black', 'shadow-sm'];
-    var inactPills = ['text-slate-400', 'hover:text-white', 'font-bold', 'bg-slate-900', 'border-slate-800'];
+    var inactPills = ['text-slate-600', 'dark:text-slate-400', 'hover:text-slate-900', 'dark:hover:text-white', 'font-bold', 'bg-slate-100', 'dark:bg-slate-900', 'border-slate-200', 'dark:border-slate-800'];
 
     document.querySelectorAll('.admin-tab-btn').forEach(function(btn) {
         actPills.forEach(function(c) { btn.classList.remove(c); });
@@ -786,3 +786,25 @@ window.addEventListener('scroll', function() {
         window.BEASTzNative.onScroll(sy);
     }
 }, { passive: true });
+
+// ============================================================
+// NATIVE ANDROID SCROLL BRIDGE FOR STRICT TOP-ONLY REFRESH
+// ============================================================
+(function() {
+    function reportScrollToNative() {
+        var top = (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0);
+        var atTop = (top <= 2);
+        if (window.BEASTzNative) {
+            if (typeof window.BEASTzNative.setScrollState === 'function') {
+                window.BEASTzNative.setScrollState(top, atTop);
+            }
+            if (typeof window.BEASTzNative.onScroll === 'function') {
+                window.BEASTzNative.onScroll(top);
+            }
+        }
+    }
+    window.addEventListener('scroll', reportScrollToNative, { passive: true });
+    document.addEventListener('scroll', reportScrollToNative, { passive: true });
+    document.addEventListener('DOMContentLoaded', reportScrollToNative);
+    setInterval(reportScrollToNative, 300);
+})();

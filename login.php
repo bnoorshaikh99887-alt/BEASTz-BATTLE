@@ -380,8 +380,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         <!-- Brand Header -->
         <div class="text-center mb-5">
-            <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl font-black mb-2.5 shadow-lg shadow-blue-500/20">
-                <i class="fa-solid fa-gamepad"></i>
+            <div class="w-16 h-16 mx-auto mb-2.5 flex items-center justify-center">
+                <img src="/logo.png" alt="BEASTz BATTLE" class="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(56,189,248,0.7)]">
             </div>
             <h1 class="text-xl font-black font-display tracking-tight text-white">
                 BEASTz <span class="text-sky-400">BATTLE</span>
@@ -455,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                  data-client_id="202554953418-39ib6bd6t6c8uj395lm6m70i05povk1b.apps.googleusercontent.com"
                  data-context="signin"
                  data-ux_mode="redirect"
-                 data-login_uri="https://beastz-battle.vercel.app/google_auth.php"
+                 data-login_uri="https://beast-battle-eight.vercel.app/google_auth.php"
                  data-auto_prompt="false">
             </div>
 

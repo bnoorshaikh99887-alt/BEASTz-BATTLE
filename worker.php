@@ -1,5 +1,4 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . "/common/config.php";
 require_once __DIR__ . "/common/onesignal_helper.php";
 
@@ -301,8 +300,8 @@ if ($nt_q) {
     <header class="w-full bg-white dark:bg-[#0d1424] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
-                    <i class="fa-solid fa-gamepad"></i>
+                <div class="w-10 h-10 rounded-2xl bg-slate-900 border border-blue-500/30 flex items-center justify-center shadow-sm p-1.5">
+                    <img src="/logo.png" alt="BEASTz" class="w-full h-full object-contain">
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
@@ -323,7 +322,7 @@ if ($nt_q) {
                 <a href="index.php" target="_blank" class="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold flex items-center gap-1">
                     <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> <span class="hidden sm:inline">User App</span>
                 </a>
-                <a href="logout.php" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold">
+                <a href="logout.php" onclick="return confirm('Are you sure you want to log out?');" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold">
                     <i class="fa-solid fa-power-off"></i>
                 </a>
             </div>
@@ -755,7 +754,7 @@ if ($nt_q) {
         var btnPush = document.getElementById("wmain-tab-push");
         var btnTourneys = document.getElementById("wmain-tab-tournaments");
 
-        var actCls = ["bg-blue-600", "text-slate-950", "shadow-sm", "font-black"];
+        var actCls = ["bg-blue-600", "text-white", "shadow-sm", "font-black"];
         var inactCls = ["bg-slate-100", "dark:bg-slate-800/60", "text-slate-600", "dark:text-slate-400", "font-bold"];
 
         if (tab === "push") {

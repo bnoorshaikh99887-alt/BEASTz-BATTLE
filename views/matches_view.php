@@ -4,10 +4,10 @@
         <button type="button" onclick="switchMatchTab('upcoming', this)" id="tabBtnUpcoming" class="match-tab py-1.5 px-3 rounded-full bg-blue-600 text-white font-black shadow-xs transition-all">
             Upcoming
         </button>
-        <button type="button" onclick="switchMatchTab('live', this)" id="tabBtnLive" class="match-tab py-1.5 px-3 rounded-full text-slate-400 hover:text-white font-bold transition-all">
+        <button type="button" onclick="switchMatchTab('live', this)" id="tabBtnLive" class="match-tab py-1.5 px-3 rounded-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold transition-all">
             Live
         </button>
-        <button type="button" onclick="switchMatchTab('played', this)" id="tabBtnPlayed" class="match-tab py-1.5 px-3 rounded-full text-slate-400 hover:text-white font-bold transition-all">
+        <button type="button" onclick="switchMatchTab('played', this)" id="tabBtnPlayed" class="match-tab py-1.5 px-3 rounded-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold transition-all">
             Played
         </button>
     </div>
@@ -289,13 +289,14 @@
         }
 
         document.querySelectorAll('.match-tab').forEach(function(b) {
-            b.classList.remove('bg-blue-600', 'text-slate-950', 'font-black', 'shadow-xs');
-            b.classList.add('text-slate-400', 'font-bold');
+            b.classList.remove('bg-blue-600', 'text-white', 'text-slate-950', 'font-black', 'shadow-xs');
+            b.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:text-slate-900', 'dark:hover:text-white', 'font-bold');
         });
 
         if (btn) {
-            btn.classList.remove('text-slate-400', 'font-bold');
-            btn.classList.add('bg-blue-600', 'text-slate-950', 'font-black', 'shadow-xs');
+            b_rem = ['text-slate-600', 'dark:text-slate-400', 'hover:text-slate-900', 'dark:hover:text-white', 'font-bold'];
+            b_rem.forEach(function(c) { btn.classList.remove(c); });
+            btn.classList.add('bg-blue-600', 'text-white', 'font-black', 'shadow-xs');
         }
 
         document.querySelectorAll('.tab-pane').forEach(function(p) {

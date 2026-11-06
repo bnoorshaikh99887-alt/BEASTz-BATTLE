@@ -32,7 +32,7 @@ if (
 $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
 $cur_admin_tab = sanitize($_GET['tab'] ?? 'overview');
 $act_btn = "bg-blue-600 text-white font-black shadow-md border border-blue-500";
-$inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800";
+$inact_btn = "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -106,7 +106,7 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
                     <span>Player App</span>
                 </a>
 
-                <a href="/logout.php" title="Sign Out" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[10px] font-bold border border-rose-200 transition flex items-center gap-1">
+                <a href="/logout.php" onclick="return confirm('Are you sure you want to log out?');" title="Sign Out" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[10px] font-bold border border-rose-200 transition flex items-center gap-1">
                     <i class="fa-solid fa-power-off text-[9px]"></i>
                     <span>Logout</span>
                 </a>
@@ -137,7 +137,7 @@ $inact_btn = "text-slate-400 hover:text-white font-bold bg-slate-900 border bord
                 <i class="fa-solid fa-users mr-1"></i> Gamers
             </button>
             <a href="/worker.php" target="_blank" class="px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer text-amber-300 hover:text-amber-200 font-bold bg-blue-600/20 border border-amber-500/40 flex items-center gap-1">
-                <i class="fa-solid fa-gamepad text-xs"></i> Worker Panel <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                <img src="/logo.png" alt="BEASTz" class="w-5 h-5 object-contain"> Worker Panel <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
             </a>
             <?php if ($is_super): ?>
             <button type="button" onclick="switchAdminTab('settings')" id="admin-nav-settings" class="admin-tab-btn px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer <?= ($cur_admin_tab === 'settings' ? $act_btn : $inact_btn); ?>">

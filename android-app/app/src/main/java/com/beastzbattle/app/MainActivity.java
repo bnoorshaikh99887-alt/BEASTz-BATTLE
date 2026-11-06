@@ -17,6 +17,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -49,14 +50,14 @@ import org.json.JSONObject;
 public class MainActivity extends Activity {
 
     private WebView webView;
-    private SwipeRefreshLayout swipeRefreshLayout;
+    private TopOnlySwipeRefreshLayout swipeRefreshLayout;
     private FrameLayout splashLayout;
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 101;
     private final static int PERMISSION_REQUEST_NOTIFICATIONS = 102;
-    private static final String APP_URL = "https://beastz-battle.vercel.app";
+    private static final String APP_URL = "https://beast-battle-eight.vercel.app";
     public static final String CHANNEL_ID = "beastz_push_alerts";
-    private static final int CURRENT_APP_VERSION = 20; // v2.0.0
+    private static final int CURRENT_APP_VERSION = 25; // v2.5.0
     private boolean isPageLoaded = false;
     private static int rendererCrashes = 0;
     private boolean offlinePageShown = false;
@@ -120,8 +121,8 @@ public class MainActivity extends Activity {
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
 
-        // Native SwipeRefreshLayout with vibrant Blue Gaming Theme colors
-        swipeRefreshLayout = new SwipeRefreshLayout(this);
+        // Top-Only Custom SwipeRefreshLayout: Refreshes ONLY when pulling from the top area when page is at the top
+        swipeRefreshLayout = new TopOnlySwipeRefreshLayout(this);
         swipeRefreshLayout.setColorSchemeColors(0xFF2563EB, 0xFF38BDF8, 0xFF60A5FA);
         swipeRefreshLayout.setProgressBackgroundColorSchemeColor(0xFF0F172A);
         swipeRefreshLayout.addView(webView, new ViewGroup.LayoutParams(
@@ -129,28 +130,42 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // Pull down to reload current page with fresh server assets
+        // Pull down to reload current page with fresh server assets and bypass cache
         swipeRefreshLayout.setOnRefreshListener(() -> {
             if (webView != null) {
                 try {
-                    webView.clearCache(false);
+                    webView.clearCache(true);
                 } catch (Exception ignored) {}
-                webView.reload();
+
+                String cur = webView.getUrl();
+                if (cur == null || cur.isEmpty()) cur = APP_URL;
+                Uri u = Uri.parse(cur);
+                Uri.Builder b = u.buildUpon().clearQuery();
+                for (String q : u.getQueryParameterNames()) {
+                    if (!"_r".equals(q)) {
+                        b.appendQueryParameter(q, u.getQueryParameter(q));
+                    }
+                }
+                b.appendQueryParameter("_r", String.valueOf(System.currentTimeMillis()));
+                webView.loadUrl(b.build().toString());
 
                 // Safety timeout to prevent indefinite spinner
                 swipeRefreshLayout.postDelayed(() -> {
                     if (swipeRefreshLayout != null && swipeRefreshLayout.isRefreshing()) {
                         swipeRefreshLayout.setRefreshing(false);
                     }
-                }, 6000);
+                }, 1500);
             } else {
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
 
-        // Strict Top-Only Pull-to-Refresh:
+        // Strict Top-Only Pull-to-Refresh Child Callback:
         swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> {
             if (webView == null) return false;
+            if (swipeRefreshLayout != null && !swipeRefreshLayout.isDomAtTop()) {
+                return true; // child cannot scroll up because it is not at the top
+            }
             return webView.canScrollVertically(-1);
         });
 
@@ -159,7 +174,7 @@ public class MainActivity extends Activity {
             webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
                 if (swipeRefreshLayout != null) {
                     boolean atTop = !webView.canScrollVertically(-1);
-                    swipeRefreshLayout.setEnabled(atTop);
+                    swipeRefreshLayout.setDomAtTop(atTop);
                 }
             });
         }
@@ -264,11 +279,19 @@ public class MainActivity extends Activity {
         // Native JS Bridge for Direct Web-to-Native Notification Call & Device Sync
         webView.addJavascriptInterface(new Object() {
             @JavascriptInterface
+            public void setScrollState(final int scrollY, final boolean atTop) {
+                runOnUiThread(() -> {
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setDomAtTop(atTop && (scrollY <= 2));
+                    }
+                });
+            }
+
+            @JavascriptInterface
             public void onScroll(final int scrollY) {
                 runOnUiThread(() -> {
-                    if (swipeRefreshLayout != null && webView != null) {
-                        boolean atTop = (scrollY <= 0) && !webView.canScrollVertically(-1);
-                        swipeRefreshLayout.setEnabled(atTop);
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setDomAtTop(scrollY <= 2);
                     }
                 });
             }
@@ -389,7 +412,7 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                if (url.contains("beastz-battle.vercel.app") || url.startsWith("/")) {
+                if ((url.contains("beast-battle-eight.vercel.app") || url.contains("beastz-battle.vercel.app") || url.contains("vercel.app")) || url.startsWith("/")) {
                     return false;
                 }
 
@@ -509,7 +532,7 @@ public class MainActivity extends Activity {
 
         // 10. Load App
         String lastUrl = prefs.getString("last_url", APP_URL);
-        if (lastUrl == null || !lastUrl.startsWith("https://beastz-battle.vercel.app")
+        if (lastUrl == null || !lastUrl.startsWith("https://beast-battle-eight.vercel.app")
                 || lastUrl.contains("install.php") || lastUrl.contains("cashfree")
                 || lastUrl.contains("logout") || lastUrl.contains("about:")) {
             lastUrl = APP_URL;
@@ -626,7 +649,7 @@ public class MainActivity extends Activity {
                             + "    window.onNativePlayerIdReady('" + playerId + "'); "
                             + "} "
                             + "if (typeof fetch === 'function') { "
-                            + "    fetch('https://beastz-battle.vercel.app/save_player_id.php', { "
+                            + "    fetch('https://beast-battle-eight.vercel.app/save_player_id.php', { "
                             + "        method: 'POST', "
                             + "        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, "
                             + "        body: 'player_id=' + encodeURIComponent('" + playerId + "') "
@@ -674,7 +697,7 @@ public class MainActivity extends Activity {
             return;
         }
 
-        if (currentUrl != null && currentUrl.contains("beastz-battle.vercel.app")) {
+        if (currentUrl != null && (currentUrl.contains("beast-battle-eight.vercel.app") || currentUrl.contains("beastz-battle.vercel.app") || currentUrl.contains("vercel.app"))) {
             webView.evaluateJavascript(
                     "(function(){try{var v=document.querySelector('.spa-tab-view:not(.hidden)');if(v&&v.id&&v.id!=='spa-tab-home'&&typeof switchAppTab==='function'){switchAppTab('home');return 'tab';}}catch(e){}return 'exit';})()",
                     new ValueCallback<String>() {
@@ -694,5 +717,68 @@ public class MainActivity extends Activity {
         }
 
         super.onBackPressed();
+    }
+
+    /**
+     * Custom TopOnlySwipeRefreshLayout
+     * Restricts pull-to-refresh to ONLY the top area (within 150dp from top)
+     * and when the web content is at scrollY == 0.
+     */
+    public static class TopOnlySwipeRefreshLayout extends SwipeRefreshLayout {
+        private float initialDownY = -1f;
+        private float initialDownX = -1f;
+        private volatile boolean isDomAtTop = true;
+        private final float maxAllowedStartY;
+
+        public TopOnlySwipeRefreshLayout(Context context) {
+            super(context);
+            maxAllowedStartY = 160f * context.getResources().getDisplayMetrics().density;
+        }
+
+        public void setDomAtTop(boolean atTop) {
+            this.isDomAtTop = atTop;
+            setEnabled(atTop);
+        }
+
+        public boolean isDomAtTop() {
+            return isDomAtTop;
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            if (!isDomAtTop) {
+                return false;
+            }
+
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    initialDownY = ev.getY();
+                    initialDownX = ev.getX();
+                    if (initialDownY > maxAllowedStartY) {
+                        return false;
+                    }
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    if (initialDownY < 0 || initialDownY > maxAllowedStartY) {
+                        return false;
+                    }
+                    float dy = ev.getY() - initialDownY;
+                    float dx = Math.abs(ev.getX() - initialDownX);
+                    // Must be a vertical pull downward
+                    if (dy <= 0 || dx > dy * 0.9f) {
+                        return false;
+                    }
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    initialDownY = -1f;
+                    initialDownX = -1f;
+                    break;
+            }
+
+            return super.onInterceptTouchEvent(ev);
+        }
     }
 }

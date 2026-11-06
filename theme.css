@@ -26,17 +26,18 @@ html.dark .nav-app-tab.active-tab {
 }
 
 /* ============================================================ */
-/* CRITICAL BADGE TEXT CONTRAST (Never Yellow on Yellow) */
+/* ELECTRIC BLUE PRIMARY BUTTONS & TABS: CRISP WHITE TEXT */
 /* ============================================================ */
 .bg-blue-600,
-html.dark .bg-blue-600,
-[class*="bg-blue-600"] {
-    background-color: #38bdf8 !important;
-    color: #020617 !important;
+.bg-blue-700,
+.btn-primary {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
 }
 .bg-blue-600 *,
-html.dark .bg-blue-600 * {
-    color: #020617 !important;
+.bg-blue-700 *,
+.btn-primary * {
+    color: #ffffff !important;
 }
 
 /* ================= DARK MODE UNIVERSAL RULES ================= */
@@ -421,15 +422,54 @@ html:not(.dark) body {
     background-color: #f8fafc !important;
 }
 
-/* All headings in Light Mode (except elements explicitly marked text-white or inside dark cards) */
-html:not(.dark) h1:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
-html:not(.dark) h2:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
-html:not(.dark) h3:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
-html:not(.dark) h4:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
-html:not(.dark) h5:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
-html:not(.dark) h6:not(.keep-white):not(.text-white):not([class*="dark:text-white"]),
-html:not(.dark) .font-display:not(.keep-white):not(.text-white) {
+/* All headings in Light Mode: Crisp dark slate (#0f172a) */
+html:not(.dark) h1:not(.keep-white),
+html:not(.dark) h2:not(.keep-white),
+html:not(.dark) h3:not(.keep-white),
+html:not(.dark) h4:not(.keep-white),
+html:not(.dark) h5:not(.keep-white),
+html:not(.dark) h6:not(.keep-white),
+html:not(.dark) .font-display:not(.keep-white) {
     color: #0f172a !important;
+}
+
+/* Ensure blue buttons & dark cards keep crisp white headings/text */
+html:not(.dark) button.bg-blue-600 *,
+html:not(.dark) a.bg-blue-600 *,
+html:not(.dark) .bg-blue-600 h1,
+html:not(.dark) .bg-blue-600 h2,
+html:not(.dark) .bg-blue-600 h3,
+html:not(.dark) .bg-slate-900 h1,
+html:not(.dark) .bg-slate-900 h2,
+html:not(.dark) .bg-slate-900 h3,
+html:not(.dark) .bg-slate-950 h1,
+html:not(.dark) .bg-slate-950 h2,
+html:not(.dark) .bg-slate-950 h3,
+html:not(.dark) .bg-black h1,
+html:not(.dark) .bg-black h2,
+html:not(.dark) .bg-black h3 {
+    color: #ffffff !important;
+}
+
+/* High-Contrast Light Mode Subtext & Labels */
+html:not(.dark) .text-slate-400 {
+    color: #475569 !important;
+}
+html:not(.dark) .text-slate-500 {
+    color: #334155 !important;
+}
+html:not(.dark) .text-slate-300 {
+    color: #64748b !important;
+}
+
+/* Top Sticky Navigation Bar Contrast */
+html.dark [class*="sticky"][class*="top-"] {
+    background-color: rgba(11, 15, 25, 0.96) !important;
+    border-color: #1e293b !important;
+}
+html:not(.dark) [class*="sticky"][class*="top-"] {
+    background-color: rgba(255, 255, 255, 0.98) !important;
+    border-color: #e2e8f0 !important;
 }
 
 /* Form labels, inputs and selects in Light Mode */
@@ -515,8 +555,9 @@ html.dark .bg-white h1,
 html.dark .bg-white h2,
 html.dark .bg-white h3,
 html.dark .bg-white h4,
-.text-white,
-h1.text-white, h2.text-white, h3.text-white, h4.text-white {
+html.dark .text-white,
+html.dark h1.text-white, html.dark h2.text-white, html.dark h3.text-white, html.dark h4.text-white,
+.bg-blue-600 .text-white, .bg-slate-900 .text-white, .bg-slate-950 .text-white, .bg-black .text-white {
     color: #ffffff !important;
 }
 
