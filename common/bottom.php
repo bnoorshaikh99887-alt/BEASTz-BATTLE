@@ -2,7 +2,7 @@
         <!-- Fixed Bottom App Navigation with Dynamic Yellow Glow -->
         <?php $cur_app_tab = $current_active_tab ?? ($_GET["tab"] ?? "home"); ?>
         <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/80 py-2 px-3 z-50 shadow-lg">
-            <div class="grid grid-cols-4 gap-1.5 text-center">
+            <div class="grid grid-cols-5 gap-1.5 text-center">
                 <button type="button" onclick="switchAppTab('home')" id="nav-tab-home" class="nav-app-tab <?= ($cur_app_tab === 'home' ? 'active-tab text-blue-500 dark:text-sky-400' : 'text-slate-400 hover:text-slate-600') ?> flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer">
                     <i class="fa-solid fa-house text-base mb-0.5"></i>
                     <span class="text-[10px] font-bold tracking-tight">Home</span>

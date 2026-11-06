@@ -116,7 +116,8 @@ public class MainActivity extends Activity {
         // 4. Create WebView & SwipeRefreshLayout (Pull-to-Refresh)
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF080A0F);
-        webView.setLayerType(View.LAYER_TYPE_NONE, null);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
@@ -255,6 +256,8 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setEnableSmoothTransition(true);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setUserAgentString(settings.getUserAgentString() + " BEASTzNativeApp/2.0.0 Android");

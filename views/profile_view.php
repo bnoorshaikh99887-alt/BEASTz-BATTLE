@@ -88,6 +88,23 @@ if (!isset($tx_res) && isset($conn) && isset($me['id'])) {
 </div>
 
 <!-- ============================================================= -->
+<!-- JOIN PRIVATE TOURNAMENT (REQUESTED IN ME / SETTINGS) -->
+<!-- ============================================================= -->
+<div class="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-200 dark:border-purple-800/60 rounded-2xl p-4 shadow-xs mb-3.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center text-sm shadow-xs">
+            <i class="fa-solid fa-key"></i>
+        </div>
+        <div>
+            <span class="text-xs font-black text-slate-900 dark:text-white block">Join Private Tournament</span>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400 block">Enter 6-digit match code to unlock private tournament</span>
+        </div>
+    </div>
+    <button type="button" onclick="openPrivateMatchModal()" class="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-xl text-xs shadow-xs transition active:scale-95 shrink-0 cursor-pointer">
+        Enter Code
+    </button>
+</div>
+<!-- ============================================================= -->
 <!-- THEME & DISPLAY PREFERENCES (DARK / LIGHT MODE) -->
 <!-- ============================================================= -->
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs mb-3.5">
