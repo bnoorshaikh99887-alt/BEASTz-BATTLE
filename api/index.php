@@ -51,13 +51,17 @@ if ($path === 'BEASTz-BATTLE.apk' || $path === 'app.apk' || $path === 'download-
         }
     }
     // High-speed direct release CDN download
-    header('Location: https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.6/BEASTz-BATTLE-v2.6.apk', true, 302);
+    header('Location: https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.7/BEASTz-BATTLE-v2.7.apk', true, 302);
     exit;
 }
 
 // 0. Specific Route Aliases to prevent 404s
 if ($path === 'check_update' || $path === 'check_update.php') {
     require __DIR__ . '/check_update.php';
+    exit;
+}
+if ($path === 'private_match' || $path === 'private_match.php') {
+    require __DIR__ . '/private_match.php';
     exit;
 }
 if ($path === 'maintenance_toggle' || $path === 'maintenance_toggle.php') {

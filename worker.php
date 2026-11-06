@@ -54,9 +54,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
             $feedback_type = "error";
         } else {
             $match_time = date("Y-m-d H:i:s", strtotime($match_time_raw));
-            $stmt = $conn->prepare("INSERT INTO tournaments (title, game, game_name, map, match_type, entry_fee, per_kill, prize_pool, match_time, total_slots, joined_slots, status, commission_percent, hosted_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'upcoming', ?, ?)");
+            $is_private = (!empty($_POST["is_private"]) && (int)$_POST["is_private"] === 1) ? 1 : 0;
+            $access_code = $is_private ? ("BTZ-" . strtoupper(substr(bin2hex(random_bytes(3)), 0, 4))) : null;
+            $stmt = $conn->prepare("INSERT INTO tournaments (title, game, game_name, map, match_type, entry_fee, per_kill, prize_pool, match_time, total_slots, joined_slots, status, commission_percent, hosted_by_admin_id, is_private, access_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'upcoming', ?, ?, ?, ?)");
             if ($stmt) {
-                $stmt->bind_param("sssssdddsiii", $title, $game, $game, $map, $match_type, $entry_fee, $per_kill, $prize_pool, $match_time, $total_slots, $commission, $logged_worker_id);
+                $stmt->bind_param("sssssdddsiiiis", $title, $game, $game, $map, $match_type, $entry_fee, $per_kill, $prize_pool, $match_time, $total_slots, $commission, $logged_worker_id, $is_private, $access_code);
                 if ($stmt->execute()) {
                     $new_id = $stmt->insert_id;
                     $stmt->close();
@@ -284,7 +286,29 @@ if ($nt_q) {
     <title>Worker Studio - BEASTz BATTLE</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+    function workerUpdateSlots(mode) {
+        const input = document.getElementById("workerTotalSlots");
+        if (!input) return;
+        const m = (mode || "").toUpperCase();
+        if (m === "SOLO BR") {
+            input.value = 48;
+        } else if (m === "DUO BR") {
+            input.value = 24;
+        } else if (m === "SQUAD BR") {
+            input.value = 12;
+        } else if (m === "CS 1VS1" || m === "LONE WOLF 1V1") {
+            input.value = 2;
+        } else if (m === "CS 2VS2" || m === "LONE WOLF 2V2") {
+            input.value = 2;
+        } else if (m === "CS 4VS4") {
+            input.value = 2;
+        } else {
+            input.value = 48;
+        }
+    }
+    
+</script>
     <script>tailwind.config = { darkMode: "class" };</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
@@ -298,31 +322,24 @@ if ($nt_q) {
 
     <!-- Top Header -->
     <header class="w-full bg-white dark:bg-[#0d1424] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
-        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-slate-900 border border-blue-500/30 flex items-center justify-center shadow-sm p-1.5">
-                    <img src="/logo.png" alt="BEASTz" class="w-full h-full object-contain">
+        <div class="max-w-5xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 overflow-hidden">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+                    <i class="fa-solid fa-gamepad"></i>
                 </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="font-black text-sm tracking-tight font-display">BEASTz<span class="text-blue-400">WORKER</span></span>
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-600/20 text-sky-300 dark:text-sky-400 border border-blue-500/40">HOST STUDIO</span>
+                <div class="min-w-0 truncate">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="font-black text-xs sm:text-sm tracking-tight font-display text-slate-900 dark:text-white">BEASTz<span class="text-blue-500">WORKER</span></span>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-600/15 text-blue-600 dark:text-sky-400 border border-blue-500/30">WORKER STUDIO</span>
                     </div>
-                    <p class="text-[11px] text-slate-400 font-medium">Logged in as @<?= htmlspecialchars($logged_worker_user); ?></p>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Logged in as @<?= htmlspecialchars($logged_worker_user); ?></p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="toggleTheme()" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="toggleTheme()" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shrink-0">
                     <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
                 </button>
-                <!-- Worker Header Brand -->
-                <div class="px-2.5 py-1 rounded-xl bg-blue-600/20 text-sky-400 border border-blue-500/30 text-xs font-black flex items-center gap-1">
-                    <i class="fa-solid fa-gamepad"></i> <span>WORKER STUDIO</span>
-                </div>
-                <a href="index.php" target="_blank" class="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold flex items-center gap-1">
-                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> <span class="hidden sm:inline">User App</span>
-                </a>
-                <a href="logout.php" onclick="return confirm('Are you sure you want to log out?');" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold">
+                <a href="logout.php" onclick="return confirm('Are you sure you want to log out?');" class="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold flex items-center justify-center shrink-0">
                     <i class="fa-solid fa-power-off"></i>
                 </a>
             </div>
@@ -528,16 +545,15 @@ if ($nt_q) {
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Match Category</label>
-                            <select name="match_type" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
-                                <option value="SOLO BR">SOLO BR</option>
-                                <option value="DUO BR">DUO BR</option>
-                                <option value="DUO PR KILL">DUO PR KILL</option>
-                                <option value="SOLO PER KILL">SOLO PER KILL</option>
-                                <option value="LONE WOLF">LONE WOLF</option>
-                                <option value="CS CHALLENGERS">CS CHALLENGERS</option>
-                                <option value="CLASH SQUAD">CLASH SQUAD</option>
-                                <option value="CS HEADSHOT">CS HEADSHOT</option>
-                                <option value="LOSS TO WIN">LOSS TO WIN</option>
+                            <select name="match_type" id="workerMatchType" onchange="workerUpdateSlots(this.value)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                                <option value="SOLO BR">SOLO BR (48 Slots)</option>
+                                <option value="DUO BR">DUO BR (24 Teams)</option>
+                                <option value="SQUAD BR">SQUAD BR (12 Squads)</option>
+                                <option value="CS 1VS1">CS 1VS1 (2 Slots)</option>
+                                <option value="CS 2VS2">CS 2VS2 (2 Teams)</option>
+                                <option value="CS 4VS4">CS 4VS4 (2 Squads)</option>
+                                <option value="LONE WOLF 1V1">LONE WOLF 1V1 (2 Slots)</option>
+                                <option value="LONE WOLF 2V2">LONE WOLF 2V2 (2 Teams)</option>
                             </select>
                         </div>
                     </div>
@@ -554,7 +570,14 @@ if ($nt_q) {
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Total Slots</label>
-                            <input type="number" name="total_slots" value="48" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                            <input type="number" name="total_slots" id="workerTotalSlots" value="48" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Visibility / Access</label>
+                            <select name="is_private" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none">
+                                <option value="0">🌐 Public (Visible to All)</option>
+                                <option value="1">🔒 Private (Join via Match Code)</option>
+                            </select>
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
@@ -622,6 +645,19 @@ if ($nt_q) {
                                         <h4 class="text-xs font-black text-slate-900 dark:text-white leading-tight">
                                             <?= htmlspecialchars($t["title"]); ?>
                                         </h4>
+                                        <?php if (!empty($t["is_private"])): ?>
+                                            <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                                                <span class="text-[9px] font-black px-1.5 py-0.2 rounded uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                    🔒 PRIVATE
+                                                </span>
+                                                <span class="text-[10px] font-mono font-bold text-sky-400">
+                                                    Code: <?= htmlspecialchars($t["access_code"] ?? ""); ?>
+                                                </span>
+                                                <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($t['access_code'] ?? ''); ?>'); alert('Copied code: <?= htmlspecialchars($t['access_code'] ?? ''); ?>');" class="px-1.5 py-0.2 rounded bg-blue-600 text-white text-[9px] font-bold">
+                                                    Copy
+                                                </button>
+                                            </div>
+                                        <?php endif; ?>
                                         <p class="text-[10px] text-slate-400 font-mono mt-0.5">
                                             <?= date("d M Y, h:i A", strtotime($t["match_time"])); ?>
                                         </p>

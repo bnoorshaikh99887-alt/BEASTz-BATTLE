@@ -33,41 +33,41 @@ jobs:
 
       - name: Prepare APK Release Files
         run: |
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE-v2.6.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE-v2.7.apk
           cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BEASTz-BATTLE-v2.6-APK
+          name: BEASTz-BATTLE-v2.7-APK
           path: |
-            BEASTz-BATTLE-v2.6.apk
+            BEASTz-BATTLE-v2.7.apk
             BEASTz-BATTLE.apk
             android-app/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Create or Update GitHub Release v2.6
+      - name: Create or Update GitHub Release v2.7
         uses: softprops/action-gh-release@v1
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v2.6
-          name: "BEASTz BATTLE v2.6 (Official Native APK)"
+          tag_name: v2.7
+          name: "BEASTz BATTLE v2.7 (Official Native APK)"
           body: |
-            # 🎮 BEASTz BATTLE v2.6 Official Native Release
+            # 🎮 BEASTz BATTLE v2.7 Official Native Release
 
-            Download the new **v2.6** native Android APK for BEASTz BATTLE.
+            Download the new **v2.7** native Android APK for BEASTz BATTLE.
 
-            ### 🚀 What's New in v2.6:
-            - **Native Pull-to-Refresh**: Swipe down from top on any screen to reload live tournament data instantly.
-            - **Modern Blue & Slate UI Theme**: High-contrast blue gaming interface with sleek glassmorphism.
-            - **WebView Cache Auto-Buster**: Flushes stale WebView HTTP cache on upgrade so new features reflect immediately without freezing.
-            - **Admin Maintenance Bypass**: Master Admins retain full control and are never locked out when Maintenance Mode is active.
-            - **OneSignal Push Notifications**: Android system tray notifications even when the app is completely closed.
-            - **Direct Cashfree & UPI Payments**: 1-tap intent opening for PhonePe, Paytm, Google Pay, and UPI apps.
+            ### 🚀 What's New in v2.7:
+            - **Strict Role Security**: Workers and standard users are blocked from Master Admin Panel.
+            - **Worker Studio Redesign**: Clean header with single unified WORKER STUDIO badge; fixed mobile layout overflow.
+            - **Dynamic Match Modes & Slots**: Full Free Fire mode matrix (SOLO BR, DUO BR, SQUAD BR, CS 1v1, CS 2v2, CS 4v4, LONE WOLF 1v1, LONE WOLF 2v2) with exact player details validation (1, 2, or 4 players).
+            - **Private Tournament Matches**: Host private matches with 6-character access codes (e.g. BTZ-A89F) and 1-tap "Join with Code".
+            - **Top-Only Pull-to-Refresh**: Clean swipe down from top screen to reload live tournament data without accidental trigger.
+            - **Dual-Mode Visual Contrast**: Complete light/dark mode support with high-contrast text and zero white-on-white glitch.
 
             ### 📲 Direct Download:
-            👉 **[Download BEASTz-BATTLE-v2.6.apk](https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.6/BEASTz-BATTLE-v2.6.apk)**
+            👉 **[Download BEASTz-BATTLE-v2.7.apk](https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.7/BEASTz-BATTLE-v2.7.apk)**
           files: |
-            BEASTz-BATTLE-v2.6.apk
+            BEASTz-BATTLE-v2.7.apk
             BEASTz-BATTLE.apk
             android-app/app/build/outputs/apk/debug/app-debug.apk
         env:
@@ -78,10 +78,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         with:
           tag_name: latest
-          name: "BEASTz BATTLE Latest APK (v2.6)"
-          body: "Official latest Android APK (v2.6) for BEASTz BATTLE with Pull-to-Refresh, Blue Gaming Theme, and Admin Maintenance Bypass."
+          name: "BEASTz BATTLE Latest APK (v2.7)"
+          body: "Official latest Android APK (v2.7) for BEASTz BATTLE with Role Security, Worker Studio redesign, Dynamic Roster slots, and Private Tournament Codes."
           files: |
-            BEASTz-BATTLE-v2.6.apk
+            BEASTz-BATTLE-v2.7.apk
             BEASTz-BATTLE.apk
             android-app/app/build/outputs/apk/debug/app-debug.apk
         env:

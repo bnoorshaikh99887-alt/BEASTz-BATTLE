@@ -72,10 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // 2. Dynamic Slot Rules: Squad = 12 slots, Duo = 24 slots, Solo = standard slots
             $t_title_upper = strtoupper($tourney['title'] ?? '');
             $t_type_upper = strtoupper($tourney['match_type'] ?? '');
-            $is_squad = ($match_mode === 'SQUAD' || str_contains($t_type_upper, 'SQUAD') || str_contains($t_title_upper, 'SQUAD'));
+            $is_squad = ($match_mode === 'SQUAD' || str_contains($t_type_upper, 'SQUAD') || str_contains($t_type_upper, '4VS4') || str_contains($t_title_upper, 'SQUAD'));
             $is_duo = (!$is_squad && ($match_mode === 'DUO' || str_contains($t_type_upper, 'DUO') || str_contains($t_type_upper, '2VS2') || str_contains($t_title_upper, 'DUO')));
 
-            $max_slots = $is_squad ? 12 : ($is_duo ? 24 : (int)($tourney['total_slots'] ?: 48));
+            $max_slots = (int)($tourney['total_slots'] ?: ($is_squad ? 12 : ($is_duo ? 24 : 48)));
             if ($max_slots <= 0) $max_slots = 48;
 
             if ($slot_no < 1 || $slot_no > $max_slots) {
@@ -175,12 +175,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $tx_stmt->close();
             }
 
-            // 7. Insert Participant Record
+            // 7. Insert Participant Record (Unified & Dedicated Multi-Player Columns)
             $tourney_game = $tourney['game_name'] ?? 'Free Fire';
-            $p_stmt = $conn->prepare("INSERT INTO participants (tournament_id, user_id, in_game_name, game_name, game_id, slot_no) VALUES (?, ?, ?, ?, ?, ?)");
-            $p_stmt->bind_param("iisssi", $tid, $curr_uid, $in_game_name, $tourney_game, $game_id, $slot_no);
-            $p_stmt->execute();
-            $p_stmt->close();
+            $p1_name = $roster_igns[0] ?? $in_game_name;
+            $p1_uid  = $roster_uids[0] ?? $game_id;
+            $p2_name = $roster_igns[1] ?? null;
+            $p2_uid  = $roster_uids[1] ?? null;
+            $p3_name = $roster_igns[2] ?? null;
+            $p3_uid  = $roster_uids[2] ?? null;
+            $p4_name = $roster_igns[3] ?? null;
+            $p4_uid  = $roster_uids[3] ?? null;
+
+            $p_stmt = $conn->prepare("INSERT INTO participants (tournament_id, user_id, in_game_name, game_name, game_id, slot_no, player_1_name, player_1_uid, player_2_name, player_2_uid, player_3_name, player_3_uid, player_4_name, player_4_uid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            if ($p_stmt) {
+                $p_stmt->bind_param("iisssissssssss", $tid, $curr_uid, $in_game_name, $tourney_game, $game_id, $slot_no, $p1_name, $p1_uid, $p2_name, $p2_uid, $p3_name, $p3_uid, $p4_name, $p4_uid);
+                $p_stmt->execute();
+                $p_stmt->close();
+            } else {
+                $fb = $conn->prepare("INSERT INTO participants (tournament_id, user_id, in_game_name, game_name, game_id, slot_no) VALUES (?, ?, ?, ?, ?, ?)");
+                $fb->bind_param("iisssi", $tid, $curr_uid, $in_game_name, $tourney_game, $game_id, $slot_no);
+                $fb->execute();
+                $fb->close();
+            }
 
             @$conn->query("INSERT INTO user_tournaments (user_id, tournament_id, game_name, slot_no) VALUES ({$curr_uid}, {$tid}, '" . $conn->real_escape_string($in_game_name) . "', {$slot_no})");
 
@@ -365,7 +381,7 @@ $tournaments_res = $conn->query("
     COALESCE(t.game_name, t.game, 'Free Fire') as display_game,
     (SELECT COUNT(*) FROM participants WHERE tournament_id = t.id) as enrolled_count
     FROM tournaments t
-    WHERE t.status != 'completed' {$joined_filter}
+    WHERE t.status != 'completed' AND (t.is_private = 0 OR t.is_private IS NULL) {$joined_filter}
     ORDER BY t.match_time ASC, t.id DESC
 ");
 

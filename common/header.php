@@ -41,9 +41,19 @@ if (isset($_SESSION['user_id'])) {
 
 $is_native_apk = (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', 'BEASTzNativeApp'));
 
-if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin')) {
-    $is_admin = true;
+$is_super_admin = false;
+$logged_user_clean = strtolower(trim($logged_username ?? ""));
+if (
+    !empty($_SESSION["is_super_admin"]) ||
+    $logged_user_clean === "anonymous.349" ||
+    $logged_user_clean === "admin" ||
+    $logged_user_clean === "noorshaikh99887@gmail.com" ||
+    ($_SESSION["admin_role"] ?? "") === "super_admin"
+) {
+    $is_super_admin = true;
 }
+$is_worker = (!empty($_SESSION["is_worker"]) || !empty($_SESSION["worker_id"]) || ($user_role === "worker") || (($_SESSION["role"] ?? "") === "worker"));
+$is_admin = $is_super_admin;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -197,12 +207,12 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
     <!-- Mobile App Container (Max Width 440px) -->
     <div class="w-full max-w-md min-h-screen bg-slate-50 border-x border-slate-200 flex flex-col relative pb-20 shadow-xl">
         
-        <?php if ($is_admin): ?>
-            <!-- Admin Top Navigation Strip -->
+        <?php if ($is_super_admin): ?>
+            <!-- Master Admin Top Navigation Strip -->
             <div class="bg-slate-900 border-b border-blue-500/40 px-3 py-1.5 flex items-center justify-between text-[11px] sticky top-0 z-50 text-white">
                 <div class="flex items-center gap-1.5">
-                    <span class="px-1.5 py-0.5 rounded bg-blue-600 text-slate-950 font-black uppercase text-[9px] tracking-wider">
-                        ADMIN
+                    <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase text-[9px] tracking-wider">
+                        MASTER ADMIN
                     </span>
                     <a href="admin/index.php" class="text-slate-200 hover:text-white font-semibold">Panel</a>
                     <span class="text-slate-500">&bull;</span>
@@ -215,6 +225,28 @@ if (isset($_SESSION['admin_id']) || $user_role === 'admin' || (isset($_SESSION['
                         <i class="fa-solid fa-moon text-[10px] beastz-theme-icon"></i>
                     </button>
                     <a href="logout.php" onclick="return confirm('Are you sure you want to log out?');" title="Sign Out" class="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-power-off text-[9px]"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        <?php elseif ($is_worker): ?>
+            <!-- Worker Studio Top Navigation Strip -->
+            <div class="bg-slate-900 border-b border-blue-500/40 px-3 py-1.5 flex items-center justify-between text-[11px] sticky top-0 z-50 text-white">
+                <div class="flex items-center gap-1.5">
+                    <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase text-[9px] tracking-wider">
+                        WORKER
+                    </span>
+                    <a href="worker.php" class="text-sky-300 hover:text-white font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-gamepad text-[10px]"></i>
+                        <span>Worker Studio</span>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleTheme()" title="Toggle Dark/Light Mode" class="text-sky-400 text-[10px] flex items-center gap-1">
+                        <i class="fa-solid fa-moon text-[10px] beastz-theme-icon"></i>
+                    </button>
+                    <a href="logout.php" onclick="return confirm('Are you sure you want to log out?');" title="Sign Out" class="text-rose-400 text-[10px] font-bold flex items-center gap-1">
                         <i class="fa-solid fa-power-off text-[9px]"></i>
                         <span>Logout</span>
                     </a>

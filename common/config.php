@@ -275,6 +275,16 @@ if (!defined('ADEPT_PLAY_CONFIG')) {
     // Auto-ensure remember_token columns exist in TiDB schema
     @$conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS remember_token VARCHAR(128) DEFAULT NULL");
     @$conn->query("ALTER TABLE admin ADD COLUMN IF NOT EXISTS remember_token VARCHAR(128) DEFAULT NULL");
+    @$conn->query("ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS is_private TINYINT(1) DEFAULT 0");
+    @$conn->query("ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS access_code VARCHAR(32) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_1_name VARCHAR(128) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_1_uid VARCHAR(64) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_2_name VARCHAR(128) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_2_uid VARCHAR(64) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_3_name VARCHAR(128) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_3_uid VARCHAR(64) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_4_name VARCHAR(128) DEFAULT NULL");
+    @$conn->query("ALTER TABLE participants ADD COLUMN IF NOT EXISTS player_4_uid VARCHAR(64) DEFAULT NULL");
 
     if (!function_exists('beastz_try_restore_session')) {
         function beastz_try_restore_session() {

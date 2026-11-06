@@ -305,18 +305,22 @@ if ($p_res) {
     <script>tailwind.config = { darkMode: "class" };</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
+    <script src="/theme.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen pb-16">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased min-h-screen pb-16 transition-colors">
     <div class="max-w-xl mx-auto px-4 py-4 space-y-4">
         
-        <header class="flex items-center justify-between bg-slate-800/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-700">
-            <a href="worker.php" class="flex items-center gap-2 text-xs font-bold text-sky-400 hover:text-yellow-300">
+        <header class="flex items-center justify-between bg-white dark:bg-[#111827] backdrop-blur-md p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <a href="worker.php" class="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-sky-400">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span>Worker Studio</span>
             </a>
             <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleTheme()" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <i class="fa-solid fa-moon text-xs beastz-theme-icon"></i>
+                </button>
                 <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-blue-600 text-white">Worker Match Studio</span>
-                <span class="text-xs font-mono font-bold text-slate-400">#<?= $t['id']; ?></span>
+                <span class="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">#<?= $t['id']; ?></span>
             </div>
         </header>
 
@@ -327,7 +331,7 @@ if ($p_res) {
             </div>
         <?php endif; ?>
 
-        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 space-y-3">
+        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-xs">
             <div class="flex items-start justify-between">
                 <div>
                     <div class="flex items-center gap-1.5 mb-1">
@@ -352,7 +356,7 @@ if ($p_res) {
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-2 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 text-xs">
+            <div class="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                 <div>
                     <span class="text-slate-400 text-[10px] block">Entry Fee</span>
                     <span class="font-extrabold text-white">₹<?= number_format($t['entry_fee'], 0); ?></span>
@@ -421,31 +425,32 @@ if ($p_res) {
         </div>
 
         <!-- SECTION 1.5: COMPACT ENROLLED SLOT LIST (NEW) -->
-        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 space-y-3">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h3 class="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-                    <i class="fa-solid fa-users-viewfinder text-blue-400"></i> Enrolled Slot List (<?= count($participants); ?>)
+        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-xs">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-users-viewfinder text-blue-500"></i> Enrolled Slot List (<?= count($participants); ?>)
                 </h3>
-                <span class="text-[10px] text-slate-400 font-bold">Slot, Name & UID</span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold">Slot, Name & UID</span>
             </div>
 
             <?php if (!empty($participants)): ?>
-                <div class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
                     <?php foreach ($participants as $ps): ?>
-                        <div class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-[11px] flex flex-col justify-between">
-                            <div class="flex items-center justify-between mb-0.5">
-                                <span class="px-1.5 py-0.2 bg-blue-600 text-white font-black rounded text-[9px]">
-                                    Slot #<?= $ps['slot_no'] ?: 'A'; ?>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs space-y-1.5 shadow-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="px-2 py-0.5 bg-blue-600 text-white font-black rounded text-[10px]">
+                                    Slot #<?= $ps['slot_no'] ?: '1'; ?>
                                 </span>
-                                <span class="font-extrabold text-white truncate max-w-[90px]" title="@<?= htmlspecialchars($ps['username']); ?>">
+                                <span class="font-extrabold text-slate-900 dark:text-white truncate max-w-[160px]" title="@<?= htmlspecialchars($ps['username']); ?>">
                                     @<?= htmlspecialchars($ps['username']); ?>
                                 </span>
                             </div>
-                            <div class="text-[10px] text-slate-300 truncate">
-                                IGN: <strong class="text-slate-100"><?= htmlspecialchars($ps['in_game_name'] ?: 'N/A'); ?></strong>
+                            <div class="text-[11px] text-slate-700 dark:text-slate-300">
+                                <strong class="text-slate-900 dark:text-slate-100 font-bold">IGN:</strong>
+                                <span class="break-words"><?= htmlspecialchars($ps['in_game_name'] ?: 'N/A'); ?></span>
                             </div>
-                            <div class="text-[9px] text-slate-400 font-mono truncate">
-                                UID: <?= htmlspecialchars($ps['user_game_id'] ?: 'N/A'); ?>
+                            <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono break-words">
+                                <strong>UID:</strong> <?= htmlspecialchars($ps['game_id'] ?: ($ps['user_game_id'] ?? 'N/A')); ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -478,14 +483,14 @@ if ($p_res) {
                                 $pid = $p['id'];
                                 $has_won = ($p['prize_won'] > 0);
                             ?>
-                            <div class="p-3 rounded-xl border <?= $has_won ? 'border-amber-400/50 bg-blue-600/5' : 'border-slate-800 bg-slate-900' ?> text-xs space-y-2">
+                            <div class="p-3 rounded-xl border <?= $has_won ? 'border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900' ?> text-xs space-y-2 shadow-xs">
                                 <div class="flex items-start justify-between">
                                     <div>
                                         <div class="flex items-center gap-1.5">
                                             <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-black text-[10px]">
                                                 Slot #<?= $p['slot_no'] ?: 'Auto'; ?>
                                             </span>
-                                            <span class="font-extrabold text-white text-xs">
+                                            <span class="font-extrabold text-slate-900 dark:text-white text-xs">
                                                 @<?= htmlspecialchars($p['username']); ?>
                                             </span>
                                         </div>
@@ -511,11 +516,11 @@ if ($p_res) {
                                 <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800">
                                     <div>
                                         <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Kills</label>
-                                        <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-blue-500 focus:outline-none">
+                                        <input type="number" name="kills[<?= $pid; ?>]" min="0" value="<?= (int)$p['kills']; ?>" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-mono font-bold focus:border-blue-500 focus:outline-none">
                                     </div>
                                     <div>
                                         <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Rank</label>
-                                        <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-blue-500 focus:outline-none">
+                                        <input type="number" name="rank_no[<?= $pid; ?>]" min="0" value="<?= (int)$p['rank_no']; ?>" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-mono font-bold focus:border-blue-500 focus:outline-none">
                                     </div>
                                     <div>
                                         <label class="block text-[9px] font-bold text-slate-400 mb-0.5 uppercase">Bonus ₹</label>

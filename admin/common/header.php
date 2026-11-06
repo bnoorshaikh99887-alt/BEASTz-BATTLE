@@ -29,6 +29,16 @@ if (
     $_SESSION['is_super_admin'] = true;
 }
 
+// Strictly prevent Workers and Regular Gamers from accessing Master Admin Panel
+if (!$is_super) {
+    if (!empty($_SESSION['is_worker']) || !empty($_SESSION['worker_id']) || ($_SESSION['role'] ?? '') === 'worker' || ($_SESSION['admin_role'] ?? '') === 'worker') {
+        safe_redirect("../worker.php");
+        exit;
+    }
+    safe_redirect("../index.php");
+    exit;
+}
+
 $cur_script = basename($_SERVER['PHP_SELF'] ?? '');
 $cur_admin_tab = sanitize($_GET['tab'] ?? 'overview');
 $act_btn = "bg-blue-600 text-white font-black shadow-md border border-blue-500";

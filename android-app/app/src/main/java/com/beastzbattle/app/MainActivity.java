@@ -57,7 +57,7 @@ public class MainActivity extends Activity {
     private final static int PERMISSION_REQUEST_NOTIFICATIONS = 102;
     private static final String APP_URL = "https://beastz-battle.vercel.app";
     public static final String CHANNEL_ID = "beastz_push_alerts";
-    private static final int CURRENT_APP_VERSION = 26; // v2.6.0
+    private static final int CURRENT_APP_VERSION = 27; // v2.7.0
     private boolean isPageLoaded = false;
     private static int rendererCrashes = 0;
     private boolean offlinePageShown = false;

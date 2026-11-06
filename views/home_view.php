@@ -6,25 +6,46 @@
     </div>
 <?php endif; ?>
 
+<!-- Header Bar: Arenas & Private Match Button -->
+<div class="flex items-center justify-between gap-2 mb-2.5 px-0.5">
+    <div class="flex items-center gap-1.5 text-xs font-black uppercase text-slate-900 dark:text-white">
+        <i class="fa-solid fa-gamepad text-blue-500"></i>
+        <span>Battle Arenas</span>
+    </div>
+    <button type="button" onclick="openPrivateMatchModal()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+        <i class="fa-solid fa-key text-[10px]"></i>
+        <span>Join with Code</span>
+    </button>
+</div>
+
 <!-- Horizontal Category Filter Bar -->
-<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 mb-4 border-b border-slate-200/80 -mx-1 px-1">
-    <button type="button" onclick="filterTourneys('ALL', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition bg-blue-600 text-white shadow-xs border border-blue-500">
+<div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 mb-4 border-b border-slate-200 dark:border-slate-800 -mx-1 px-1">
+    <button type="button" onclick="filterTourneys('ALL', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition bg-blue-600 text-white shadow-xs border border-blue-500">
         ALL
     </button>
-    <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+    <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         SOLO BR
     </button>
-    <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+    <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         DUO BR
     </button>
-    <button type="button" onclick="filterTourneys('SQUAD', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
-        SQUAD
+    <button type="button" onclick="filterTourneys('SQUAD BR', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+        SQUAD BR
     </button>
-    <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+    <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         CS 1VS1
     </button>
-    <button type="button" onclick="filterTourneys('CS 2VS2', this)" class="category-tab px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+    <button type="button" onclick="filterTourneys('CS 2VS2', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
         CS 2VS2
+    </button>
+    <button type="button" onclick="filterTourneys('CS 4VS4', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+        CS 4VS4
+    </button>
+    <button type="button" onclick="filterTourneys('LONE WOLF 1V1', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+        LONE WOLF 1V1
+    </button>
+    <button type="button" onclick="filterTourneys('LONE WOLF 2V2', this)" class="category-tab px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+        LONE WOLF 2V2
     </button>
 </div>
 
@@ -151,11 +172,40 @@
     <?php endif; ?>
 </div>
 
+<!-- Modal: Join Private Match by Code -->
+<div id="privateCodeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs hidden">
+    <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center">
+                    <i class="fa-solid fa-key"></i>
+                </span>
+                <h3 class="text-sm font-black text-slate-900 dark:text-white">Join Private Match</h3>
+            </div>
+            <button type="button" onclick="closePrivateMatchModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 text-base cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Enter the 6-character match code provided by your tournament host to book your slot.
+        </p>
+        <div>
+            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Access Code</label>
+            <input type="text" id="privateMatchCodeInput" placeholder="e.g. BTZ-A89F" maxlength="16" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-mono font-black text-center text-sm uppercase tracking-wider focus:outline-none focus:border-blue-500">
+            <p id="privateCodeError" class="hidden text-[11px] text-rose-500 font-bold mt-1.5 text-center"></p>
+        </div>
+        <button type="button" id="submitPrivateCodeBtn" onclick="verifyAndJoinPrivateMatch()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-md">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            <span>Find & Book Slot</span>
+        </button>
+    </div>
+</div>
+
 <!-- ============================================================= -->
 <!-- MODAL: JOIN TOURNAMENT (IGN + Game UID + Slot Number Selector) -->
 <!-- ============================================================= -->
 <div id="joinModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+    <div class="w-full max-w-sm bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-3xl p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button type="button" onclick="closeJoinModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-base">
             <i class="fa-solid fa-xmark"></i>
         </button>
@@ -296,9 +346,9 @@
         // Detect mode: Squad (12 slots, 4 players) vs Duo (24 slots, 2 players) vs Solo
         const normMode = (modeName || '').toUpperCase();
         const normTitle = (title || '').toUpperCase();
-        const isSquad = normMode.includes('SQUAD') || normTitle.includes('SQUAD');
-        const isDuo = !isSquad && (normMode.includes('DUO') || normMode.includes('2VS2') || normTitle.includes('DUO'));
-        const effectiveSlots = isSquad ? 12 : (isDuo ? 24 : (parseInt(totalSlots) || 48));
+        const isSquad = normMode.includes('SQUAD') || normTitle.includes('SQUAD') || normMode.includes('4VS4') || normTitle.includes('4VS4');
+        const isDuo = !isSquad && (normMode.includes('DUO') || normTitle.includes('DUO') || normMode.includes('2VS2') || normTitle.includes('2VS2'));
+        const effectiveSlots = parseInt(totalSlots) || (isSquad ? 12 : (isDuo ? 24 : 48));
 
         document.getElementById('modalMatchMode').value = isSquad ? 'SQUAD' : (isDuo ? 'DUO' : 'SOLO');
 
@@ -462,4 +512,70 @@
     function closeJoinModal() {
         document.getElementById('joinModal').classList.add('hidden');
     }
+
+    function openPrivateMatchModal() {
+        const modal = document.getElementById("privateCodeModal");
+        const err = document.getElementById("privateCodeError");
+        if (err) { err.classList.add("hidden"); err.innerText = ""; }
+        const inp = document.getElementById("privateMatchCodeInput");
+        if (inp) { inp.value = ""; }
+        if (modal) modal.classList.remove("hidden");
+    }
+
+    function closePrivateMatchModal() {
+        const modal = document.getElementById("privateCodeModal");
+        if (modal) modal.classList.add("hidden");
+    }
+
+    function verifyAndJoinPrivateMatch() {
+        const inp = document.getElementById("privateMatchCodeInput");
+        const err = document.getElementById("privateCodeError");
+        const btn = document.getElementById("submitPrivateCodeBtn");
+        const code = (inp ? inp.value.trim().toUpperCase() : "");
+
+        if (!code) {
+            if (err) {
+                err.innerText = "Please type the 6-character match code.";
+                err.classList.remove("hidden");
+            }
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Searching Match...';
+        }
+        if (err) err.classList.add("hidden");
+
+        fetch("api/private_match.php?code=" + encodeURIComponent(code))
+            .then(res => res.json())
+            .then(data => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Find & Book Slot';
+                }
+                if (data.success && data.match) {
+                    closePrivateMatchModal();
+                    const m = data.match;
+                    const bookedJson = JSON.stringify(m.booked_slots || []);
+                    openJoinModal(m.id, m.title, m.entry_fee, m.prize_pool, m.total_slots, bookedJson, m.match_type);
+                } else {
+                    if (err) {
+                        err.innerText = data.error || "Invalid match code. Please check and retry.";
+                        err.classList.remove("hidden");
+                    }
+                }
+            })
+            .catch(e => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Find & Book Slot';
+                }
+                if (err) {
+                    err.innerText = "Server communication error. Please try again.";
+                    err.classList.remove("hidden");
+                }
+            });
+    }
+
 </script>

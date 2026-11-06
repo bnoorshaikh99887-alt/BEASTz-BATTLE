@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS `tournaments` (
     `room_id` VARCHAR(64) DEFAULT NULL,
     `room_password` VARCHAR(64) DEFAULT NULL,
     `status` VARCHAR(32) NOT NULL DEFAULT 'Upcoming',
+    `is_private` TINYINT(1) DEFAULT 0,
+    `access_code` VARCHAR(32) DEFAULT NULL,
     `created_by` INT NOT NULL DEFAULT 1,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY `idx_tourneys_status` (`status`),
