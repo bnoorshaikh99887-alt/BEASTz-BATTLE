@@ -55,9 +55,9 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 101;
     private final static int PERMISSION_REQUEST_NOTIFICATIONS = 102;
-    private static final String APP_URL = "https://beast-battle-eight.vercel.app";
+    private static final String APP_URL = "https://beastz-battle.vercel.app";
     public static final String CHANNEL_ID = "beastz_push_alerts";
-    private static final int CURRENT_APP_VERSION = 25; // v2.5.0
+    private static final int CURRENT_APP_VERSION = 26; // v2.6.0
     private boolean isPageLoaded = false;
     private static int rendererCrashes = 0;
     private boolean offlinePageShown = false;
@@ -532,7 +532,7 @@ public class MainActivity extends Activity {
 
         // 10. Load App
         String lastUrl = prefs.getString("last_url", APP_URL);
-        if (lastUrl == null || !lastUrl.startsWith("https://beast-battle-eight.vercel.app")
+        if (lastUrl == null || !lastUrl.startsWith("https://beastz-battle.vercel.app")
                 || lastUrl.contains("install.php") || lastUrl.contains("cashfree")
                 || lastUrl.contains("logout") || lastUrl.contains("about:")) {
             lastUrl = APP_URL;
@@ -649,7 +649,7 @@ public class MainActivity extends Activity {
                             + "    window.onNativePlayerIdReady('" + playerId + "'); "
                             + "} "
                             + "if (typeof fetch === 'function') { "
-                            + "    fetch('https://beast-battle-eight.vercel.app/save_player_id.php', { "
+                            + "    fetch('https://beastz-battle.vercel.app/save_player_id.php', { "
                             + "        method: 'POST', "
                             + "        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, "
                             + "        body: 'player_id=' + encodeURIComponent('" + playerId + "') "

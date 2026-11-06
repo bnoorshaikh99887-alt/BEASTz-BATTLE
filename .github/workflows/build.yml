@@ -33,30 +33,30 @@ jobs:
 
       - name: Prepare APK Release Files
         run: |
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE-v2.5.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE-v2.6.apk
           cp android-app/app/build/outputs/apk/debug/app-debug.apk BEASTz-BATTLE.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BEASTz-BATTLE-v2.5-APK
+          name: BEASTz-BATTLE-v2.6-APK
           path: |
-            BEASTz-BATTLE-v2.5.apk
+            BEASTz-BATTLE-v2.6.apk
             BEASTz-BATTLE.apk
             android-app/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Create or Update GitHub Release v2.5
+      - name: Create or Update GitHub Release v2.6
         uses: softprops/action-gh-release@v1
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v2.5
-          name: "BEASTz BATTLE v2.5 (Official Native APK)"
+          tag_name: v2.6
+          name: "BEASTz BATTLE v2.6 (Official Native APK)"
           body: |
-            # 🎮 BEASTz BATTLE v2.5 Official Native Release
+            # 🎮 BEASTz BATTLE v2.6 Official Native Release
 
-            Download the new **v2.5** native Android APK for BEASTz BATTLE.
+            Download the new **v2.6** native Android APK for BEASTz BATTLE.
 
-            ### 🚀 What's New in v2.5:
+            ### 🚀 What's New in v2.6:
             - **Native Pull-to-Refresh**: Swipe down from top on any screen to reload live tournament data instantly.
             - **Modern Blue & Slate UI Theme**: High-contrast blue gaming interface with sleek glassmorphism.
             - **WebView Cache Auto-Buster**: Flushes stale WebView HTTP cache on upgrade so new features reflect immediately without freezing.
@@ -65,9 +65,9 @@ jobs:
             - **Direct Cashfree & UPI Payments**: 1-tap intent opening for PhonePe, Paytm, Google Pay, and UPI apps.
 
             ### 📲 Direct Download:
-            👉 **[Download BEASTz-BATTLE-v2.5.apk](https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.5/BEASTz-BATTLE-v2.5.apk)**
+            👉 **[Download BEASTz-BATTLE-v2.6.apk](https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.6/BEASTz-BATTLE-v2.6.apk)**
           files: |
-            BEASTz-BATTLE-v2.5.apk
+            BEASTz-BATTLE-v2.6.apk
             BEASTz-BATTLE.apk
             android-app/app/build/outputs/apk/debug/app-debug.apk
         env:
@@ -78,10 +78,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         with:
           tag_name: latest
-          name: "BEASTz BATTLE Latest APK (v2.5)"
-          body: "Official latest Android APK (v2.5) for BEASTz BATTLE with Pull-to-Refresh, Blue Gaming Theme, and Admin Maintenance Bypass."
+          name: "BEASTz BATTLE Latest APK (v2.6)"
+          body: "Official latest Android APK (v2.6) for BEASTz BATTLE with Pull-to-Refresh, Blue Gaming Theme, and Admin Maintenance Bypass."
           files: |
-            BEASTz-BATTLE-v2.5.apk
+            BEASTz-BATTLE-v2.6.apk
             BEASTz-BATTLE.apk
             android-app/app/build/outputs/apk/debug/app-debug.apk
         env:

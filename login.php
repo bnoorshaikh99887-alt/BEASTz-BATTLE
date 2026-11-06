@@ -455,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                  data-client_id="202554953418-39ib6bd6t6c8uj395lm6m70i05povk1b.apps.googleusercontent.com"
                  data-context="signin"
                  data-ux_mode="redirect"
-                 data-login_uri="https://beast-battle-eight.vercel.app/google_auth.php"
+                 data-login_uri="https://beastz-battle.vercel.app/google_auth.php"
                  data-auto_prompt="false">
             </div>
 
