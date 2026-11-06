@@ -57,6 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     FROM participants p 
                     JOIN users u ON p.user_id = u.id 
                     WHERE p.tournament_id = {$tournament_id}
+                    UNION
+                    SELECT DISTINCT u.player_id, ut.user_id as user_id 
+                    FROM user_tournaments ut 
+                    JOIN users u ON ut.user_id = u.id 
+                    WHERE ut.tournament_id = {$tournament_id}
                 ");
                 if ($qp) {
                     while ($pr = $qp->fetch_assoc()) {
@@ -159,6 +164,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             FROM participants p 
             JOIN users u ON p.user_id = u.id 
             WHERE p.tournament_id = {$tournament_id}
+            UNION
+            SELECT DISTINCT u.player_id, ut.user_id as user_id 
+            FROM user_tournaments ut 
+            JOIN users u ON ut.user_id = u.id 
+            WHERE ut.tournament_id = {$tournament_id}
         ");
         if ($qp_res) {
             while ($pr = $qp_res->fetch_assoc()) {

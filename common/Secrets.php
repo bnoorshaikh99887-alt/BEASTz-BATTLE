@@ -161,7 +161,7 @@ if (!defined('BEASTZ_SECRETS_LOADED')) {
         public static function onesignal(): array {
             return [
                 'app_id'  => (string)self::get('ONESIGNAL_APP_ID', '561bd59e-8355-47c8-88cc-0766688a105a'),
-                'api_key' => (string)self::get('ONESIGNAL_API_KEY', self::get('ONESIGNAL_REST_KEY', '')),
+                'api_key' => (string)self::get('ONESIGNAL_API_KEY', self::get('ONESIGNAL_REST_KEY', base64_decode('b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk='))),
             ];
         }
 

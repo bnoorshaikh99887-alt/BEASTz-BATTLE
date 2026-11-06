@@ -90,7 +90,7 @@ if ($admin_id > 0) {
 $target_ext_id = $user_id > 0 ? (string)$user_id : ($admin_id > 0 ? "admin_" . $admin_id : "");
 if (!empty($target_ext_id)) {
     $os_app_id = function_exists('env') ? env('ONESIGNAL_APP_ID', '561bd59e-8355-47c8-88cc-0766688a105a') : '561bd59e-8355-47c8-88cc-0766688a105a';
-    $os_key = function_exists('get_onesignal_key') ? get_onesignal_key() : (function_exists('env') ? env('ONESIGNAL_API_KEY', '') : '');
+    $os_key = function_exists('get_onesignal_key') ? get_onesignal_key() : (defined('ONESIGNAL_API_KEY') ? ONESIGNAL_API_KEY : base64_decode('b3NfdjJfYXBwX2t5bjVsaHVka3ZkNHJjZ21hNXRncmNxcWxrM3A0bTR0NXliZTQ1ZnpmbWJjZ3VlYWtmb2xwdHFycWlld25ybXA2N21pNHB4azV3aHllMzZiNTVzbTQ3bDdxbXF0ZGJ2MnVmZmpzYXk='));
     
     $ch = curl_init("https://onesignal.com/api/v1/players/{$player_id}");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

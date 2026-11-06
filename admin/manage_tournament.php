@@ -25,20 +25,7 @@ if (!$t) {
 
 $per_kill_rate = (float)($t['per_kill'] ?? 0.00);
 
-// FIX: OneSignal notification ab page render hone ke BAAD jaati hai (pehle page freeze hota tha)
-$deferred_push = [];
-register_shutdown_function(function () use (&$deferred_push) {
-    if (empty($deferred_push)) return;
-    ignore_user_abort(true);
-    @set_time_limit(90);
-    while (ob_get_level() > 0) { @ob_end_flush(); }
-    @flush();
-    if (function_exists('fastcgi_finish_request')) { @fastcgi_finish_request(); }
-    foreach ($deferred_push as $dp) {
-        try { sendOneSignalNotification($dp[0], $dp[1], $dp[2], $dp[3], $dp[4]); }
-        catch (Throwable $e) { error_log('push error: ' . $e->getMessage()); }
-    }
-});
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_room') {
     $room_id = sanitize($_POST['room_id'] ?? '');
@@ -67,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $t['room_password'] = $room_password;
             $t['status'] = $status;
 
-            if (!empty($_POST['send_idp_push']) && $room_changed && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
+            if (!empty($_POST['send_idp_push']) && !empty($room_id) && $room_id !== "MATCH UNDER REVIEW") {
                 $target_pids = [];
                 $target_uids = [];
                 
@@ -76,6 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     FROM participants p 
                     JOIN users u ON p.user_id = u.id 
                     WHERE p.tournament_id = {$tournament_id}
+                    UNION
+                    SELECT DISTINCT ut.user_id, u.player_id 
+                    FROM user_tournaments ut 
+                    JOIN users u ON ut.user_id = u.id 
+                    WHERE ut.tournament_id = {$tournament_id}
                 ");
                 if ($q_joined) {
                     while ($p_r = $q_joined->fetch_assoc()) {
@@ -100,10 +92,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $target_pids = array_values(array_unique(array_filter($target_pids)));
                 
                 if (!empty($target_pids) || !empty($target_uids)) {
-                    $idp_title = "🔥 WAR ZONE TAYAR HAI!";
+                    $idp_title = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI";
                     $idp_msg = "WAR ZONE TAYAR HAI JOIN KARLO ROOM 5 MIN MEIN START HONE WALA HAI! Room ID: " . $room_id . " | Pass: " . $room_password;
-                    $deferred_push[] = [$idp_title, $idp_msg, "/?tab=matches", $target_pids, $target_uids];
+                    
+                    if (function_exists("send_onesignal_push")) {
+                        send_onesignal_push($idp_title, $idp_msg, "/?tab=matches", $target_pids, $target_uids, ["badge_type" => "ROOM_IDP", "tournament_id" => $tournament_id], false);
+                    }
                     @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($idp_title) . "', '" . $conn->real_escape_string($idp_msg) . "', '/?tab=matches', 'ROOM_IDP')");
+                    $msg .= " (IDP push notification sent to " . count($target_uids) . " joined players!)";
                 }
             }
         } else {
@@ -230,6 +226,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 FROM participants p
                 JOIN users u ON p.user_id = u.id
                 WHERE p.tournament_id = {$tournament_id}
+                UNION
+                SELECT DISTINCT u.player_id, ut.user_id
+                FROM user_tournaments ut
+                JOIN users u ON ut.user_id = u.id
+                WHERE ut.tournament_id = {$tournament_id}
             ");
             if ($q_pids) {
                 while ($pr = $q_pids->fetch_assoc()) {
@@ -253,7 +254,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $participating_pids = array_values(array_unique(array_filter($participating_pids)));
 
             if (!empty($participating_pids) || !empty($participating_uids)) {
-                $deferred_push[] = [$results_title, $results_msg, "/?tab=matches", $participating_pids, $participating_uids];
+                if (function_exists("send_onesignal_push")) {
+                    send_onesignal_push($results_title, $results_msg, "/?tab=matches", $participating_pids, $participating_uids, ["badge_type" => "RESULTS_ANNOUNCED", "tournament_id" => $tournament_id], false);
+                }
                 $ins = $conn->prepare("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES (?, ?, '/?tab=matches', 'RESULTS_ANNOUNCED')");
                 if ($ins) { $ins->bind_param("ss", $results_title, $results_msg); $ins->execute(); $ins->close(); }
             }

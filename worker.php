@@ -65,7 +65,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                     // Dispatch Instant Listing Push Alert to all Gamers
                     $list_title = "⚔️ New Tournament Listed: " . $title;
                     $list_body = "New " . $game . " (" . $match_type . ") match is live! Entry: " . format_inr($entry_fee) . " | Prize: " . format_inr($prize_pool) . ". Join now!";
-                    send_onesignal_push($list_title, $list_body, "/?tab=home", [], [], ["badge_type" => "NEW_TOURNAMENT", "tournament_id" => $new_id]);
+                    send_onesignal_push($list_title, $list_body, "/?tab=home", [], [], ["badge_type" => "NEW_TOURNAMENT", "tournament_id" => $new_id], true);
                     @$conn->query("INSERT INTO app_notifications (title, message, target_url, badge_type) VALUES ('" . $conn->real_escape_string($list_title) . "', '" . $conn->real_escape_string($list_body) . "', '/?tab=home', 'NEW_TOURNAMENT')");
                     
                     $feedback_msg = "Tournament #" . $new_id . " ('" . htmlspecialchars($title) . "') created & listing push alert broadcasted to gamers!";
