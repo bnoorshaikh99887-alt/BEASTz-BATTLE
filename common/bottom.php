@@ -9,7 +9,7 @@
                 </button>
                 <button type="button" onclick="switchAppTab('matches')" id="nav-tab-matches" class="nav-app-tab <?= ($cur_app_tab === 'matches' ? 'active-tab text-blue-500 dark:text-sky-400' : 'text-slate-400 hover:text-slate-600') ?> flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer">
                     <i class="fa-solid fa-trophy text-base mb-0.5"></i>
-                    <span class="text-[10px] font-bold tracking-tight">My Matches</span>
+                    <span class="text-[10px] font-bold tracking-tight">My Match</span>
                 </button>
                 <button type="button" onclick="switchAppTab('store')" id="nav-tab-store" class="nav-app-tab <?= ($cur_app_tab === 'store' ? 'active-tab text-blue-500 dark:text-sky-400' : 'text-slate-400 hover:text-blue-500 dark:text-sky-400') ?> flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer relative">
                     <i class="fa-solid fa-gift text-base mb-0.5"></i>
@@ -19,6 +19,10 @@
                 <button type="button" onclick="switchAppTab('leaderboard')" id="nav-tab-leaderboard" class="nav-app-tab <?= ($cur_app_tab === 'leaderboard' ? 'active-tab text-blue-500 dark:text-sky-400' : 'text-slate-400 hover:text-slate-600') ?> flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer">
                     <i class="fa-solid fa-chart-simple text-base mb-0.5"></i>
                     <span class="text-[10px] font-bold tracking-tight">Leaderboard</span>
+                </button>
+                <button type="button" onclick="switchAppTab('me')" id="nav-tab-me" class="nav-app-tab <?= ($cur_app_tab === 'profile' || $cur_app_tab === 'me' ? 'active-tab text-blue-500 dark:text-sky-400' : 'text-slate-400 hover:text-slate-600') ?> flex flex-col items-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer">
+                    <i class="fa-solid fa-user-gear text-base mb-0.5"></i>
+                    <span class="text-[10px] font-bold tracking-tight">Me</span>
                 </button>
             </div>
         </nav>

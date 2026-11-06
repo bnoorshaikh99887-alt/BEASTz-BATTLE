@@ -56,6 +56,27 @@ if ($path === 'new release update.apk' || $path === 'new.release.update.apk' || 
 }
 
 // 0. Specific Route Aliases to prevent 404s
+if ( === 'me' ||  === 'profile' ||  === 'settings' ||  === 'account') {
+    ['tab'] = 'profile';
+    require  . '/index.php';
+    exit;
+}
+if ( === 'my_match' ||  === 'my_matches' ||  === 'matches') {
+    ['tab'] = 'matches';
+    require  . '/index.php';
+    exit;
+}
+if ( === 'store' ||  === 'beastz_store' ||  === 'beastz-store') {
+    ['tab'] = 'store';
+    require  . '/index.php';
+    exit;
+}
+if ( === 'wallet') {
+    ['tab'] = 'wallet';
+    require  . '/index.php';
+    exit;
+}
+
 if ($path === 'check_update' || $path === 'check_update.php') {
     require __DIR__ . '/check_update.php';
     exit;

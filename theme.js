@@ -90,6 +90,8 @@ function switchAppTab(tabName, skipState) {
         "passbook": "wallet",
         "profiles": "profile",
         "account": "profile",
+        "me": "profile",
+        "settings": "profile",
         "shops": "store",
         "shop": "store"
     };
@@ -119,7 +121,7 @@ function switchAppTab(tabName, skipState) {
         btn.classList.add("text-slate-400");
     });
 
-    var activeBottom = document.getElementById("nav-tab-" + tabName) || document.getElementById("nav-" + tabName);
+    var activeBottom = document.getElementById("nav-tab-" + tabName) || (tabName === "profile" ? document.getElementById("nav-tab-me") : null) || document.getElementById("nav-" + tabName);
     if (activeBottom) {
         activeBottom.classList.remove("text-slate-400");
         activeBottom.classList.add("active-tab", "text-blue-500", "font-black");

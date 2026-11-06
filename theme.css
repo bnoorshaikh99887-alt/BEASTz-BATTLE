@@ -610,3 +610,64 @@ html.dark select {
     background-color: #0f172a !important;
     border-color: #334155 !important;
 }
+
+/* ============================================================ */
+/* HIGHEST PRIORITY DARK MODE TEXT & CONTRAST OVERRIDES        */
+/* Fixes black-on-black text in balance cards & tourney cards  */
+/* ============================================================ */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark [class*="text-slate-900"],
+html.dark [class*="text-slate-800"],
+html.dark .font-display,
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+    color: #ffffff !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark [class*="text-slate-500"],
+html.dark [class*="text-slate-400"] {
+    color: #94a3b8 !important;
+}
+
+html.dark .text-slate-600,
+html.dark [class*="text-slate-600"] {
+    color: #cbd5e1 !important;
+}
+
+/* Balance Card & Modal Card Dark Mode Backgrounds */
+html.dark .bg-white,
+html.dark div.bg-white,
+html.dark [class*="dark:bg-[#111827]"],
+html.dark [class*="dark:bg-[#0b0f19]"],
+html.dark [class*="dark:bg-[#121826]"] {
+    background-color: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #ffffff !important;
+}
+
+html.dark .bg-slate-50,
+html.dark div.bg-slate-50 {
+    background-color: #0b0f19 !important;
+    border-color: #1e293b !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+    border-color: #1e293b !important;
+}
+
+/* Single line mode capsules */
+.category-tab {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+

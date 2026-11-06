@@ -65,41 +65,36 @@
             Top Events
         </h2>
         <div class="flex items-center gap-2">
-            <button type="button" onclick="openPrivateMatchModal()" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer">
+            <button type="button" onclick="openPrivateMatchModal()" class="text-xs font-black text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5 cursor-pointer bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800">
                 <i class="fa-solid fa-key text-[10px]"></i>
-                <span>Private Code</span>
-            </button>
-            <span class="text-slate-300 dark:text-slate-600">·</span>
-            <button type="button" onclick="filterTourneys('ALL', this)" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer">
-                <span>See All</span>
-                <span>&gt;</span>
+                <span>Join Private Match</span>
             </button>
         </div>
     </div>
 
     <!-- Category Filters -->
     <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
-        <button type="button" onclick="filterTourneys('ALL', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-blue-600 text-white shadow-xs">
+        <button type="button" onclick="filterTourneys('ALL', this)" class="category-tab shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-blue-600 text-white shadow-xs">
             <i class="fa-solid fa-gamepad"></i>
             <span>All Modes</span>
         </button>
-        <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+        <button type="button" onclick="filterTourneys('SOLO BR', this)" class="category-tab shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
             <i class="fa-solid fa-user"></i>
             <span>Solo BR</span>
         </button>
-        <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+        <button type="button" onclick="filterTourneys('DUO BR', this)" class="category-tab shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
             <i class="fa-solid fa-user-group"></i>
             <span>Duo BR</span>
         </button>
-        <button type="button" onclick="filterTourneys('SQUAD BR', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+        <button type="button" onclick="filterTourneys('SQUAD BR', this)" class="category-tab shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
             <i class="fa-solid fa-users"></i>
             <span>Squad BR</span>
         </button>
-        <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+        <button type="button" onclick="filterTourneys('CS 1VS1', this)" class="category-tab shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
             <i class="fa-solid fa-crosshairs"></i>
             <span>CS 1v1</span>
         </button>
-        <button type="button" onclick="filterTourneys('LONE WOLF 1V1', this)" class="category-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
+        <button type="button" onclick="filterTourneys('LONE WOLF 1V1', this)" class="category-tab shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50">
             <i class="fa-solid fa-fire"></i>
             <span>Lone Wolf</span>
         </button>
