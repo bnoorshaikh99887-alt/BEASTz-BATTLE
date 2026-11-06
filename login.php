@@ -1,28 +1,60 @@
 <?php
 require_once __DIR__ . '/common/config.php';
 
-// FIX: config.php may already start the session; make sure it is active either way
 if (session_status() === PHP_SESSION_NONE) { @session_start(); }
 
+$apiKey = 'FrlHzGnUeoucLdOwuAn0c5KQvhonwCALTFsK1QUeVMw';
+
 // =========================================================================================
-// 1. AJAX HANDLER: FIREBASE OTP LOGIN / AUTO-REGISTER 
+// 1. AJAX HANDLER: SEND OTP VIA CUSTOM API
 // =========================================================================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'firebase_auth') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'send_otp') {
     header('Content-Type: application/json');
     $phone = preg_replace('/[^0-9]/', '', sanitize($_POST['phone'] ?? ''));
-    $uid = sanitize($_POST['uid'] ?? ''); // Firebase UID
     
-    // Agar number India ka hai (+91) toh 91 hata do taaki DB me match ho sake
     if (strlen($phone) > 10 && substr($phone, 0, 2) === '91') {
         $phone = substr($phone, 2);
     }
     
-    if (empty($phone) || empty($uid) || !$db_ok) {
-        echo json_encode(['success' => false, 'message' => 'Invalid Request or Database Error']);
+    if (strlen($phone) !== 10) {
+        echo json_encode(['success' => false, 'message' => 'Please enter a valid 10-digit mobile number.']);
+        exit;
+    }
+    
+    // Generate 6-digit OTP
+    $otp = rand(100000, 999999);
+    $_SESSION['auth_otp'] = $otp;
+    $_SESSION['auth_phone'] = $phone;
+    
+    // TODO: Yahan apni API key ($apiKey) ke sath SMS gateway ka cURL request laga sakte ho.
+    // Testing ke liye debug_otp bhej rahe hain taaki bina SMS ke bhi aaram se check ho sake.
+    echo json_encode([
+        'success' => true, 
+        'message' => 'OTP sent successfully!',
+        'debug_otp' => $otp // Testing ke liye screen par alert/console me dikh jayega
+    ]);
+    exit;
+}
+
+// =========================================================================================
+// 2. AJAX HANDLER: VERIFY OTP & LOGIN / AUTO-REGISTER
+// =========================================================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'verify_otp') {
+    header('Content-Type: application/json');
+    $entered_otp = trim($_POST['otp'] ?? '');
+    $phone = $_SESSION['auth_phone'] ?? '';
+    
+    if (empty($entered_otp) || empty($phone) || $entered_otp != ($_SESSION['auth_otp'] ?? '')) {
+        echo json_encode(['success' => false, 'message' => 'Invalid OTP! Please try again.']);
+        exit;
+    }
+    
+    if (!$db_ok) {
+        echo json_encode(['success' => false, 'message' => 'Database connection error.']);
         exit;
     }
 
-    // 1.1 Check if this number exists in Admin/Worker table
+    // 2.1 Check in Admin/Worker table
     $adm_chk = $conn->prepare("SELECT id, username, role, status FROM admin WHERE username = ? LIMIT 1");
     $adm_chk->bind_param("s", $phone);
     $adm_chk->execute();
@@ -55,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
 
-    // 1.2 Check if this number exists in Users table (Gamer)
+    // 2.2 Check in Users table
     $u_stmt = $conn->prepare("SELECT id, username, role, status FROM users WHERE phone = ? LIMIT 1");
     $u_stmt->bind_param("s", $phone);
     $u_stmt->execute();
@@ -68,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             exit;
         }
         
-        // Log in Existing User
         $_SESSION['user_id'] = (int)$u['id'];
         $_SESSION['username'] = $u['username'];
         $_SESSION['role'] = 'user';
@@ -78,15 +109,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         echo json_encode(['success' => true, 'redirect' => 'index.php']);
         exit;
     } else {
-        // 1.3 Auto-Register New User if phone number doesn't exist
-        $username = "Gamer_" . substr($uid, 0, 6); // Auto-generate username
+        // 2.3 Auto-Register New User
+        $uid_rand = md5($phone . time());
+        $username = "Gamer_" . substr($uid_rand, 0, 6);
         $initial_wallet = 0.00;
         $default_avatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($username);
         $my_ref_code = 'BEAST' . strtoupper(substr(md5($phone . time()), 0, 5));
         $empty_str = "";
         
         $ins = $conn->prepare("INSERT INTO users (username, name, email, phone, password, role, status, wallet_balance, avatar, referral_code) VALUES (?, ?, ?, ?, ?, 'user', 'active', ?, ?, ?)");
-        $ins->bind_param("sssssdss", $username, $username, $empty_str, $phone, $uid, $initial_wallet, $default_avatar, $my_ref_code);
+        $ins->bind_param("sssssdss", $username, $username, $empty_str, $phone, $uid_rand, $initial_wallet, $default_avatar, $my_ref_code);
         
         if ($ins->execute()) {
             $new_id = (int)$ins->insert_id;
@@ -107,40 +139,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-
-// =========================================================================================
-// 2. SESSION & REDIRECT CHECKS
-// =========================================================================================
+// Session checks
 $has_admin_session  = !empty($_SESSION['admin_id']);
 $has_worker_session = !empty($_SESSION['worker_id']) || (!empty($_SESSION['is_worker']) && $has_admin_session);
-if ($has_admin_session && !empty($_SESSION['is_super_admin'])) {
-    header("Location: admin/index.php");
-    exit;
-}
-if ($has_worker_session || $has_admin_session) {
-    header("Location: worker.php");
-    exit;
-}
-if (isset($_SESSION['active_panel']) && empty($_SESSION['user_id'])) {
-    unset($_SESSION['active_panel'], $_SESSION['is_worker']);
-}
-if (isset($_SESSION['user_id'])) {
-    header("Location: index.php");
-    exit;
-}
+if ($has_admin_session && !empty($_SESSION['is_super_admin'])) { header("Location: admin/index.php"); exit; }
+if ($has_worker_session || $has_admin_session) { header("Location: worker.php"); exit; }
+if (isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
 
-$error = "";
-$success = "";
-$db_ok = (isset($conn) && $conn && !$conn->connect_error);
-
-if (isset($_GET['logged_out'])) {
-    $success = "You have been logged out successfully.";
-}
-
-if (!function_exists('sanitize')) {
-    function sanitize($data) { return htmlspecialchars(strip_tags(trim($data))); }
-}
-
+$success = isset($_GET['logged_out']) ? "You have been logged out successfully." : "";
+if (!function_exists('sanitize')) { function sanitize($data) { return htmlspecialchars(strip_tags(trim($data))); } }
 ?>
 <!DOCTYPE html>
 <html lang="en" class="dark">
@@ -161,10 +168,8 @@ if (!function_exists('sanitize')) {
 
     <div class="w-full max-w-sm bg-[#131b2e] border border-[#1e2d42] rounded-3xl p-6 shadow-2xl relative overflow-hidden">
         
-        <!-- Subtle Glow -->
         <div class="absolute -top-16 -right-16 w-36 h-36 bg-[#3D40BD]/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <!-- Brand Header -->
         <div class="text-center mb-5">
             <div class="w-16 h-16 mx-auto mb-2.5 flex items-center justify-center">
                 <img src="/logo.png" alt="BEASTz BATTLE" class="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(61,64,189,0.7)]">
@@ -175,14 +180,6 @@ if (!function_exists('sanitize')) {
             <p class="text-[11px] text-slate-400 mt-0.5">Instant OTP Login & Signup</p>
         </div>
 
-        <!-- Alert Feedbacks -->
-        <?php if (!empty($error)): ?>
-            <div class="p-3 mb-4 rounded-xl text-xs font-bold bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-center gap-2">
-                <i class="fa-solid fa-circle-exclamation text-rose-400 shrink-0"></i>
-                <span><?= htmlspecialchars($error); ?></span>
-            </div>
-        <?php endif; ?>
-
         <?php if (!empty($success)): ?>
             <div class="p-3 mb-4 rounded-xl text-xs font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2">
                 <i class="fa-solid fa-circle-check text-emerald-400 shrink-0"></i>
@@ -190,9 +187,7 @@ if (!function_exists('sanitize')) {
             </div>
         <?php endif; ?>
 
-        <!-- ========================================== -->
-        <!-- FIREBASE PHONE OTP SECTION -->
-        <!-- ========================================== -->
+        <!-- PHONE INPUT SECTION -->
         <div id="phone-section" class="space-y-3.5">
             <div>
                 <label class="block text-[11px] font-bold text-slate-400 mb-1">MOBILE NUMBER</label>
@@ -202,14 +197,13 @@ if (!function_exists('sanitize')) {
                 </div>
             </div>
             
-            <div id="recaptcha-container"></div>
-            
             <button id="sendOtpBtn" class="w-full py-3 bg-[#3D40BD] hover:bg-[#6C6FF5] text-white font-black rounded-xl text-xs transition shadow-[0_4px_15px_-2px_rgba(61,64,189,0.4)] active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-2">
                 <i class="fa-solid fa-paper-plane"></i>
                 <span>Send OTP</span>
             </button>
         </div>
 
+        <!-- OTP VERIFY SECTION -->
         <div id="otp-section" class="hidden space-y-3.5">
             <div>
                 <label class="block text-[11px] font-bold text-slate-400 mb-1 text-center">ENTER OTP RECEIVED</label>
@@ -227,24 +221,8 @@ if (!function_exists('sanitize')) {
 
     </div>
 
-    <!-- Firebase SDK & Logic -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyCnTjTDD8gcpW1u4vhG6A0GMUpI7eax9FA",
-            authDomain: "beast-esports-community.firebaseapp.com",
-            projectId: "beast-esports-community",
-            storageBucket: "beast-esports-community.firebasestorage.app",
-            messagingSenderId: "187588604278",
-            appId: "1:187588604278:web:f699a010f37ae609aaca57"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
+    <!-- AJAX Frontend Script (No Firebase / No reCAPTCHA) -->
+    <script>
         const phoneSection = document.getElementById('phone-section');
         const otpSection = document.getElementById('otp-section');
         const phoneInput = document.getElementById('phoneNumber');
@@ -253,16 +231,6 @@ if (!function_exists('sanitize')) {
         const verifyOtpBtn = document.getElementById('verifyOtpBtn');
         const backBtn = document.getElementById('backBtn');
 
-        let confirmationResult;
-
-        // Setup ReCaptcha bound to sendOtpBtn to prevent domain/widget errors on Vercel
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'sendOtpBtn', {
-            'size': 'invisible',
-            'callback': (response) => {
-                // reCAPTCHA verified successfully
-            }
-        });
-
         // SEND OTP
         sendOtpBtn.addEventListener('click', () => {
             const numberVal = phoneInput.value.trim();
@@ -270,30 +238,42 @@ if (!function_exists('sanitize')) {
                 alert("Please enter a valid 10-digit mobile number.");
                 return;
             }
-            const number = "+91" + numberVal;
 
             sendOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Sending...</span>';
             sendOtpBtn.disabled = true;
 
-            signInWithPhoneNumber(auth, number, window.recaptchaVerifier)
-                .then((result) => {
-                    confirmationResult = result;
+            const formData = new FormData();
+            formData.append('action', 'send_otp');
+            formData.append('phone', numberVal);
+
+            fetch('login.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
                     phoneSection.classList.add('hidden');
                     otpSection.classList.remove('hidden');
-                    sendOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send OTP</span>';
-                    sendOtpBtn.disabled = false;
-                }).catch((error) => {
-                    console.error("SMS Error:", error);
-                    alert("Error sending OTP. Please try again.");
-                    sendOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send OTP</span>';
-                    sendOtpBtn.disabled = false;
-                    window.recaptchaVerifier.render().then(function(widgetId) {
-                        grecaptcha.reset(widgetId);
-                    });
-                });
+                    if(data.debug_otp) {
+                        alert("OTP (Test): " + data.debug_otp); // Testing ke liye turant OTP alert dikha dega
+                    } else {
+                        alert(data.message);
+                    }
+                } else {
+                    alert(data.message || "Error sending OTP.");
+                }
+                sendOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send OTP</span>';
+                sendOtpBtn.disabled = false;
+            })
+            .catch(err => {
+                alert("Network error.");
+                sendOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send OTP</span>';
+                sendOtpBtn.disabled = false;
+            });
         });
 
-        // VERIFY OTP & AJAX LOGIN
+        // VERIFY OTP
         verifyOtpBtn.addEventListener('click', () => {
             const code = otpInput.value.trim();
             if(code.length !== 6) {
@@ -304,43 +284,31 @@ if (!function_exists('sanitize')) {
             verifyOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Verifying...</span>';
             verifyOtpBtn.disabled = true;
 
-            confirmationResult.confirm(code).then((result) => {
-                const user = result.user;
-                
-                // Send verified data to PHP for Session creation
-                const formData = new FormData();
-                formData.append('action', 'firebase_auth');
-                formData.append('phone', user.phoneNumber);
-                formData.append('uid', user.uid);
+            const formData = new FormData();
+            formData.append('action', 'verify_otp');
+            formData.append('otp', code);
 
-                fetch('login.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.success) {
-                        window.location.href = data.redirect; // Go to Home/Admin/Worker
-                    } else {
-                        alert(data.message || "Account error.");
-                        verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> <span>Verify & Enter Arena</span>';
-                        verifyOtpBtn.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    alert("System error connecting to server.");
+            fetch('login.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message || "Invalid OTP.");
                     verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> <span>Verify & Enter Arena</span>';
                     verifyOtpBtn.disabled = false;
-                });
-                
-            }).catch((error) => {
-                alert("Invalid OTP! Please check and try again.");
+                }
+            })
+            .catch(err => {
+                alert("Server connection error.");
                 verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> <span>Verify & Enter Arena</span>';
                 verifyOtpBtn.disabled = false;
             });
         });
 
-        // BACK BUTTON
         backBtn.addEventListener('click', () => {
             otpSection.classList.add('hidden');
             phoneSection.classList.remove('hidden');
