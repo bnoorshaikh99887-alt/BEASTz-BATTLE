@@ -56,24 +56,24 @@ if ($path === 'new release update.apk' || $path === 'new.release.update.apk' || 
 }
 
 // 0. Specific Route Aliases to prevent 404s
-if ( === 'me' ||  === 'profile' ||  === 'settings' ||  === 'account') {
-    ['tab'] = 'profile';
-    require  . '/index.php';
+if ($path === 'me' || $path === 'profile' || $path === 'settings' || $path === 'account') {
+    $_GET['tab'] = 'profile';
+    require $root . '/index.php';
     exit;
 }
-if ( === 'my_match' ||  === 'my_matches' ||  === 'matches') {
-    ['tab'] = 'matches';
-    require  . '/index.php';
+if ($path === 'my_match' || $path === 'my_matches' || $path === 'matches') {
+    $_GET['tab'] = 'matches';
+    require $root . '/index.php';
     exit;
 }
-if ( === 'store' ||  === 'beastz_store' ||  === 'beastz-store') {
-    ['tab'] = 'store';
-    require  . '/index.php';
+if ($path === 'store' || $path === 'beastz_store' || $path === 'beastz-store') {
+    $_GET['tab'] = 'store';
+    require $root . '/index.php';
     exit;
 }
-if ( === 'wallet') {
-    ['tab'] = 'wallet';
-    require  . '/index.php';
+if ($path === 'wallet') {
+    $_GET['tab'] = 'wallet';
+    require $root . '/index.php';
     exit;
 }
 
