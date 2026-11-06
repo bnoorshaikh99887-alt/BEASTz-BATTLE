@@ -34,7 +34,7 @@ if (
 }
 
 // APK Direct Download Handler (Serves binary if present >500KB or redirects to GitHub Releases v2.6)
-if ($path === 'BEASTz-BATTLE.apk' || $path === 'app.apk' || $path === 'download-apk') {
+if ($path === 'new release update.apk' || $path === 'new.release.update.apk' || $path === 'new_release_update.apk' || $path === 'BEASTz-BATTLE.apk' || $path === 'app.apk' || $path === 'download-apk') {
     $apk_candidates = [
         $root . '/BEASTz-BATTLE.apk',
         __DIR__ . '/BEASTz-BATTLE.apk',
@@ -51,7 +51,7 @@ if ($path === 'BEASTz-BATTLE.apk' || $path === 'app.apk' || $path === 'download-
         }
     }
     // High-speed direct release CDN download
-    header('Location: https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/v2.7/BEASTz-BATTLE-v2.7.apk', true, 302);
+    header('Location: https://github.com/bnoorshaikh99887-alt/BEASTz-BATTLE/releases/download/latest/new.release.update.apk', true, 302);
     exit;
 }
 
